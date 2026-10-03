@@ -18,7 +18,7 @@ impl Default for AutodrivePolicy {
             max_turns: 32,
             max_total_actions: 128,
             max_consecutive_empty_turns: 4,
-            max_emulated_frames: 18_000,
+            max_emulated_frames: 3_600,
         }
     }
 }
