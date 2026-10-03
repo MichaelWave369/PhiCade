@@ -176,6 +176,10 @@ fn run() -> Result<(), String> {
         max_actions: 4,
         max_delay_frames: 8,
         valid_until_frame: start_frame + 20,
+        memory: String::new(),
+        memory_sha256: sha256_bytes(b""),
+        max_memory_bytes: 4096,
+        max_memory_update_bytes: 1024,
     };
     request.validate()?;
 
@@ -191,6 +195,8 @@ fn run() -> Result<(), String> {
         seat: observation.seat,
         observation_frame: observation.frame,
         observation_sha256: observation.frame_sha256.clone(),
+        memory_sha256: request.memory_sha256.clone(),
+        memory_update: None,
         actions: vec![
             AgentTurnAction {
                 delay_frames: 0,
