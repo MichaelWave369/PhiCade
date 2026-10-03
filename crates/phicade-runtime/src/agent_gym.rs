@@ -106,6 +106,33 @@ pub fn agent_gym_success(point: PixelPoint) -> bool {
     agent_gym_distance(point) <= AGENT_GYM_SUCCESS_DISTANCE
 }
 
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentGymScore {
+    pub player: PixelPoint,
+    pub target: PixelPoint,
+    pub initial_distance: i32,
+    pub final_distance: i32,
+    pub progress: i32,
+    pub score_1000: u16,
+    pub success: bool,
+}
+
+pub fn score_agent_gym_frame(video: &FrameBuffer) -> Result<AgentGymScore, String> {
+    let player = locate_agent_gym_player(video)?;
+    let final_distance = agent_gym_distance(player);
+    Ok(AgentGymScore {
+        player,
+        target: AGENT_GYM_TARGET,
+        initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+        final_distance,
+        progress: AGENT_GYM_INITIAL_DISTANCE - final_distance,
+        score_1000: agent_gym_score_1000(AGENT_GYM_INITIAL_DISTANCE, final_distance),
+        success: agent_gym_success(player),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,5 +171,23 @@ mod tests {
         assert_eq!(agent_gym_distance(AGENT_GYM_TARGET), 0);
         assert_eq!(agent_gym_score_1000(AGENT_GYM_INITIAL_DISTANCE, 0), 1000);
         assert!(agent_gym_success(AGENT_GYM_TARGET));
+    }
+
+    #[test]
+    fn scores_target_frame_at_full_credit() {
+        let score = score_agent_gym_frame(&synthetic_frame(AGENT_GYM_TARGET)).expect("score");
+        assert_eq!(score.final_distance, 0);
+        assert_eq!(score.progress, AGENT_GYM_INITIAL_DISTANCE);
+        assert_eq!(score.score_1000, 1000);
+        assert!(score.success);
+    }
+
+    #[test]
+    fn scores_start_frame_at_zero_progress() {
+        let score = score_agent_gym_frame(&synthetic_frame(AGENT_GYM_START)).expect("score");
+        assert_eq!(score.final_distance, AGENT_GYM_INITIAL_DISTANCE);
+        assert_eq!(score.progress, 0);
+        assert_eq!(score.score_1000, 0);
+        assert!(!score.success);
     }
 }
