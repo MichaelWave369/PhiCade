@@ -290,3 +290,41 @@ application-data namespace.
 
 A changed model digest invalidates prior qualification without mutating or
 deleting the historical receipt.
+
+
+## Φ-Agent Gym
+
+Rung 11 adds a benchmark environment above the qualified core/runtime stack.
+
+```text
+RGBDS source
+    |
+    v
+assembled Game Boy ROM
+    |
+    v
+SameBoy
+    |
+    v
+rendered RGBA framebuffer
+    |
+    +--> model observation
+    |
+    +--> pixel-grounded scorer
+```
+
+The scorer does not read emulator RAM.
+
+The current task uses a solid 8×8 player sprite and a visible X target. The
+benchmark harness locates the player in the rendered framebuffer and scores
+normalized Manhattan-distance progress.
+
+Before a real model is compared on the gym, CI self-qualifies the environment
+with:
+
+- NO-INPUT negative control
+- deterministic oracle positive control
+- exact final-frame replay check
+
+The qualification receipt binds source, assembled ROM, and SameBoy hashes so
+future model-specific benchmark receipts can reference a frozen environment.
