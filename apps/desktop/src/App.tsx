@@ -1385,7 +1385,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 18 // ADAPTIVE OBSERVATION CADENCE ONLINE</small>
+                  <small>RUNG 19 // VERSIONED BENCHMARK SUITES ONLINE</small>
                 </div>
               )}
             </div>
@@ -1557,6 +1557,19 @@ export function App() {
           <div className="suite-strip">
             <span>SUITE REPORT</span>
             <select
+              value={selectedSuiteId}
+              onChange={(event) => void changeSelectedSuite(event.target.value)}
+              disabled={suiteRegistry.length === 0 || suiteReportBusy || suiteComparisonBusy || autodrive?.active}
+              aria-label="Benchmark Suite version"
+            >
+              <option value="">SELECT SUITE</option>
+              {suiteRegistry.map((suite) => (
+                <option key={suite.id} value={suite.id}>
+                  {`V${suite.version} // ${suite.taskCount} TASKS // ${suite.title}`}
+                </option>
+              ))}
+            </select>
+            <select
               value={selectedSuiteCohortId ?? ""}
               onChange={(event) => {
                 setSelectedSuiteCohortId(event.target.value || null);
@@ -1584,13 +1597,13 @@ export function App() {
             >
               {suiteReportBusy ? "VERIFYING..." : "BUILD REPORT"}
             </button>
-            <button onClick={() => void refreshSuiteReportCandidates()} disabled={suiteReportBusy || autodrive?.active}>
+            <button onClick={() => void refreshSuiteReportCandidates(selectedSuiteId)} disabled={suiteReportBusy || autodrive?.active || !selectedSuiteId}>
               REFRESH
             </button>
             <small>
               {lastSuiteReport
-                ? `#${lastSuiteReport.receipt.reportId} // MACRO μ ${lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // σTASK ${lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1)}`
-                : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ALL REGISTERED TASKS REQUIRED`}
+                ? `V${selectedSuite?.version ?? "?"} #${lastSuiteReport.receipt.reportId} // MACRO μ ${lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // σTASK ${lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1)}`
+                : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ${selectedSuite?.taskCount ?? 0} TASKS REQUIRED`}
             </small>
           </div>
           <div className="comparison-strip">
@@ -1641,15 +1654,15 @@ export function App() {
               {suiteComparisonBusy ? "REVERIFYING..." : "COMPARE SUITES"}
             </button>
             <button
-              onClick={() => void refreshSuiteReportLedger()}
-              disabled={suiteComparisonBusy || autodrive?.active}
+              onClick={() => void refreshSuiteReportLedger(selectedSuiteId)}
+              disabled={suiteComparisonBusy || autodrive?.active || !selectedSuiteId}
             >
               REFRESH
             </button>
             <small>
               {lastSuiteComparison
                 ? `#${lastSuiteComparison.receipt.comparisonId} // ΔMACRO ${lastSuiteComparison.receipt.stats.macroMeanScoreDifferenceAMinusB.toFixed(1)} // ΔSUCCESS ${(lastSuiteComparison.receipt.stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp // TASK Δ [${lastSuiteComparison.receipt.stats.minTaskMeanDifferenceAMinusB.toFixed(1)}, ${lastSuiteComparison.receipt.stats.maxTaskMeanDifferenceAMinusB.toFixed(1)}]`
-                : `${suiteReportLedger.length} SUITE REPORTS // A−B // TASK-PAIRED // NO WINNER BADGE`}
+                : `${suiteReportLedger.length} V${selectedSuite?.version ?? "?"} REPORTS // A−B // TASK-PAIRED // NO WINNER BADGE`}
             </small>
           </div>
           <div className="replay-strip">
@@ -1712,7 +1725,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 18</div>
+          <div className="panel-title">RUNTIME // RUNG 19</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1749,7 +1762,7 @@ export function App() {
             <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
             <div><dt>BENCH TASK</dt><dd>{session?.benchmarkTask ? session.benchmarkTask.title.toUpperCase() : "NONE"}</dd></div>
             <div><dt>TASK ID</dt><dd>{session?.benchmarkTask?.id ?? "----"}</dd></div>
-            <div><dt>SUITE</dt><dd>{session?.benchmarkTask?.suiteId ?? "----"}</dd></div>
+            <div><dt>SUITES</dt><dd>{session?.benchmarkTask?.suiteIds.join(" + ") ?? "----"}</dd></div>
             <div><dt>BENCH RUN</dt><dd>{benchmarkRunning ? `#${benchmarkRunId} ACTIVE` : lastModelBenchmark ? `#${lastModelBenchmark.receipt.benchmarkRunId}` : "NONE"}</dd></div>
             <div><dt>BENCH SCORE</dt><dd>{lastModelBenchmark?.receipt.score1000 === null || lastModelBenchmark?.receipt.score1000 === undefined ? "----" : `${lastModelBenchmark.receipt.score1000}/1000`}</dd></div>
             <div><dt>BENCH OUTCOME</dt><dd>{lastModelBenchmark ? lastModelBenchmark.receipt.taskSuccess ? "TARGET REACHED" : lastModelBenchmark.receipt.recordStatus : "UNRUN"}</dd></div>
