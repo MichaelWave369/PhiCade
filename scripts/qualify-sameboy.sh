@@ -32,7 +32,7 @@ curl --fail --location --retry 3 "$FIXTURE_URL" --output "$WORK/dmg-acid2.gb"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
-cargo run --locked -p phicade-libretro --bin qualify -- \
+cargo run -p phicade-libretro --bin qualify -- \
   --core "$CORE" \
   --rom "$WORK/dmg-acid2.gb" \
   --frames 240 \
