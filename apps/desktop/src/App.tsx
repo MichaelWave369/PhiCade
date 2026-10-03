@@ -14,9 +14,11 @@ import {
   captureScreenshot,
   flushGameSave,
   getAuthorityStatus,
+  getDriverStatus,
+  issueAgentTurn,
   loadSettings,
-  observePhiBot,
   setControlMode,
+  submitAgentTurn,
   startReplayRecording,
   stopReplayRecording,
   verifyLastReplay,
@@ -29,6 +31,7 @@ import {
   stepEmulation,
   stopEmulation,
   validateActionEnvelope,
+  type AgentTurnResponse,
   type AppSettings,
   type AuthorityStatus,
   type ControlMode,
@@ -43,10 +46,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["OBSERVATION", "PIXELS ONLY", "Phi-Bot sees the rendered frame and scoped control metadata, never emulator RAM or save-state bytes."],
-  ["AUTHORITY", "SCOPED", "AgentId, seat, buttons, expiry, and per-frame action limits are enforced before core execution."],
-  ["HANDOFF / CO-OP", "LIVE", "Human, Phi-Bot, or shared seat control all enter through the same Action Bus."],
-  ["VERSUS", "REFUSAL PROVEN", "The two-seat topology exists, while SameBoy correctly refuses it because this core exposes one playable port."],
+  ["TURN REQUEST", "BOUND", "Each driver request carries a specific framebuffer hash, frame, seat, budget, and expiry."],
+  ["TURN RESPONSE", "VALIDATED", "Drivers return bounded delayed actions; stale, mismatched, or oversized responses are rejected."],
+  ["HOST INBOX", "SCHEDULED", "Accepted driver intents become Phi-Bot ActionEnvelopes and wait for their emulated frame."],
+  ["CANONICAL ORDER", "HOST OWNED", "The native runtime re-sequences mixed human and agent actions, with human input last on same-frame co-op conflicts."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -86,6 +89,8 @@ export function App() {
   const [lastReplay, setLastReplay] = useState<ReplayArtifact | null>(null);
   const [authority, setAuthority] = useState<AuthorityStatus | null>(null);
   const [lastObservation, setLastObservation] = useState<string | null>(null);
+  const [driverPendingTurnId, setDriverPendingTurnId] = useState<number | null>(null);
+  const [driverQueuedActions, setDriverQueuedActions] = useState(0);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -197,6 +202,8 @@ export function App() {
           rejectedActions: packet.authorityRejections,
           lastReason: packet.lastAuthorityReason,
         } : current);
+        setDriverPendingTurnId(packet.driverPendingTurnId);
+        setDriverQueuedActions(packet.driverQueuedActions);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -348,6 +355,8 @@ export function App() {
       );
       setAuthority(next);
       setLastObservation(null);
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
       setNotice(
         mode === "human"
           ? "HUMAN TAKEOVER // PHI-BOT GRANT REVOKED"
@@ -358,21 +367,38 @@ export function App() {
     }
   };
 
-  const phiBotObserveAndAct = async () => {
+  const runReferenceDriverTurn = async () => {
     try {
-      const observation = await observePhiBot(PHIBOT_AGENT_ID, 1);
+      const request = await issueAgentTurn(PHIBOT_AGENT_ID, 1);
+      setDriverPendingTurnId(request.turnId);
+
+      const observation = request.observation;
       const candidates = ["A", "B", "RIGHT", "LEFT", "UP", "DOWN"]
         .filter((button) => observation.allowedButtons.includes(button));
       if (candidates.length === 0) throw new Error("active grant has no demo-compatible buttons");
+
       const selector = Number.parseInt(observation.frameSha256.slice(-2), 16);
       const button = candidates[selector % candidates.length];
-      const source: ActionSource = { kind: "phi-bot", agentId: PHIBOT_AGENT_ID, seat: 1 };
-      queueSourceAction(source, { kind: "button", button, pressed: true }, observation.frame);
-      queueSourceAction(source, { kind: "button", button, pressed: false }, observation.frame + 1);
-      setLastObservation(`F${observation.frame} // ${observation.frameSha256.slice(0, 12)}… // ${button}`);
-      setNotice(`PHI-BOT OBSERVED FRAME ${observation.frame} // QUEUED ${button} TAP THROUGH ACTION BUS`);
+      const response: AgentTurnResponse = {
+        schema: "phicade.agent-turn-response.v1",
+        turnId: request.turnId,
+        agentId: PHIBOT_AGENT_ID,
+        seat: 1,
+        observationFrame: observation.frame,
+        observationSha256: observation.frameSha256,
+        actions: [
+          { delayFrames: 0, action: { kind: "button", button, pressed: true } },
+          { delayFrames: 2, action: { kind: "button", button, pressed: false } },
+        ],
+      };
+
+      const status = await submitAgentTurn(response);
+      setDriverPendingTurnId(status.pendingTurnId);
+      setDriverQueuedActions(status.queuedActions);
+      setLastObservation(`T${request.turnId} // F${observation.frame} // ${observation.frameSha256.slice(0, 12)}… // ${button}`);
+      setNotice(`DRIVER TURN ${request.turnId} ACCEPTED // ${button} TAP ENTERED NATIVE INBOX`);
     } catch (error) {
-      setNotice(`PHI-BOT OBSERVATION ERROR // ${String(error)}`);
+      setNotice(`AGENT DRIVER ERROR // ${String(error)}`);
     }
   };
 
@@ -453,11 +479,18 @@ export function App() {
       setLastReplay(null);
       setAuthority(null);
       setLastObservation(null);
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
 
       const info = await startEmulation(corePath, selectedGame.path);
-      const initialAuthority = await getAuthorityStatus();
+      const [initialAuthority, initialDriver] = await Promise.all([
+        getAuthorityStatus(),
+        getDriverStatus(),
+      ]);
       setSession(info);
       setAuthority(initialAuthority);
+      setDriverPendingTurnId(initialDriver.pendingTurnId);
+      setDriverQueuedActions(initialDriver.queuedActions);
       setProfile(info.profile);
       setRunning(true);
       setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName}`);
@@ -481,6 +514,8 @@ export function App() {
       setLastReplay(null);
       setAuthority(null);
       setLastObservation(null);
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
@@ -501,6 +536,7 @@ export function App() {
           <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? "SAMEBOY RUNNING" : "CORE HOST STANDBY"}</span>
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
+          <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
         </div>
       </header>
 
@@ -560,7 +596,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 6 // PHI-BOT SEAT ONLINE</small>
+                  <small>RUNG 7 // AGENT DRIVER PROTOCOL ONLINE</small>
                 </div>
               )}
             </div>
@@ -578,7 +614,7 @@ export function App() {
             <button className={authority?.mode === "phi-bot" ? "active" : ""} onClick={() => changeControlMode("phi-bot")} disabled={!running || replayRecording}>HANDOFF</button>
             <button className={authority?.mode === "coop" ? "active" : ""} onClick={() => changeControlMode("coop")} disabled={!running || replayRecording}>CO-OP</button>
             <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording}>VERSUS</button>
-            <button onClick={phiBotObserveAndAct} disabled={!running || !authority || !["phi-bot", "coop"].includes(authority.mode)}>OBSERVE + ACT</button>
+            <button onClick={runReferenceDriverTurn} disabled={!running || replayRecording || !authority || !["phi-bot", "coop"].includes(authority.mode) || driverPendingTurnId !== null}>DRIVER TURN</button>
             <small>{lastObservation ?? (authority?.agentId ? `${authority.agentId} // P${authority.agentSeat} // GRANT TO F${authority.expiresAtFrame}` : "NO AGENT GRANT")}</small>
           </div>
 
@@ -642,7 +678,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 6</div>
+          <div className="panel-title">RUNTIME // RUNG 7</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -661,6 +697,8 @@ export function App() {
             <div><dt>AUTHORITY</dt><dd>{authority?.mode.toUpperCase() ?? "OFFLINE"}</dd></div>
             <div><dt>AGENT</dt><dd>{authority?.agentId ?? "NONE"}</dd></div>
             <div><dt>REJECTED</dt><dd>{(authority?.rejectedActions ?? 0).toString().padStart(6, "0")}</dd></div>
+            <div><dt>DRIVER TURN</dt><dd>{driverPendingTurnId === null ? "NONE" : driverPendingTurnId}</dd></div>
+            <div><dt>DRIVER QUEUE</dt><dd>{driverQueuedActions.toString().padStart(6, "0")}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -702,7 +740,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // OBSERVATION ≠ MEMORY ACCESS // ONE ACTION BUS // HUMAN TAKEOVER ALWAYS AVAILABLE</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // PROVIDER ≠ RUNTIME // OBSERVATION-BOUND TURNS // HOST-CANONICAL ACTION ORDER</footer>
     </main>
   );
 }
