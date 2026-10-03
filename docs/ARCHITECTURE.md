@@ -471,3 +471,62 @@ campaign, and comparison evidence.
 
 The UI chooses campaign IDs only. Native PhiCade reloads and verifies the evidence;
 React never owns compatibility or statistical authority.
+
+
+## Benchmark Suite v1
+
+Rung 15 removes the structural assumption that PhiCade has exactly one benchmark
+ROM.
+
+```text
+suite manifest
+     |
+     v
+shared task registry
+     |
+     +--> Task A / exact ROM hash
+     |        |
+     |        +--> start / target / oracle / prompt
+     |
+     +--> Task B / exact ROM hash
+              |
+              +--> start / target / oracle / prompt
+     |
+     v
+one benchmark runtime path
+     |
+     +--> scoring
+     +--> task-success
+     +--> gameplay receipt
+     +--> campaign
+     +--> Comparison Lab
+```
+
+Benchmark identity is resolved by exact ROM SHA-256.
+
+The registry freezes suite ID, task ID/title, source/ROM hashes, start/target
+geometry, success radius, warmup, model-visible prompt, and qualification oracle.
+
+The original `AGENT_GYM_*` API remains as a compatibility surface for Task A, but
+new live execution resolves through the registry.
+
+Suite v1 contains two independently built worlds:
+
+- `move-block-to-x-v1`: start (16,24), target (136,112), RIGHT then DOWN oracle
+- `move-block-to-x-mirror-v1`: start (136,112), target (16,24), LEFT then UP oracle
+
+Both tasks use the same rendered-pixel player detector and score function.
+
+Native benchmark start refuses ROMs that are not registered. SessionInfo exposes
+the recognized task to the desktop.
+
+Single-run receipts carry the active task ID and that task's frozen source/ROM
+hashes. Campaigns pin those values for every trial. Comparison Lab still requires
+the same benchmark ID and hashes, preserving its like-for-like semantics.
+
+The provider prompt is also selected by registry lookup from the observation's game
+SHA-256. Arbitrary ROMs receive no benchmark-specific objective.
+
+CI assembles both suite ROMs from source and requires exact registry hash equality,
+zero-progress NO-INPUT controls, deterministic oracle success, and exact replay for
+each member.

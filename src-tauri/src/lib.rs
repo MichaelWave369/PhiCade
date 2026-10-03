@@ -4,15 +4,15 @@ use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
-    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
-    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    compare_campaign_samples, summarize_benchmark_trials,
-    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
-    AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
-    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    BENCHMARK_CAMPAIGN_SCHEMA, CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
-    REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA, score_agent_gym_frame,
+    BenchmarkTaskSpec, BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    benchmark_task_by_id, benchmark_task_by_rom_sha256, compare_campaign_samples,
+    score_benchmark_task_frame, summarize_benchmark_trials, AGENT_TURN_REQUEST_SCHEMA,
+    AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256,
+    AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
+    AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA,
+    CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -88,6 +88,9 @@ struct AutodriveExport {
 struct ModelBenchmarkRun {
     run_id: u64,
     autodrive_run_id: u64,
+    benchmark_id: String,
+    benchmark_source_sha256: String,
+    benchmark_rom_sha256: String,
     provider: String,
     model: String,
     model_digest: String,
@@ -95,6 +98,8 @@ struct ModelBenchmarkRun {
     core_sha256: String,
     started_frame: u64,
     start_player: PixelPoint,
+    target: PixelPoint,
+    initial_distance: i32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -171,6 +176,9 @@ struct BenchmarkCampaignRun {
     campaign_id: u64,
     active: bool,
     total_trials: u16,
+    benchmark_id: String,
+    benchmark_source_sha256: String,
+    benchmark_rom_sha256: String,
     provider: String,
     model: String,
     model_digest: String,
@@ -401,12 +409,43 @@ struct RomEntry {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct BenchmarkTaskInfo {
+    suite_id: String,
+    id: String,
+    title: String,
+    rom_sha256: String,
+    source_sha256: String,
+    start: PixelPoint,
+    target: PixelPoint,
+    initial_distance: i32,
+    success_distance: i32,
+    warmup_frames: u64,
+}
+
+fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
+    BenchmarkTaskInfo {
+        suite_id: task.suite_id.into(),
+        id: task.id.into(),
+        title: task.title.into(),
+        rom_sha256: task.rom_sha256.into(),
+        source_sha256: task.source_sha256.into(),
+        start: task.start,
+        target: task.target,
+        initial_distance: task.initial_distance,
+        success_distance: task.success_distance,
+        warmup_frames: task.warmup_frames,
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SessionInfo {
     game_path: String,
     game_key: String,
     core_path: String,
     core: CoreIdentity,
     profile: GameProfile,
+    benchmark_task: Option<BenchmarkTaskInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1497,6 +1536,7 @@ fn start_emulation(
         core_path: core_file.to_string_lossy().to_string(),
         core: identity,
         profile: profile.clone(),
+        benchmark_task: benchmark_task_by_rom_sha256(&game_key).map(benchmark_task_info),
     };
 
     let next_autodrive_run_id =
@@ -1835,13 +1875,13 @@ fn finish_benchmark_campaign(
         schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
         record_status: record_status.to_owned(),
         campaign_id: snapshot.campaign_id,
-        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_id: snapshot.benchmark_id.clone(),
         provider: snapshot.provider,
         model: snapshot.model,
         model_digest: snapshot.model_digest,
         model_qualification_sha256: snapshot.model_qualification_sha256,
-        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
-        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        gym_source_sha256: snapshot.benchmark_source_sha256.clone(),
+        gym_rom_sha256: snapshot.benchmark_rom_sha256.clone(),
         core_sha256: snapshot.core_sha256,
         core_name: session.core.identity().library_name.clone(),
         core_version: session.core.identity().library_version.clone(),
@@ -1891,8 +1931,9 @@ fn note_benchmark_campaign_trial(
         || receipt.model_digest != campaign.model_digest
         || receipt.model_qualification_sha256 != campaign.model_qualification_sha256
         || receipt.core_sha256 != campaign.core_sha256
-        || receipt.gym_source_sha256 != AGENT_GYM_SOURCE_SHA256
-        || receipt.gym_rom_sha256 != AGENT_GYM_ROM_SHA256
+        || receipt.benchmark_id != campaign.benchmark_id
+        || receipt.gym_source_sha256 != campaign.benchmark_source_sha256
+        || receipt.gym_rom_sha256 != campaign.benchmark_rom_sha256
         || receipt.policy != campaign.policy
     {
         return Err("benchmark campaign trial does not match pinned campaign evidence".into());
@@ -1936,7 +1977,10 @@ fn finish_model_benchmark(
         return Ok(None);
     }
 
-    let scored: Result<AgentGymScore, String> = score_agent_gym_frame(&session.last_frame);
+    let task = benchmark_task_by_id(&run.benchmark_id)
+        .ok_or_else(|| format!("benchmark registry no longer contains {}", run.benchmark_id))?;
+    let scored: Result<AgentGymScore, String> =
+        score_benchmark_task_frame(&session.last_frame, task);
     let (
         record_status,
         final_player,
@@ -1969,14 +2013,14 @@ fn finish_model_benchmark(
     let receipt = ModelGameplayBenchmarkReceipt {
         schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.to_owned(),
         record_status,
-        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_id: run.benchmark_id.clone(),
         benchmark_run_id: run.run_id,
         provider: run.provider,
         model: run.model,
         model_digest: run.model_digest,
         model_qualification_sha256: run.model_qualification_sha256,
-        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
-        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        gym_source_sha256: run.benchmark_source_sha256.clone(),
+        gym_rom_sha256: run.benchmark_rom_sha256.clone(),
         core_sha256: run.core_sha256,
         core_name: session.core.identity().library_name.clone(),
         core_version: session.core.identity().library_version.clone(),
@@ -1988,8 +2032,8 @@ fn finish_model_benchmark(
         ended_frame: autodrive.receipt.ended_frame,
         start_player: run.start_player,
         final_player,
-        target: AGENT_GYM_TARGET,
-        initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+        target: run.target,
+        initial_distance: run.initial_distance,
         final_distance,
         progress,
         score_1000,
@@ -2100,10 +2144,13 @@ fn autodrive_pre_turn_guard(session: &mut EmulatorSession) -> Result<(), String>
 fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String> {
     let current_frame = session.core.frame_count();
     let driver_idle = session.pending_agent_turn.is_none() && session.agent_inbox.is_empty();
-    let benchmark_success = session.model_benchmark.is_some()
-        && score_agent_gym_frame(&session.last_frame)
-            .map(|score| score.success)
-            .unwrap_or(false);
+    let benchmark_success = session
+        .model_benchmark
+        .as_ref()
+        .and_then(|run| benchmark_task_by_id(&run.benchmark_id))
+        .and_then(|task| score_benchmark_task_frame(&session.last_frame, task).ok())
+        .map(|score| score.success)
+        .unwrap_or(false);
     let reason = session.autodrive.as_mut().and_then(|status| {
         if !status.active {
             return None;
@@ -2239,12 +2286,8 @@ fn start_model_gameplay_benchmark_inner(
     model_digest: String,
     policy: AutodrivePolicy,
 ) -> Result<ModelBenchmarkStart, String> {
-    if session.game_key != AGENT_GYM_ROM_SHA256 {
-        return Err(format!(
-            "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
-            AGENT_GYM_ROM_SHA256
-        ));
-    }
+    let task = benchmark_task_by_rom_sha256(&session.game_key)
+        .ok_or_else(|| "model gameplay benchmark requires a registered benchmark-suite ROM".to_owned())?;
     if session
         .model_benchmark
         .as_ref()
@@ -2282,26 +2325,32 @@ fn start_model_gameplay_benchmark_inner(
     session
         .core
         .reset()
-        .map_err(|error| format!("reset Phi-Agent Gym: {error:?}"))?;
+        .map_err(|error| format!("reset benchmark {}: {error:?}", task.id))?;
     session.last_frame = FrameBuffer::default();
     session.rewind.clear();
     session.next_rewind_frame = 0;
 
     let mut warmup_audio = AudioBuffer::default();
-    for _ in 0..AGENT_GYM_WARMUP_FRAMES {
+    for _ in 0..task.warmup_frames {
         session
             .core
             .step_frame(&[], &mut session.last_frame, &mut warmup_audio)
-            .map_err(|error| format!("warm Phi-Agent Gym: {error:?}"))?;
+            .map_err(|error| format!("warm benchmark {}: {error:?}", task.id))?;
     }
 
-    let start_score = score_agent_gym_frame(&session.last_frame)?;
-    if start_score.player != AGENT_GYM_START
-        || start_score.final_distance != AGENT_GYM_INITIAL_DISTANCE
+    let start_score = score_benchmark_task_frame(&session.last_frame, task)?;
+    if start_score.player != task.start
+        || start_score.final_distance != task.initial_distance
     {
         return Err(format!(
-            "Phi-Agent Gym start geometry drifted: player=({}, {}) distance={}",
-            start_score.player.x, start_score.player.y, start_score.final_distance
+            "benchmark {} start geometry drifted: expected ({}, {}) / {} got ({}, {}) / {}",
+            task.id,
+            task.start.x,
+            task.start.y,
+            task.initial_distance,
+            start_score.player.x,
+            start_score.player.y,
+            start_score.final_distance
         ));
     }
 
@@ -2342,6 +2391,9 @@ fn start_model_gameplay_benchmark_inner(
     session.model_benchmark = Some(ModelBenchmarkRun {
         run_id: benchmark_run_id,
         autodrive_run_id: autodrive.run_id,
+        benchmark_id: task.id.into(),
+        benchmark_source_sha256: task.source_sha256.into(),
+        benchmark_rom_sha256: task.rom_sha256.into(),
         provider: provider.trim().to_ascii_lowercase(),
         model,
         model_digest,
@@ -2349,6 +2401,8 @@ fn start_model_gameplay_benchmark_inner(
         core_sha256,
         started_frame: session.core.frame_count(),
         start_player: start_score.player,
+        target: task.target,
+        initial_distance: task.initial_distance,
     });
 
     Ok(ModelBenchmarkStart {
@@ -2474,6 +2528,9 @@ async fn start_benchmark_campaign(
         campaign_id,
         active: true,
         total_trials,
+        benchmark_id: run.benchmark_id,
+        benchmark_source_sha256: run.benchmark_source_sha256,
+        benchmark_rom_sha256: run.benchmark_rom_sha256,
         provider: run.provider,
         model: run.model,
         model_digest: run.model_digest,
@@ -2536,6 +2593,9 @@ async fn continue_benchmark_campaign(
         || current.model_digest != snapshot.model_digest
         || current.model_qualification_sha256 != snapshot.model_qualification_sha256
         || current.core_sha256 != snapshot.core_sha256
+        || current.benchmark_id != snapshot.benchmark_id
+        || current.benchmark_source_sha256 != snapshot.benchmark_source_sha256
+        || current.benchmark_rom_sha256 != snapshot.benchmark_rom_sha256
         || current.policy != snapshot.policy
     {
         return Err("benchmark campaign pins changed before continuation".into());

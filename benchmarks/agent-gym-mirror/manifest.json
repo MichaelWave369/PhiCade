@@ -1,0 +1,32 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "move-block-to-x-mirror-v1",
+  "title": "Mirror Dash",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "shape": "solid-8x8",
+    "startScreenX": 136,
+    "startScreenY": 112
+  },
+  "target": {
+    "shape": "x-8x8",
+    "screenX": 16,
+    "screenY": 24
+  },
+  "score": {
+    "metric": "manhattan-distance-progress",
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["LEFT", "UP"],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}

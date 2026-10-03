@@ -52,7 +52,7 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
   sameboy:
-    name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Agent Gym qualification
+    name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Benchmark Suite v1 qualification
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -147,9 +147,25 @@
 - [x] Comparison Lab desktop selectors + telemetry
 - [x] Tamper/refusal/persistent-ID CI controls
 
+## Rung 15 — Benchmark Suite v1
+- [x] Two independently source-first Game Boy benchmark tasks
+- [x] Original diagonal + Mirror Dash reversed geometry
+- [x] Frozen suite manifest
+- [x] Shared runtime task registry
+- [x] Exact ROM-hash task lookup
+- [x] Generic rendered-pixel task scorer
+- [x] Generic task-driven qualification harness
+- [x] Per-task no-input/oracle/replay qualification receipts
+- [x] Exact source + ROM registry hash enforcement
+- [x] Native benchmark/campaign task pinning
+- [x] Registry-derived Ollama task prompts
+- [x] Native SessionInfo benchmark task metadata
+- [x] Desktop BENCH/CAMPAIGN gates for any registered task
+- [x] Comparison Lab remains like-for-like across task identity
+
 ## Later
 
-Adaptive observation cadence, larger benchmark suites, multi-task aggregate
+Adaptive observation cadence, additional benchmark tasks, multi-task aggregate
 reports, additional uncertainty methods, provider capability profiles beyond
 Ollama, cloud-provider adapters, metadata/cover art, additional systems, true
 multi-port versus play, netplay, spectator mode, achievements, tournaments,
