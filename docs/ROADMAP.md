@@ -288,7 +288,7 @@
 - [x] v3 READY at 5/5 while v4 remains INCOMPLETE at 5/7
 - [x] v4 remains INCOMPLETE at 6/7
 - [x] v4 READY only at 7/7
-- [ ] Freeze canonical relay source + ROM SHA-256 after qualification
+- [x] Freeze canonical relay source + ROM SHA-256 after qualification
 
 ## Later
 
