@@ -21,13 +21,13 @@
 
 ## Rung 3 — First qualified core
 
-- [ ] Select the first core/target with compatible redistribution terms
-- [ ] Freeze source, version, license, and provenance
-- [ ] Load a public-domain/homebrew fixture
-- [ ] Present video frames in the CRT surface
-- [ ] Produce audio through the host output
-- [ ] Translate human gamepad state into Action Bus events
-- [ ] Produce a golden smoke-test receipt
+- [x] Select SameBoy 1.0.3 / GB+GBC with compatible redistribution terms
+- [x] Freeze source revision, version, license, and provenance
+- [x] Load the MIT-licensed dmg-acid2 smoke fixture in CI
+- [x] Present libretro video frames in the CRT canvas
+- [x] Produce libretro audio through Web Audio
+- [x] Translate standard human gamepad state into Action Bus events
+- [x] Produce an exportable SHA-256 smoke-test receipt
 
 ## Rung 4 — Session machinery
 

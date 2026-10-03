@@ -1,3 +1,3 @@
 [workspace]
-members = ["crates/phicade-runtime", "src-tauri"]
+members = ["crates/phicade-runtime", "crates/phicade-libretro", "src-tauri"]
 resolver = "2"
