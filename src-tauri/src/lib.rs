@@ -4,14 +4,15 @@ use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
-    BenchmarkTrialOutcome, ControlMode, EmulatorCore, FrameBuffer, GameImage, PhiBotObservation,
-    PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification,
-    ReplayVerificationResult, SystemCommand, SystemId, summarize_benchmark_trials,
+    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
+    GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
+    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    compare_campaign_samples, summarize_benchmark_trials,
     AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
     AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    BENCHMARK_CAMPAIGN_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
-    score_agent_gym_frame,
+    BENCHMARK_CAMPAIGN_SCHEMA, CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
+    REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA, score_agent_gym_frame,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -59,6 +60,7 @@ struct SessionPaths {
     autodrive_dir: PathBuf,
     model_benchmark_dir: PathBuf,
     benchmark_campaign_dir: PathBuf,
+    campaign_comparison_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -153,7 +155,7 @@ struct ModelBenchmarkStart {
 }
 
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CampaignTrialEvidence {
     benchmark_run_id: u64,
@@ -178,7 +180,7 @@ struct BenchmarkCampaignRun {
     trials: Vec<CampaignTrialEvidence>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkCampaignReceipt {
     schema: String,
@@ -235,6 +237,60 @@ struct BenchmarkCampaignStart {
     benchmark: ModelBenchmarkStart,
 }
 
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignListEntry {
+    campaign_id: u64,
+    receipt_sha256: String,
+    record_status: String,
+    model: String,
+    model_digest: String,
+    total_trials: u16,
+    completed_trials: u16,
+    mean_score_1000: Option<f64>,
+    success_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComparisonCampaignRef {
+    campaign_id: u64,
+    receipt_sha256: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    completed_trials: u16,
+    stats: BenchmarkCampaignStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignComparisonReceipt {
+    schema: String,
+    record_status: String,
+    comparison_id: u64,
+    benchmark_id: String,
+    gym_source_sha256: String,
+    gym_rom_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+    campaign_a: ComparisonCampaignRef,
+    campaign_b: ComparisonCampaignRef,
+    stats: CampaignComparisonStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignComparisonArtifact {
+    receipt_path: String,
+    receipt: CampaignComparisonReceipt,
+}
+
 struct EmulatorSession {
     core: LibretroCore,
     game_path: String,
@@ -263,6 +319,7 @@ struct EmulatorSession {
     benchmark_campaign: Option<BenchmarkCampaignRun>,
     last_benchmark_campaign: Option<BenchmarkCampaignExport>,
     next_benchmark_campaign_id: u64,
+    next_campaign_comparison_id: u64,
 }
 
 impl Drop for EmulatorSession {
