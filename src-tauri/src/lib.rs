@@ -1279,6 +1279,19 @@ fn set_control_mode(
         return Err("control-mode changes are disabled during replay recording".into());
     }
 
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        let reason = if mode == ControlMode::Human {
+            AutodriveStopReason::HumanTakeover
+        } else {
+            AutodriveStopReason::OperatorStop
+        };
+        let _ = finish_autodrive(session, reason)?;
+    }
+
     let grant = match mode {
         ControlMode::Human => None,
         ControlMode::PhiBot | ControlMode::Coop | ControlMode::Versus => {
@@ -1654,6 +1667,8 @@ fn issue_agent_turn(
         return Err("agent turn issuance is disabled during replay recording".into());
     }
 
+    autodrive_pre_turn_guard(session)?;
+
     if session
         .pending_agent_turn
         .as_ref()
@@ -1675,6 +1690,10 @@ fn issue_agent_turn(
 
     session.next_driver_turn_id = session.next_driver_turn_id.saturating_add(1);
     session.pending_agent_turn = Some(request.clone());
+    if let Some(status) = session.autodrive.as_mut().filter(|status| status.active) {
+        status.note_turn_issued();
+        status.current_frame = session.core.frame_count();
+    }
     Ok(request)
 }
 
@@ -1688,8 +1707,16 @@ fn cancel_agent_turn(state: State<'_, EmulatorState>) -> Result<DriverStatus, St
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
-    session.pending_agent_turn = None;
-    session.last_authority_reason = Some("operator cancelled pending agent turn".to_owned());
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        let _ = finish_autodrive(session, AutodriveStopReason::OperatorStop)?;
+    } else {
+        session.pending_agent_turn = None;
+        session.last_authority_reason = Some("operator cancelled pending agent turn".to_owned());
+    }
     Ok(driver_status_for(session))
 }
 
@@ -1731,6 +1758,14 @@ fn submit_agent_turn(
         .ok_or_else(|| "no agent turn is pending".to_owned())?;
     let apply_frame = session.core.frame_count();
     let compiled = compile_agent_turn(&request, &response, apply_frame)?;
+    let compiled_count = compiled.len();
+
+    if let Some(status) = session.autodrive.as_ref().filter(|status| status.active) {
+        if !status.can_accept_actions(compiled_count) {
+            let _ = finish_autodrive(session, AutodriveStopReason::ActionBudget)?;
+            return Err("autonomous run action budget would be exceeded".into());
+        }
+    }
 
     for action in compiled {
         session.agent_inbox.push_back(action);
@@ -1740,6 +1775,18 @@ fn submit_agent_turn(
         .make_contiguous()
         .sort_by_key(|action| action.frame);
     session.pending_agent_turn = None;
+
+    let empty_stop = if let Some(status) = session.autodrive.as_mut().filter(|status| status.active) {
+        status.current_frame = apply_frame;
+        status.note_turn_completed(compiled_count);
+        status.post_turn_stop_reason()
+    } else {
+        None
+    };
+
+    if let Some(reason) = empty_stop {
+        let _ = finish_autodrive(session, reason)?;
+    }
 
     Ok(driver_status_for(session))
 }
