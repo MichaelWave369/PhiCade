@@ -5,12 +5,12 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 23
+## Current status — Rung 24
 
-PhiCade now has a balanced stateful object-dependency benchmark. A visible key
-must be deliberately acquired with A before the same central gate can be
-unlocked and the visible target reached. Suite v5 preserves every Suite v4 task
-and adds opposite LEFT/RIGHT key placements under identical interaction rules.
+PhiCade now has a balanced ordered-causality benchmark. A visible fuse must be
+acquired, installed into a central generator, and used to power a gate before
+the visible target can be reached. Suite v6 preserves every Suite v5 task and
+adds opposite LEFT/RIGHT fuse placements under the same causal chain.
 
 Benchmark suites:
 
@@ -19,6 +19,7 @@ Benchmark suites:
 - **Suite v3** — the exact v2 tasks + **Temporal Cue: Left** + **Temporal Cue: Right**
 - **Suite v4** — the exact v3 tasks + **Relay Rooms: Left** + **Relay Rooms: Right**
 - **Suite v5** — the exact v4 tasks + **Key Gate: Left** + **Key Gate: Right**
+- **Suite v6** — the exact v5 tasks + **Power Chain: Left** + **Power Chain: Right**
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -27,6 +28,8 @@ Benchmark suites:
   corridor before an identical terminal scene requires the remembered side
 - **Key Gate pair** — visible prerequisite object must be acquired before a
   locked barrier can be mutated and traversed
+- **Power Chain pair** — visible fuse → powered generator → opened gate must
+  occur in order before the target becomes reachable
 
 Current evidence stack includes:
 
@@ -54,6 +57,11 @@ Current evidence stack includes:
 - direct-gate and empty-side negative controls
 - post-pickup and open-gate framebuffer convergence controls
 - Benchmark Suite v5 with exact 9-task membership
+- balanced Power Chain LEFT/RIGHT ordered-causality probes
+- explicit fuse-acquire → generator-power → gate-open state sequence
+- generator-before-fuse, gate-before-power, and fake-pickup negative controls
+- post-fuse, powered-generator, and opened-gate convergence controls
+- Benchmark Suite v6 with exact 11-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -79,6 +87,22 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Ordered power-chain benchmark
+
+Suite v6 adds two source-first Game Boy tasks:
+
+- `power-chain-left-v1`
+- `power-chain-right-v1`
+
+The player must acquire the visible fuse, return to the central generator and
+press A to power it, then reach the gate switch and press A again before the
+final X can be reached.
+
+The pair qualifier explicitly proves that generator-before-fuse, gate-before-
+power, and empty-side fake-pickup sequences do not advance the world.
+
+See `docs/ORDERED_POWER_CHAIN_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V6.md`.
 
 ## Stateful key-gate dependency benchmark
 
@@ -210,7 +234,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select **Suite v1**, **Suite v2**, **Suite v3**, **Suite v4**, or **Suite v5**,
+2. select **Suite v1**, **Suite v2**, **Suite v3**, **Suite v4**, **Suite v5**, or **Suite v6**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -276,13 +300,15 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all nine registered benchmark ROMs from source,
-jointly qualifies the Temporal Cue, Relay Rooms, and Key Gate pairs, tests
-prior-suite preservation, Suite v5 7/9 → 8/9 → 9/9 coverage, digest splitting,
-and trial-tamper refusal.
+CI assembles and qualifies all eleven registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, and Power Chain
+pairs, tests prior-suite preservation, Suite v6 9/11 → 10/11 → 11/11 coverage,
+digest splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/ORDERED_POWER_CHAIN_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V6.md`
 - `docs/STATEFUL_KEY_GATE_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V5.md`
 - `docs/MULTI_ROOM_RELAY_BENCHMARK.md`
