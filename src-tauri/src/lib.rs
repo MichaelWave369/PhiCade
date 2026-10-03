@@ -2279,6 +2279,9 @@ fn finish_autodrive(
         turns_issued: status.turns_issued,
         turns_completed: status.turns_completed,
         total_actions: status.total_actions,
+        total_cadence_wait_frames: status.total_cadence_wait_frames,
+        max_cadence_wait_frames: status.max_cadence_wait_frames,
+        last_observation_frame: status.last_observation_frame,
         stop_reason: reason,
         final_frame_sha256: sha256_bytes(&session.last_frame.rgba8),
         policy: status.policy.clone(),
@@ -2425,6 +2428,10 @@ fn start_autodrive_inner(
         turns_completed: 0,
         total_actions: 0,
         consecutive_empty_turns: 0,
+        next_observation_frame: frame,
+        last_observation_frame: None,
+        total_cadence_wait_frames: 0,
+        max_cadence_wait_frames: 0,
         policy,
         stop_reason: None,
     };
@@ -3858,6 +3865,16 @@ fn issue_agent_turn(
 
     autodrive_pre_turn_guard(session)?;
 
+    if let Some(status) = session.autodrive.as_ref().filter(|status| status.active) {
+        let current_frame = session.core.frame_count();
+        if !status.observation_ready(current_frame) {
+            return Err(format!(
+                "autonomous observation cadence waits until frame {} (current {})",
+                status.next_observation_frame, current_frame
+            ));
+        }
+    }
+
     if session
         .pending_agent_turn
         .as_ref()
@@ -3880,8 +3897,7 @@ fn issue_agent_turn(
     session.next_driver_turn_id = session.next_driver_turn_id.saturating_add(1);
     session.pending_agent_turn = Some(request.clone());
     if let Some(status) = session.autodrive.as_mut().filter(|status| status.active) {
-        status.note_turn_issued();
-        status.current_frame = session.core.frame_count();
+        status.note_turn_issued_at(session.core.frame_count());
     }
     Ok(request)
 }
@@ -3993,6 +4009,12 @@ fn submit_agent_turn(
         .cloned()
         .ok_or_else(|| "no agent turn is pending".to_owned())?;
     let apply_frame = session.core.frame_count();
+    let max_action_delay_frames = response
+        .actions
+        .iter()
+        .map(|action| action.delay_frames)
+        .max()
+        .unwrap_or(0);
     let compiled = compile_agent_turn(&request, &response, apply_frame)?;
     let compiled_count = compiled.len();
 
@@ -4013,8 +4035,11 @@ fn submit_agent_turn(
     session.pending_agent_turn = None;
 
     let empty_stop = if let Some(status) = session.autodrive.as_mut().filter(|status| status.active) {
-        status.current_frame = apply_frame;
-        status.note_turn_completed(compiled_count);
+        status.note_turn_completed_with_delay(
+            compiled_count,
+            max_action_delay_frames,
+            apply_frame,
+        );
         status.post_turn_stop_reason()
     } else {
         None
