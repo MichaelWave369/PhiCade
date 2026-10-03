@@ -1766,11 +1766,19 @@ fn autodrive_pre_turn_guard(session: &mut EmulatorSession) -> Result<(), String>
 fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String> {
     let current_frame = session.core.frame_count();
     let driver_idle = session.pending_agent_turn.is_none() && session.agent_inbox.is_empty();
+    let benchmark_success = session.model_benchmark.is_some()
+        && score_agent_gym_frame(&session.last_frame)
+            .map(|score| score.success)
+            .unwrap_or(false);
     let reason = session.autodrive.as_mut().and_then(|status| {
         if !status.active {
             return None;
         }
         status.current_frame = current_frame;
+
+        if benchmark_success {
+            return Some(AutodriveStopReason::TaskSuccess);
+        }
 
         if status.frame_span() >= status.policy.max_emulated_frames {
             return Some(AutodriveStopReason::FrameBudget);
