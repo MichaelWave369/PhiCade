@@ -1814,6 +1814,13 @@ fn step_emulation(
         .is_some_and(|expires| authority_frame > expires);
 
     if grant_expired {
+        if session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+        {
+            let _ = finish_autodrive(session, AutodriveStopReason::GrantExpired)?;
+        }
         session.authority.set_mode(ControlMode::Human, None)?;
         session.pending_agent_turn = None;
         session.agent_inbox.clear();
@@ -1857,14 +1864,24 @@ fn step_emulation(
         .authorize_batch(&incoming_actions, authority_frame);
     let mut accepted_actions = Vec::with_capacity(incoming_actions.len());
     for (mut event, decision) in decisions {
-        if decision.accepted {
+        let autodrive_blocks_system = session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+            && matches!(event.action, ActionKind::System { .. });
+
+        if decision.accepted && !autodrive_blocks_system {
             event.sequence = session.next_action_sequence;
             event.frame = authority_frame;
             session.next_action_sequence = session.next_action_sequence.saturating_add(1);
             accepted_actions.push(event);
         } else {
             session.authority_rejections = session.authority_rejections.saturating_add(1);
-            session.last_authority_reason = Some(decision.reason);
+            session.last_authority_reason = Some(if autodrive_blocks_system {
+                "system/timeline actions are disabled during autonomous driving".to_owned()
+            } else {
+                decision.reason
+            });
         }
     }
 
@@ -1906,6 +1923,17 @@ fn step_emulation(
             flush_save_ram(session)?;
             session.last_sram_flush_frame = frame;
         }
+    }
+
+    if session.core.shutdown_requested()
+        && session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+    {
+        let _ = finish_autodrive(session, AutodriveStopReason::CoreShutdown)?;
+    } else {
+        autodrive_post_step_guard(session)?;
     }
 
     let output_rate = if audio.sample_rate_hz > 96_000 {
@@ -1965,6 +1993,7 @@ fn step_emulation(
             .as_ref()
             .map(|request| request.turn_id),
         driver_queued_actions: session.agent_inbox.len(),
+        autodrive: autodrive_status_for(session),
     })
 }
 
@@ -1984,6 +2013,13 @@ fn set_game_profile(
 
     if session.recording.is_some() {
         return Err("per-game profile changes are disabled during replay recording".into());
+    }
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        return Err("per-game profile changes are disabled during autonomous driving".into());
     }
 
     persist_game_profile(&session.paths.profile, &profile)?;
@@ -2022,6 +2058,13 @@ fn start_replay_recording(state: State<'_, EmulatorState>) -> Result<ReplayStatu
 
     if session.recording.is_some() {
         return Err("replay recording is already active".into());
+    }
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        return Err("stop autonomous driving before starting replay recording".into());
     }
     if session.profile.fast_forward != 1 {
         return Err("replay recording requires the per-game profile to be at 1x".into());
@@ -2208,14 +2251,35 @@ fn stop_emulation(state: State<'_, EmulatorState>) -> Result<(), String> {
         .session
         .lock()
         .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    if let Some(active) = session.as_ref() {
+    if let Some(active) = session.as_mut() {
         if active.recording.is_some() {
             return Err("stop replay recording before ejecting the game".into());
+        }
+        if active
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+        {
+            let _ = finish_autodrive(active, AutodriveStopReason::CoreShutdown)?;
         }
         flush_save_ram(active)?;
     }
     *session = None;
     Ok(())
+}
+
+#[tauri::command]
+fn last_autodrive_receipt(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<AutodriveArtifact>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session.last_autodrive.as_ref().map(autodrive_artifact))
 }
 
 #[tauri::command]
@@ -2243,6 +2307,11 @@ pub fn run() {
             set_control_mode,
             phi_bot_observation,
             driver_status,
+            start_autodrive,
+            autodrive_status,
+            stop_autodrive,
+            fail_autodrive_provider,
+            last_autodrive_receipt,
             issue_agent_turn,
             cancel_agent_turn,
             list_ollama_models,
