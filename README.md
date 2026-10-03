@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 13
+## Current status — Rung 14
 
-PhiCade can now run **repeated exact-digest gameplay benchmark campaigns** against
-the frozen Φ-Agent Gym environment.
+PhiCade can now compare two provenance-compatible repeated benchmark campaigns and
+persist a statistical comparison receipt.
 
 Current stack:
 
@@ -21,14 +21,15 @@ Current stack:
 - bounded multi-turn Autodrive
 - digest-bound local model qualification
 - source-first Φ-Agent Gym benchmark ROM
-- shared rendered-pixel scorer
-- exact-digest single-run gameplay receipts
-- 3–20 trial native benchmark campaigns
-- live Ollama digest re-check before every trial
-- qualification/core/policy drift refusal
-- immutable per-trial receipt hashes
-- success rate, mean, median, min/max, and population standard deviation
-- COMPLETE and PARTIAL campaign receipts
+- exact-digest gameplay receipts
+- repeated 3–20 trial benchmark campaigns
+- persistent evidence IDs across app sessions
+- strict campaign compatibility gate
+- trial-receipt SHA-256 re-verification before comparison
+- Welch 95% mean-difference confidence interval
+- Hedges' g small-sample effect size
+- success-rate difference
+- persistent comparison receipts
 
 ## Run
 
@@ -37,56 +38,49 @@ npm install
 npm run desktop
 ```
 
-## Qualify a local model
+## Build campaign evidence
 
-With Ollama running locally:
+Load the exact Φ-Agent Gym ROM, qualify a local Ollama vision model, choose
+**HANDOFF**, then use:
 
-1. **SCAN MODELS**
-2. select a local model
-3. press **QUALIFY MODEL**
+- **BENCH GYM** for one scored run,
+- **CAMPAIGN 5×** for a repeated campaign.
 
-A PASS receipt binds the selected provider/model to the exact currently installed
-digest.
-
-## Score one run
-
-Load the exact Φ-Agent Gym ROM, choose **HANDOFF**, then press **BENCH GYM**.
-
-PhiCade creates one Rung 12 model gameplay receipt.
-
-## Run a repeated campaign
-
-With the same frozen gym and a qualified model selected:
-
-1. choose **HANDOFF**,
-2. press **CAMPAIGN 5×**.
-
-The desktop runs five trials by default.
-
-Before every continuation trial, native PhiCade re-queries Ollama and confirms the
-installed model digest still matches the campaign pin.
-
-Each trial writes its own Rung 12 receipt. The final campaign receipt references
-those trial receipts by SHA-256 and reports:
-
-- observed/scored/error trial counts,
-- success rate,
-- mean score,
-- median score,
-- min/max score,
-- population standard deviation.
-
-Pressing **END CAMPAIGN** writes a PARTIAL summary instead of discarding completed
+Each campaign remains bound to exact model, qualification, core, Gym, and policy
 evidence.
 
-## Evidence semantics
+## Compare campaigns
 
-A COMPLETE campaign means all configured trials were recorded.
+When two campaign receipts exist for the loaded Gym:
 
-It does **not** mean the model succeeded.
+1. open **COMPARISON LAB**,
+2. select campaign A,
+3. select campaign B,
+4. press **COMPARE**.
 
-Score statistics exclude scoring-error trials rather than inventing numeric values.
-Success rate uses all observed trials.
+Native PhiCade refuses comparison unless both campaigns are COMPLETE, fully
+scoreable, have the same configured trial count, and match on provider, Gym,
+SameBoy binary/identity, and Autodrive policy.
+
+Before computing statistics, it re-hashes every Rung 12 trial receipt referenced by
+both campaign summaries.
+
+The comparison reports:
+
+- mean score difference A−B,
+- Welch 95% confidence interval,
+- Hedges' g A−B,
+- success-rate difference A−B,
+- source campaign identities and hashes.
+
+PhiCade does not generate a winner badge from these values.
+
+## Evidence persistence
+
+Receipt numbering is seeded from existing evidence on disk. Restarting PhiCade no
+longer resets Autodrive, gameplay-benchmark, campaign, or comparison IDs to 1.
+
+Historical JSON receipts are therefore not silently overwritten by a later session.
 
 ## CI qualification
 
@@ -94,13 +88,14 @@ Success rate uses all observed trials.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI qualifies the frozen environment and campaign machinery. Real model campaign
-receipts are local runtime evidence and are not fabricated by CI.
+CI qualifies the frozen environment and Comparison Lab machinery. Real local model
+scores and campaign comparisons are not fabricated by CI.
 
 See:
 
 - `docs/MODEL_GAMEPLAY_BENCHMARK.md`
 - `docs/BENCHMARK_CAMPAIGNS.md`
+- `docs/COMPARISON_LAB.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
