@@ -2928,4 +2928,49 @@ mod tests {
             "digest-b"
         ));
     }
+
+    #[test]
+    fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
+        let receipt = ModelGameplayBenchmarkReceipt {
+            schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            benchmark_id: AGENT_GYM_ID.into(),
+            benchmark_run_id: 7,
+            provider: "ollama".into(),
+            model: "vision-model".into(),
+            model_digest: "digest-a".into(),
+            model_qualification_sha256: "q".repeat(64),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            autodrive_receipt_sha256: "a".repeat(64),
+            autodrive_run_id: 8,
+            policy: AutodrivePolicy::default(),
+            stop_reason: AutodriveStopReason::TaskSuccess,
+            started_frame: 120,
+            ended_frame: 240,
+            start_player: AGENT_GYM_START,
+            final_player: Some(AGENT_GYM_TARGET),
+            target: AGENT_GYM_TARGET,
+            initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+            final_distance: Some(0),
+            progress: Some(AGENT_GYM_INITIAL_DISTANCE),
+            score_1000: Some(1000),
+            task_success: true,
+            turns_issued: 4,
+            turns_completed: 4,
+            total_actions: 8,
+            final_frame_sha256: "f".repeat(64),
+            scoring_error: None,
+        };
+
+        let json = serde_json::to_value(&receipt).expect("serialize receipt");
+        assert_eq!(json["schema"], MODEL_GAMEPLAY_BENCHMARK_SCHEMA);
+        assert_eq!(json["modelDigest"], "digest-a");
+        assert_eq!(json["score1000"], 1000);
+        assert_eq!(json["taskSuccess"], true);
+        assert_eq!(json["stopReason"], "task-success");
+    }
 }
