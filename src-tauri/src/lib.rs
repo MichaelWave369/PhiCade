@@ -2601,6 +2601,264 @@ fn benchmark_campaign_status(
         .map(benchmark_campaign_status_for))
 }
 
+fn benchmark_campaign_receipt_path(session: &EmulatorSession, campaign_id: u64) -> PathBuf {
+    session
+        .paths
+        .benchmark_campaign_dir
+        .join(format!("campaign-{campaign_id:06}.json"))
+}
+
+fn load_benchmark_campaign_receipt(
+    session: &EmulatorSession,
+    campaign_id: u64,
+) -> Result<(PathBuf, BenchmarkCampaignReceipt), String> {
+    let path = benchmark_campaign_receipt_path(session, campaign_id);
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read campaign {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<BenchmarkCampaignReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse campaign {}: {error}", path.display()))?;
+    if receipt.schema != BENCHMARK_CAMPAIGN_SCHEMA {
+        return Err(format!("unsupported campaign schema: {}", receipt.schema));
+    }
+    if receipt.campaign_id != campaign_id {
+        return Err("campaign file ID does not match receipt ID".into());
+    }
+    Ok((path, receipt))
+}
+
+fn verify_campaign_trial_receipts(
+    session: &EmulatorSession,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    for trial in &campaign.trials {
+        let path = session
+            .paths
+            .model_benchmark_dir
+            .join(format!("run-{:06}.json", trial.benchmark_run_id));
+        if !path.exists() {
+            return Err(format!(
+                "campaign {} references missing benchmark receipt {}",
+                campaign.campaign_id,
+                path.display()
+            ));
+        }
+        let observed = sha256_file(&path)?;
+        if observed != trial.receipt_sha256 {
+            return Err(format!(
+                "campaign {} trial {} receipt hash mismatch",
+                campaign.campaign_id, trial.benchmark_run_id
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_campaign_for_comparison(
+    session: &EmulatorSession,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    if campaign.record_status != "COMPLETE" {
+        return Err(format!(
+            "campaign {} is {}, not COMPLETE",
+            campaign.campaign_id, campaign.record_status
+        ));
+    }
+    if campaign.completed_trials != campaign.total_trials
+        || campaign.trials.len() != usize::from(campaign.total_trials)
+    {
+        return Err(format!(
+            "campaign {} does not contain all configured trials",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.observed_trials != campaign.completed_trials {
+        return Err(format!(
+            "campaign {} observed-trial count does not match receipt",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scoring_error_trials != 0 {
+        return Err(format!(
+            "campaign {} contains scoring-error trials",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scored_trials != campaign.completed_trials {
+        return Err(format!(
+            "campaign {} does not have a numeric score for every trial",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scored_trials < 2 {
+        return Err(format!(
+            "campaign {} needs at least two scored trials for comparison",
+            campaign.campaign_id
+        ));
+    }
+    verify_campaign_trial_receipts(session, campaign)
+}
+
+fn validate_campaign_compatibility(
+    a: &BenchmarkCampaignReceipt,
+    b: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    if a.campaign_id == b.campaign_id {
+        return Err("comparison requires two distinct campaign IDs".into());
+    }
+    if a.benchmark_id != b.benchmark_id {
+        return Err("campaign benchmark IDs differ".into());
+    }
+    if a.provider != b.provider {
+        return Err("campaign providers differ".into());
+    }
+    if a.gym_source_sha256 != b.gym_source_sha256 || a.gym_rom_sha256 != b.gym_rom_sha256 {
+        return Err("campaign Gym source/ROM hashes differ".into());
+    }
+    if a.core_sha256 != b.core_sha256
+        || a.core_name != b.core_name
+        || a.core_version != b.core_version
+    {
+        return Err("campaign emulator core provenance differs".into());
+    }
+    if a.policy != b.policy {
+        return Err("campaign Autodrive policies differ".into());
+    }
+    if a.total_trials != b.total_trials {
+        return Err("campaign configured trial counts differ".into());
+    }
+    Ok(())
+}
+
+fn comparison_campaign_ref(
+    receipt_path: &Path,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<ComparisonCampaignRef, String> {
+    Ok(ComparisonCampaignRef {
+        campaign_id: campaign.campaign_id,
+        receipt_sha256: sha256_file(receipt_path)?,
+        provider: campaign.provider.clone(),
+        model: campaign.model.clone(),
+        model_digest: campaign.model_digest.clone(),
+        model_qualification_sha256: campaign.model_qualification_sha256.clone(),
+        completed_trials: campaign.completed_trials,
+        stats: campaign.stats.clone(),
+    })
+}
+
+fn campaign_list_entry(
+    path: &Path,
+    receipt: &BenchmarkCampaignReceipt,
+) -> Result<CampaignListEntry, String> {
+    Ok(CampaignListEntry {
+        campaign_id: receipt.campaign_id,
+        receipt_sha256: sha256_file(path)?,
+        record_status: receipt.record_status.clone(),
+        model: receipt.model.clone(),
+        model_digest: receipt.model_digest.clone(),
+        total_trials: receipt.total_trials,
+        completed_trials: receipt.completed_trials,
+        mean_score_1000: receipt.stats.mean_score_1000,
+        success_rate: receipt.stats.success_rate,
+    })
+}
+
+#[tauri::command]
+fn list_benchmark_campaign_receipts(
+    state: State<'_, EmulatorState>,
+) -> Result<Vec<CampaignListEntry>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&session.paths.benchmark_campaign_dir)
+        .map_err(|error| format!("cannot list campaign receipts: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("cannot read campaign directory entry: {error}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let receipt = serde_json::from_slice::<BenchmarkCampaignReceipt>(&bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+        entries.push(campaign_list_entry(&path, &receipt)?);
+    }
+    entries.sort_by_key(|entry| entry.campaign_id);
+    Ok(entries)
+}
+
+#[tauri::command]
+fn compare_benchmark_campaigns(
+    state: State<'_, EmulatorState>,
+    campaign_a_id: u64,
+    campaign_b_id: u64,
+) -> Result<CampaignComparisonArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let (path_a, a) = load_benchmark_campaign_receipt(session, campaign_a_id)?;
+    let (path_b, b) = load_benchmark_campaign_receipt(session, campaign_b_id)?;
+
+    validate_campaign_for_comparison(session, &a)?;
+    validate_campaign_for_comparison(session, &b)?;
+    validate_campaign_compatibility(&a, &b)?;
+
+    let scores_a: Vec<u16> = a.trials.iter().filter_map(|trial| trial.score_1000).collect();
+    let scores_b: Vec<u16> = b.trials.iter().filter_map(|trial| trial.score_1000).collect();
+    let stats = compare_campaign_samples(
+        &scores_a,
+        a.stats.successful_trials,
+        a.stats.observed_trials,
+        &scores_b,
+        b.stats.successful_trials,
+        b.stats.observed_trials,
+    )?;
+
+    let comparison_id = session.next_campaign_comparison_id;
+    let receipt = CampaignComparisonReceipt {
+        schema: CAMPAIGN_COMPARISON_SCHEMA.to_owned(),
+        record_status: "COMPLETE".into(),
+        comparison_id,
+        benchmark_id: a.benchmark_id.clone(),
+        gym_source_sha256: a.gym_source_sha256.clone(),
+        gym_rom_sha256: a.gym_rom_sha256.clone(),
+        core_sha256: a.core_sha256.clone(),
+        core_name: a.core_name.clone(),
+        core_version: a.core_version.clone(),
+        policy: a.policy.clone(),
+        total_trials: a.total_trials,
+        campaign_a: comparison_campaign_ref(&path_a, &a)?,
+        campaign_b: comparison_campaign_ref(&path_b, &b)?,
+        stats,
+    };
+
+    let receipt_path = session
+        .paths
+        .campaign_comparison_dir
+        .join(format!("comparison-{comparison_id:06}.json"));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize campaign comparison receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+    session.next_campaign_comparison_id =
+        session.next_campaign_comparison_id.saturating_add(1);
+
+    Ok(CampaignComparisonArtifact {
+        receipt_path: receipt_path.to_string_lossy().to_string(),
+        receipt,
+    })
+}
+
 #[tauri::command]
 fn last_benchmark_campaign_receipt(
     state: State<'_, EmulatorState>,
