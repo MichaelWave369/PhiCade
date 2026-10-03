@@ -821,7 +821,7 @@ export function App() {
 
           <div className="agent-strip">
             <span>Φ-BOT SEAT</span>
-            <button className={authority?.mode === "human" ? "active" : ""} onClick={() => changeControlMode("human")} disabled={!running || replayRecording || autodrive?.active}>HUMAN</button>
+            <button className={authority?.mode === "human" ? "active" : ""} onClick={() => changeControlMode("human")} disabled={!running || replayRecording}>HUMAN</button>
             <button className={authority?.mode === "phi-bot" ? "active" : ""} onClick={() => changeControlMode("phi-bot")} disabled={!running || replayRecording || autodrive?.active}>HANDOFF</button>
             <button className={authority?.mode === "coop" ? "active" : ""} onClick={() => changeControlMode("coop")} disabled={!running || replayRecording || autodrive?.active}>CO-OP</button>
             <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording || autodrive?.active}>VERSUS</button>
