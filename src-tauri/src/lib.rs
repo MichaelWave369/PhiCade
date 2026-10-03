@@ -1873,13 +1873,13 @@ fn finish_benchmark_campaign(
         schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
         record_status: record_status.to_owned(),
         campaign_id: snapshot.campaign_id,
-        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_id: snapshot.benchmark_id.clone(),
         provider: snapshot.provider,
         model: snapshot.model,
         model_digest: snapshot.model_digest,
         model_qualification_sha256: snapshot.model_qualification_sha256,
-        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
-        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        gym_source_sha256: snapshot.benchmark_source_sha256.clone(),
+        gym_rom_sha256: snapshot.benchmark_rom_sha256.clone(),
         core_sha256: snapshot.core_sha256,
         core_name: session.core.identity().library_name.clone(),
         core_version: session.core.identity().library_version.clone(),
@@ -1929,8 +1929,9 @@ fn note_benchmark_campaign_trial(
         || receipt.model_digest != campaign.model_digest
         || receipt.model_qualification_sha256 != campaign.model_qualification_sha256
         || receipt.core_sha256 != campaign.core_sha256
-        || receipt.gym_source_sha256 != AGENT_GYM_SOURCE_SHA256
-        || receipt.gym_rom_sha256 != AGENT_GYM_ROM_SHA256
+        || receipt.benchmark_id != campaign.benchmark_id
+        || receipt.gym_source_sha256 != campaign.benchmark_source_sha256
+        || receipt.gym_rom_sha256 != campaign.benchmark_rom_sha256
         || receipt.policy != campaign.policy
     {
         return Err("benchmark campaign trial does not match pinned campaign evidence".into());
@@ -1974,7 +1975,10 @@ fn finish_model_benchmark(
         return Ok(None);
     }
 
-    let scored: Result<AgentGymScore, String> = score_agent_gym_frame(&session.last_frame);
+    let task = benchmark_task_by_id(&run.benchmark_id)
+        .ok_or_else(|| format!("benchmark registry no longer contains {}", run.benchmark_id))?;
+    let scored: Result<AgentGymScore, String> =
+        score_benchmark_task_frame(&session.last_frame, task);
     let (
         record_status,
         final_player,
@@ -2007,14 +2011,14 @@ fn finish_model_benchmark(
     let receipt = ModelGameplayBenchmarkReceipt {
         schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.to_owned(),
         record_status,
-        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_id: run.benchmark_id.clone(),
         benchmark_run_id: run.run_id,
         provider: run.provider,
         model: run.model,
         model_digest: run.model_digest,
         model_qualification_sha256: run.model_qualification_sha256,
-        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
-        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        gym_source_sha256: run.benchmark_source_sha256.clone(),
+        gym_rom_sha256: run.benchmark_rom_sha256.clone(),
         core_sha256: run.core_sha256,
         core_name: session.core.identity().library_name.clone(),
         core_version: session.core.identity().library_version.clone(),
@@ -2026,8 +2030,8 @@ fn finish_model_benchmark(
         ended_frame: autodrive.receipt.ended_frame,
         start_player: run.start_player,
         final_player,
-        target: AGENT_GYM_TARGET,
-        initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+        target: run.target,
+        initial_distance: run.initial_distance,
         final_distance,
         progress,
         score_1000,
@@ -2138,10 +2142,13 @@ fn autodrive_pre_turn_guard(session: &mut EmulatorSession) -> Result<(), String>
 fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String> {
     let current_frame = session.core.frame_count();
     let driver_idle = session.pending_agent_turn.is_none() && session.agent_inbox.is_empty();
-    let benchmark_success = session.model_benchmark.is_some()
-        && score_agent_gym_frame(&session.last_frame)
-            .map(|score| score.success)
-            .unwrap_or(false);
+    let benchmark_success = session
+        .model_benchmark
+        .as_ref()
+        .and_then(|run| benchmark_task_by_id(&run.benchmark_id))
+        .and_then(|task| score_benchmark_task_frame(&session.last_frame, task).ok())
+        .map(|score| score.success)
+        .unwrap_or(false);
     let reason = session.autodrive.as_mut().and_then(|status| {
         if !status.active {
             return None;
@@ -2519,6 +2526,9 @@ async fn start_benchmark_campaign(
         campaign_id,
         active: true,
         total_trials,
+        benchmark_id: run.benchmark_id,
+        benchmark_source_sha256: run.benchmark_source_sha256,
+        benchmark_rom_sha256: run.benchmark_rom_sha256,
         provider: run.provider,
         model: run.model,
         model_digest: run.model_digest,
@@ -2581,6 +2591,9 @@ async fn continue_benchmark_campaign(
         || current.model_digest != snapshot.model_digest
         || current.model_qualification_sha256 != snapshot.model_qualification_sha256
         || current.core_sha256 != snapshot.core_sha256
+        || current.benchmark_id != snapshot.benchmark_id
+        || current.benchmark_source_sha256 != snapshot.benchmark_source_sha256
+        || current.benchmark_rom_sha256 != snapshot.benchmark_rom_sha256
         || current.policy != snapshot.policy
     {
         return Err("benchmark campaign pins changed before continuation".into());
