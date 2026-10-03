@@ -1,0 +1,55 @@
+{
+  "schema": "phicade.benchmark-suite-manifest.v1",
+  "id": "phicade-agent-gym-suite-v3",
+  "system": "GB",
+  "coreQualification": "SameBoy 1.0.3 / pinned source revision",
+  "observation": "rendered-framebuffer-only",
+  "taskCount": 5,
+  "tasks": [
+    {
+      "id": "move-block-to-x-v1",
+      "title": "Move the Block to the X",
+      "source": "benchmarks/agent-gym/main.asm",
+      "sourceSha256": "0c82f65532030d64bf022539002f334716a5aae822672b3cdfca511906e51e6f",
+      "romSha256": "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e",
+      "oracle": ["RIGHT", "DOWN"],
+      "qualificationReceipt": "artifacts/agent-gym-qualification.json"
+    },
+    {
+      "id": "move-block-to-x-mirror-v1",
+      "title": "Mirror Dash",
+      "source": "benchmarks/agent-gym-mirror/main.asm",
+      "sourceSha256": "fc10866cf7166f74f1ae41f8957f3b6057d8bf710731e42a02cbdb9087feb658",
+      "romSha256": "278a8106343fe1688a1370c0575578417744c96ae52568ab1e97f446dc222bfb",
+      "oracle": ["LEFT", "UP"],
+      "qualificationReceipt": "artifacts/agent-gym-mirror-qualification.json"
+    },
+    {
+      "id": "wall-detour-v1",
+      "title": "Wall Detour",
+      "source": "benchmarks/agent-gym-wall-detour/main.asm",
+      "sourceSha256": "02fc444e7ffc6f9de819f7462685448268b41a641592332918f972e17fd0fc96",
+      "romSha256": "c8bfbe95b368635370a61abf004d0efd4135b96c8fa9e4fb510582e25534c4f8",
+      "oracle": ["DOWN", "RIGHT", "UP"],
+      "qualificationReceipt": "artifacts/agent-gym-wall-detour-qualification.json"
+    },
+    {
+      "id": "temporal-cue-left-v1",
+      "title": "Temporal Cue: Left",
+      "source": "benchmarks/agent-gym-temporal-left/main.asm",
+      "sourceSha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "romSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "oracle": ["A", "WAIT", "LEFT"],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-left-qualification.json"
+    },
+    {
+      "id": "temporal-cue-right-v1",
+      "title": "Temporal Cue: Right",
+      "source": "benchmarks/agent-gym-temporal-right/main.asm",
+      "sourceSha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "romSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "oracle": ["A", "WAIT", "RIGHT"],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-right-qualification.json"
+    }
+  ]
+}
