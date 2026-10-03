@@ -564,6 +564,14 @@ fn replay_status_for(session: &EmulatorSession) -> ReplayStatus {
                 recording.ledger.checkpoints.len(),
             )
         })
+        .or_else(|| {
+            session.last_replay.as_ref().map(|replay| {
+                (
+                    replay.receipt.action_count,
+                    replay.receipt.checkpoint_count,
+                )
+            })
+        })
         .unwrap_or((0, 0));
 
     ReplayStatus {
@@ -729,6 +737,16 @@ fn artifact_view(export: &ReplayExport) -> ReplayArtifact {
 }
 
 fn finalize_replay_recording(session: &mut EmulatorSession) -> Result<ReplayExport, String> {
+    let start_frame = session
+        .recording
+        .as_ref()
+        .ok_or_else(|| "replay recorder is not active".to_owned())?
+        .ledger
+        .start_frame;
+    if session.core.frame_count() <= start_frame {
+        return Err("record at least one emulated frame before exporting the replay".into());
+    }
+
     let mut recording = session
         .recording
         .take()
@@ -1207,6 +1225,14 @@ fn step_emulation(
                 recording.ledger.actions.len(),
                 recording.ledger.checkpoints.len(),
             )
+        })
+        .or_else(|| {
+            session.last_replay.as_ref().map(|replay| {
+                (
+                    replay.receipt.action_count,
+                    replay.receipt.checkpoint_count,
+                )
+            })
         })
         .unwrap_or((0, 0));
 
