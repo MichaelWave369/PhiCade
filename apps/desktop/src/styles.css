@@ -698,3 +698,61 @@ footer {
   content: "◆ ";
 }
 
+
+
+/* Rung 14: Comparison Lab */
+.comparison-strip {
+  display: grid;
+  grid-template-columns: auto minmax(170px, 1fr) minmax(170px, 1fr) auto auto minmax(220px, 1.6fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #3d405a;
+  background: #080913;
+}
+
+.comparison-strip > span {
+  color: #aeb8ff;
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.comparison-strip select,
+.comparison-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.comparison-strip button {
+  cursor: pointer;
+}
+
+.comparison-strip button:hover:not(:disabled),
+.comparison-strip select:focus {
+  border-color: #8f9cff;
+  outline: none;
+}
+
+.comparison-strip > small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .comparison-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .comparison-strip > span,
+  .comparison-strip > small,
+  .comparison-strip select {
+    grid-column: 1 / -1;
+  }
+}
