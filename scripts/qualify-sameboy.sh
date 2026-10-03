@@ -260,6 +260,13 @@ cargo run -p phicade-libretro --bin key_gate_qualify -- \
   --right-rom "$KEY_RIGHT_ROM" \
   --receipt "$ROOT/artifacts/key-gate-pair-qualification.json"
 
+printf '==> running Power Chain pair ordered-causality qualification\n'
+cargo run -p phicade-libretro --bin power_chain_qualify -- \
+  --core "$CORE" \
+  --left-rom "$POWER_LEFT_ROM" \
+  --right-rom "$POWER_RIGHT_ROM" \
+  --receipt "$ROOT/artifacts/power-chain-pair-qualification.json"
+
 printf '==> running Phi-Agent Gym task J / Power Chain LEFT qualification\n'
 cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --core "$CORE" \
@@ -275,13 +282,6 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --source "$POWER_RIGHT_SRC" \
   --task "power-chain-right-v1" \
   --receipt "$ROOT/artifacts/agent-gym-power-chain-right-qualification.json"
-
-printf '==> running Power Chain pair ordered-causality qualification\n'
-cargo run -p phicade-libretro --bin power_chain_qualify -- \
-  --core "$CORE" \
-  --left-rom "$POWER_LEFT_ROM" \
-  --right-rom "$POWER_RIGHT_ROM" \
-  --receipt "$ROOT/artifacts/power-chain-pair-qualification.json"
 
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
