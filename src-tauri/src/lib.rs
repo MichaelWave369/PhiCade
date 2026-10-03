@@ -1385,6 +1385,236 @@ fn phi_bot_observation(
     build_phi_bot_observation(session, agent_id, seat)
 }
 
+fn autodrive_status_for(session: &EmulatorSession) -> Option<AutodriveStatus> {
+    session.autodrive.as_ref().map(|status| {
+        let mut snapshot = status.clone();
+        snapshot.current_frame = session.core.frame_count();
+        snapshot
+    })
+}
+
+fn autodrive_artifact(export: &AutodriveExport) -> AutodriveArtifact {
+    AutodriveArtifact {
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finish_autodrive(
+    session: &mut EmulatorSession,
+    reason: AutodriveStopReason,
+) -> Result<AutodriveArtifact, String> {
+    let current_frame = session.core.frame_count();
+    let status = session
+        .autodrive
+        .as_mut()
+        .ok_or_else(|| "no autonomous run has been started".to_owned())?;
+
+    if !status.active {
+        if let Some(last) = session.last_autodrive.as_ref() {
+            return Ok(autodrive_artifact(last));
+        }
+        return Err("autonomous run is already stopped".into());
+    }
+
+    status.current_frame = current_frame;
+    status.active = false;
+    status.stop_reason = Some(reason);
+
+    session.pending_agent_turn = None;
+    session.agent_inbox.clear();
+    session.core.restore_input_mask(0);
+
+    let receipt = AutodriveReceipt {
+        schema: AUTODRIVE_RECEIPT_SCHEMA.to_owned(),
+        run_id: status.run_id,
+        provider: status.provider.clone(),
+        model: status.model.clone(),
+        game_sha256: session.game_key.clone(),
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        started_frame: status.started_frame,
+        ended_frame: current_frame,
+        turns_issued: status.turns_issued,
+        turns_completed: status.turns_completed,
+        total_actions: status.total_actions,
+        stop_reason: reason,
+        final_frame_sha256: sha256_bytes(&session.last_frame.rgba8),
+        policy: status.policy.clone(),
+    };
+
+    let receipt_path = session
+        .paths
+        .autodrive_dir
+        .join(format!("run-{:06}.json", status.run_id));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize autonomous run receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+
+    let export = AutodriveExport {
+        receipt_path,
+        receipt,
+    };
+    session.last_autodrive = Some(export.clone());
+    Ok(autodrive_artifact(&export))
+}
+
+fn autodrive_pre_turn_guard(session: &mut EmulatorSession) -> Result<(), String> {
+    let current_frame = session.core.frame_count();
+    let reason = session.autodrive.as_mut().and_then(|status| {
+        if !status.active {
+            return None;
+        }
+        status.current_frame = current_frame;
+        status.pre_turn_stop_reason()
+    });
+
+    if let Some(reason) = reason {
+        let _ = finish_autodrive(session, reason)?;
+        return Err(format!("autonomous run stopped: {reason:?}"));
+    }
+
+    Ok(())
+}
+
+fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String> {
+    let current_frame = session.core.frame_count();
+    let reason = session.autodrive.as_mut().and_then(|status| {
+        if !status.active {
+            return None;
+        }
+        status.current_frame = current_frame;
+
+        if status.frame_span() >= status.policy.max_emulated_frames {
+            return Some(AutodriveStopReason::FrameBudget);
+        }
+
+        if session.pending_agent_turn.is_none() && session.agent_inbox.is_empty() {
+            if status.turns_completed >= status.policy.max_turns {
+                return Some(AutodriveStopReason::TurnBudget);
+            }
+            if status.total_actions >= status.policy.max_total_actions {
+                return Some(AutodriveStopReason::ActionBudget);
+            }
+            if let Some(reason) = status.post_turn_stop_reason() {
+                return Some(reason);
+            }
+        }
+
+        None
+    });
+
+    if let Some(reason) = reason {
+        let _ = finish_autodrive(session, reason)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn start_autodrive(
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    policy: AutodrivePolicy,
+) -> Result<AutodriveStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("autonomous driving is disabled during replay recording".into());
+    }
+    if session.profile.fast_forward != 1 {
+        return Err("autonomous driving requires 1x game speed".into());
+    }
+    if session.authority.mode != ControlMode::PhiBot {
+        return Err("autonomous driving requires PHI-BOT handoff mode".into());
+    }
+    if session.pending_agent_turn.is_some() || !session.agent_inbox.is_empty() {
+        return Err("driver must be idle before starting autonomous mode".into());
+    }
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        return Err("an autonomous run is already active".into());
+    }
+
+    let provider = provider.trim().to_ascii_lowercase();
+    if provider != "ollama" {
+        return Err("Rung 9 autonomous mode currently supports the ollama provider".into());
+    }
+    let model = model.trim().to_owned();
+    if model.is_empty() {
+        return Err("autonomous driving requires a selected model".into());
+    }
+    policy.validate()?;
+
+    let frame = session.core.frame_count();
+    let status = AutodriveStatus {
+        schema: AUTODRIVE_STATUS_SCHEMA.to_owned(),
+        run_id: session.next_autodrive_run_id,
+        active: true,
+        provider,
+        model,
+        started_frame: frame,
+        current_frame: frame,
+        turns_issued: 0,
+        turns_completed: 0,
+        total_actions: 0,
+        consecutive_empty_turns: 0,
+        policy,
+        stop_reason: None,
+    };
+    status.validate()?;
+
+    session.next_autodrive_run_id = session.next_autodrive_run_id.saturating_add(1);
+    session.autodrive = Some(status.clone());
+    Ok(status)
+}
+
+#[tauri::command]
+fn autodrive_status(state: State<'_, EmulatorState>) -> Result<Option<AutodriveStatus>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(autodrive_status_for(session))
+}
+
+#[tauri::command]
+fn stop_autodrive(state: State<'_, EmulatorState>) -> Result<AutodriveArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    finish_autodrive(session, AutodriveStopReason::OperatorStop)
+}
+
+#[tauri::command]
+fn fail_autodrive_provider(state: State<'_, EmulatorState>) -> Result<AutodriveArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    finish_autodrive(session, AutodriveStopReason::ProviderFailure)
+}
+
 fn driver_status_for(session: &EmulatorSession) -> DriverStatus {
     DriverStatus {
         pending_turn_id: session.pending_agent_turn.as_ref().map(|request| request.turn_id),
