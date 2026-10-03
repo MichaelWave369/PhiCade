@@ -304,21 +304,21 @@ pub static AGENT_GYM_RELAY_RIGHT_ORACLE: [OracleLeg; 7] = [
 ];
 
 pub static AGENT_GYM_KEY_GATE_LEFT_ORACLE: [OracleLeg; 6] = [
-    OracleLeg { button: "LEFT", frames: 24 },
+    OracleLeg { button: "LEFT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "RIGHT", frames: 24 },
-    OracleLeg { button: "UP", frames: 16 },
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "UP", frames: 20 },
     OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "UP", frames: 28 },
+    OracleLeg { button: "UP", frames: 32 },
 ];
 
 pub static AGENT_GYM_KEY_GATE_RIGHT_ORACLE: [OracleLeg; 6] = [
-    OracleLeg { button: "RIGHT", frames: 24 },
+    OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "LEFT", frames: 24 },
-    OracleLeg { button: "UP", frames: 16 },
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "UP", frames: 20 },
     OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "UP", frames: 28 },
+    OracleLeg { button: "UP", frames: 32 },
 ];
 
 pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
