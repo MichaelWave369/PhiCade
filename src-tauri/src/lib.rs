@@ -4491,6 +4491,202 @@ mod tests {
         let _ = fs::remove_dir_all(directory);
     }
 
+    fn suite_test_campaign(
+        task: &BenchmarkTaskSpec,
+        campaign_id: u64,
+        digest: &str,
+    ) -> BenchmarkCampaignReceipt {
+        let outcomes = [
+            BenchmarkTrialOutcome {
+                score_1000: Some(900),
+                task_success: true,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(700),
+                task_success: false,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(500),
+                task_success: false,
+            },
+        ];
+        BenchmarkCampaignReceipt {
+            schema: BENCHMARK_CAMPAIGN_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            campaign_id,
+            benchmark_id: task.id.into(),
+            provider: "ollama".into(),
+            model: "suite-model".into(),
+            model_digest: digest.into(),
+            model_qualification_sha256: format!("qualification-{digest}"),
+            gym_source_sha256: task.source_sha256.into(),
+            gym_rom_sha256: task.rom_sha256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            total_trials: 3,
+            completed_trials: 3,
+            trials: vec![
+                CampaignTrialEvidence {
+                    benchmark_run_id: 1,
+                    receipt_sha256: String::new(),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(900),
+                    task_success: true,
+                    stop_reason: AutodriveStopReason::TaskSuccess,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 2,
+                    receipt_sha256: String::new(),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(700),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 3,
+                    receipt_sha256: String::new(),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(500),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+            ],
+            stats: summarize_benchmark_trials(&outcomes),
+        }
+    }
+
+    fn write_suite_test_campaign(
+        campaign_root: &Path,
+        model_root: &Path,
+        task: &BenchmarkTaskSpec,
+        campaign_id: u64,
+        digest: &str,
+    ) -> BenchmarkCampaignReceipt {
+        let mut campaign = suite_test_campaign(task, campaign_id, digest);
+        let campaign_dir = campaign_root.join(task.rom_sha256);
+        let model_dir = model_root.join(task.rom_sha256);
+        fs::create_dir_all(&campaign_dir).expect("create suite campaign task dir");
+        fs::create_dir_all(&model_dir).expect("create suite model task dir");
+
+        for (index, trial) in campaign.trials.iter_mut().enumerate() {
+            let bytes = format!("{}-trial-{index}", task.id).into_bytes();
+            let path = model_dir.join(format!("run-{:06}.json", trial.benchmark_run_id));
+            fs::write(&path, &bytes).expect("write suite trial evidence");
+            trial.receipt_sha256 = sha256_bytes(&bytes);
+        }
+
+        let campaign_path = campaign_dir.join(format!("campaign-{campaign_id:06}.json"));
+        fs::write(
+            &campaign_path,
+            serde_json::to_vec_pretty(&campaign).expect("serialize suite campaign"),
+        )
+        .expect("write suite campaign");
+        campaign
+    }
+
+    #[test]
+    fn suite_cohort_becomes_ready_only_with_every_registered_task() {
+        let root = comparison_test_dir("suite-ready");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        for task in benchmark_suite_v1_tasks() {
+            write_suite_test_campaign(&campaign_root, &model_root, task, 1, "digest-suite");
+        }
+
+        let cohorts =
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+                .expect("scan suite cohorts");
+        assert_eq!(cohorts.len(), 1);
+        let (cohort_id, evidence) = cohorts.iter().next().expect("cohort");
+        let candidate = suite_report_candidate(cohort_id, evidence).expect("candidate");
+        assert!(candidate.ready);
+        assert_eq!(usize::from(candidate.covered_tasks), benchmark_suite_v1_tasks().len());
+        assert_eq!(candidate.tasks.len(), benchmark_suite_v1_tasks().len());
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn suite_cohort_stays_incomplete_when_one_task_is_missing() {
+        let root = comparison_test_dir("suite-incomplete");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        let first = &benchmark_suite_v1_tasks()[0];
+        write_suite_test_campaign(&campaign_root, &model_root, first, 1, "digest-suite");
+
+        let cohorts =
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+                .expect("scan incomplete suite");
+        assert_eq!(cohorts.len(), 1);
+        let (cohort_id, evidence) = cohorts.iter().next().expect("cohort");
+        let candidate = suite_report_candidate(cohort_id, evidence).expect("candidate");
+        assert!(!candidate.ready);
+        assert_eq!(candidate.covered_tasks, 1);
+        assert_eq!(
+            usize::from(candidate.suite_task_count),
+            benchmark_suite_v1_tasks().len()
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn suite_cohort_refuses_digest_mismatch_across_tasks() {
+        let root = comparison_test_dir("suite-digest-split");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        let tasks = benchmark_suite_v1_tasks();
+        write_suite_test_campaign(&campaign_root, &model_root, &tasks[0], 1, "digest-a");
+        write_suite_test_campaign(&campaign_root, &model_root, &tasks[1], 1, "digest-b");
+
+        let cohorts =
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+                .expect("scan split suite");
+        assert_eq!(cohorts.len(), 2);
+        assert!(cohorts
+            .iter()
+            .all(|(id, evidence)| !suite_report_candidate(id, evidence).expect("candidate").ready));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn suite_cohort_scan_rejects_mutated_underlying_trial() {
+        let root = comparison_test_dir("suite-tamper");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        for task in benchmark_suite_v1_tasks() {
+            write_suite_test_campaign(&campaign_root, &model_root, task, 1, "digest-suite");
+        }
+
+        let first = &benchmark_suite_v1_tasks()[0];
+        fs::write(
+            model_root.join(first.rom_sha256).join("run-000001.json"),
+            b"mutated-suite-trial",
+        )
+        .expect("mutate suite trial");
+
+        assert!(
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root).is_err()
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
     #[test]
     fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
         let receipt = ModelGameplayBenchmarkReceipt {
