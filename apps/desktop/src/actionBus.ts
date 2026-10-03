@@ -2,7 +2,7 @@ export type ActionSource =
   | { kind: "human"; seat: number }
   | { kind: "replay" }
   | { kind: "script"; name: string }
-  | { kind: "phi-bot"; agentId: string };
+  | { kind: "phi-bot"; agentId: string; seat: number };
 
 export type SystemCommand = "pause" | "reset" | "save-state" | "load-state" | "rewind";
 

@@ -74,3 +74,44 @@ require proprietary BIOS distribution.
 
 This makes claims such as "a human/bot produced this run" testable rather than
 folklore.
+
+
+## Phi-Bot authority
+
+Rung 6 makes the controller boundary explicit:
+
+```text
+Framebuffer observation
+        |
+        v
+Agent policy / human controller
+        |
+        v
+Action Bus
+        |
+        v
+AuthorityPolicy
+        |
+        +--> reject + receipt telemetry
+        |
+        v
+Session machinery
+        |
+        v
+Core adapter
+```
+
+The native host owns authority enforcement. UI controls do not decide whether an
+action is permitted; they merely enqueue ActionEnvelope events.
+
+A Phi-Bot source is identified by both `agentId` and `seat`. Older serialized
+Phi-Bot ActionSource objects without a seat deserialize as seat 1 for replay
+compatibility.
+
+The observation boundary exposes rendered pixels and public session/control
+metadata only. Serialized core state, save RAM, ROM bytes, and emulator memory are
+not part of the agent observation contract.
+
+SameBoy currently has one playable input port. The shared policy supports a
+two-seat versus topology, but the SameBoy host refuses VERSUS rather than aliasing
+seat 2 onto player 1.

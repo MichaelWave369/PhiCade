@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActionBus, type GameAction } from "./actionBus";
+import { ActionBus, type ActionSource, type GameAction } from "./actionBus";
 import {
   diffGameBoyButtons,
   emptyGameBoyButtons,
@@ -13,7 +13,10 @@ import {
   isNativeShell,
   captureScreenshot,
   flushGameSave,
+  getAuthorityStatus,
   loadSettings,
+  observePhiBot,
+  setControlMode,
   startReplayRecording,
   stopReplayRecording,
   verifyLastReplay,
@@ -27,6 +30,8 @@ import {
   stopEmulation,
   validateActionEnvelope,
   type AppSettings,
+  type AuthorityStatus,
+  type ControlMode,
   type FramePacket,
   type GameProfile,
   type ReplayArtifact,
@@ -35,12 +40,13 @@ import {
 } from "./native";
 
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
+const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["INPUT TAPE", "RECORDING", "Applied ActionEnvelope events are stamped to exact emulated frames."],
-  ["CHECKPOINTS", "HASHED", "Core state, framebuffer, and held-input mask are periodically fingerprinted."],
-  ["VERIFY", "REPLAY EXACT", "The host restores the initial snapshot and re-executes the recorded action stream."],
-  ["DIVERGENCE", "VISIBLE", "The first mismatching checkpoint is surfaced in an exportable receipt."],
+  ["OBSERVATION", "PIXELS ONLY", "Phi-Bot sees the rendered frame and scoped control metadata, never emulator RAM or save-state bytes."],
+  ["AUTHORITY", "SCOPED", "AgentId, seat, buttons, expiry, and per-frame action limits are enforced before core execution."],
+  ["HANDOFF / CO-OP", "LIVE", "Human, Phi-Bot, or shared seat control all enter through the same Action Bus."],
+  ["VERSUS", "REFUSAL PROVEN", "The two-seat topology exists, while SameBoy correctly refuses it because this core exposes one playable port."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -78,6 +84,8 @@ export function App() {
   const [replayActions, setReplayActions] = useState(0);
   const [replayCheckpoints, setReplayCheckpoints] = useState(0);
   const [lastReplay, setLastReplay] = useState<ReplayArtifact | null>(null);
+  const [authority, setAuthority] = useState<AuthorityStatus | null>(null);
+  const [lastObservation, setLastObservation] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -183,6 +191,12 @@ export function App() {
         setReplayRecording(packet.replayRecording);
         setReplayActions(packet.replayActions);
         setReplayCheckpoints(packet.replayCheckpoints);
+        setAuthority((current) => current ? {
+          ...current,
+          mode: packet.controlMode,
+          rejectedActions: packet.authorityRejections,
+          lastReason: packet.lastAuthorityReason,
+        } : current);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -261,12 +275,25 @@ export function App() {
     }
   };
 
-  const queueAction = (action: GameAction) => {
-    const event = bus.publish(frameRef.current, { kind: "human", seat: 1 }, action);
+  const queueSourceAction = (
+    source: ActionSource,
+    action: GameAction,
+    frame = frameRef.current,
+  ) => {
+    const event = bus.publish(frame, source, action);
     const detail = action.kind === "button" ? `${action.button}:${action.pressed ? "DOWN" : "UP"}` : action.kind;
-    setLastInput(`#${event.sequence.toString().padStart(4, "0")} HUMAN:P1 → ${detail}`);
+    const sourceLabel = source.kind === "phi-bot"
+      ? `PHI-BOT:${source.agentId}:P${source.seat}`
+      : source.kind === "human"
+        ? `HUMAN:P${source.seat}`
+        : source.kind.toUpperCase();
+    setLastInput(`#${event.sequence.toString().padStart(4, "0")} ${sourceLabel} → ${detail}`);
     void validateActionEnvelope(event).catch((error: unknown) => setNotice(`ACTION IPC ERROR // ${String(error)}`));
+    return event;
   };
+
+  const queueAction = (action: GameAction) =>
+    queueSourceAction({ kind: "human", seat: 1 }, action);
 
   const queueSystem = (
     command: "reset" | "save-state" | "load-state" | "rewind",
@@ -308,6 +335,44 @@ export function App() {
       setNotice("BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`SAVE RAM ERROR // ${String(error)}`);
+    }
+  };
+
+  const changeControlMode = async (mode: ControlMode) => {
+    try {
+      const next = await setControlMode(
+        mode,
+        mode === "human" ? null : PHIBOT_AGENT_ID,
+        mode === "human" ? null : ["A", "B", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT"],
+        mode === "human" ? null : 3_600,
+      );
+      setAuthority(next);
+      setLastObservation(null);
+      setNotice(
+        mode === "human"
+          ? "HUMAN TAKEOVER // PHI-BOT GRANT REVOKED"
+          : `AUTHORITY // ${mode.toUpperCase()} // ${next.agentId} P${next.agentSeat} // EXPIRES F${next.expiresAtFrame}`,
+      );
+    } catch (error) {
+      setNotice(`AUTHORITY REFUSAL // ${String(error)}`);
+    }
+  };
+
+  const phiBotObserveAndAct = async () => {
+    try {
+      const observation = await observePhiBot(PHIBOT_AGENT_ID, 1);
+      const candidates = ["A", "B", "RIGHT", "LEFT", "UP", "DOWN"]
+        .filter((button) => observation.allowedButtons.includes(button));
+      if (candidates.length === 0) throw new Error("active grant has no demo-compatible buttons");
+      const selector = Number.parseInt(observation.frameSha256.slice(-2), 16);
+      const button = candidates[selector % candidates.length];
+      const source: ActionSource = { kind: "phi-bot", agentId: PHIBOT_AGENT_ID, seat: 1 };
+      queueSourceAction(source, { kind: "button", button, pressed: true }, observation.frame);
+      queueSourceAction(source, { kind: "button", button, pressed: false }, observation.frame + 1);
+      setLastObservation(`F${observation.frame} // ${observation.frameSha256.slice(0, 12)}… // ${button}`);
+      setNotice(`PHI-BOT OBSERVED FRAME ${observation.frame} // QUEUED ${button} TAP THROUGH ACTION BUS`);
+    } catch (error) {
+      setNotice(`PHI-BOT OBSERVATION ERROR // ${String(error)}`);
     }
   };
 
@@ -386,9 +451,13 @@ export function App() {
       setReplayActions(0);
       setReplayCheckpoints(0);
       setLastReplay(null);
+      setAuthority(null);
+      setLastObservation(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
+      const initialAuthority = await getAuthorityStatus();
       setSession(info);
+      setAuthority(initialAuthority);
       setProfile(info.profile);
       setRunning(true);
       setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName}`);
@@ -410,6 +479,8 @@ export function App() {
       setReplayActions(0);
       setReplayCheckpoints(0);
       setLastReplay(null);
+      setAuthority(null);
+      setLastObservation(null);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
@@ -429,6 +500,7 @@ export function App() {
           <span><i className="lamp lamp-green" /> ACTION IPC READY</span>
           <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? "SAMEBOY RUNNING" : "CORE HOST STANDBY"}</span>
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
+          <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
         </div>
       </header>
 
@@ -488,7 +560,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 5 // REPLAY LEDGER ONLINE</small>
+                  <small>RUNG 6 // PHI-BOT SEAT ONLINE</small>
                 </div>
               )}
             </div>
@@ -498,6 +570,16 @@ export function App() {
             <button onClick={launchGame} disabled={running || !native}>LOAD / RUN</button>
             <button onClick={stopGame} disabled={!running || replayRecording}>EJECT</button>
             <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : "NO CORE LOADED"}</span>
+          </div>
+
+          <div className="agent-strip">
+            <span>Φ-BOT SEAT</span>
+            <button className={authority?.mode === "human" ? "active" : ""} onClick={() => changeControlMode("human")} disabled={!running || replayRecording}>HUMAN</button>
+            <button className={authority?.mode === "phi-bot" ? "active" : ""} onClick={() => changeControlMode("phi-bot")} disabled={!running || replayRecording}>HANDOFF</button>
+            <button className={authority?.mode === "coop" ? "active" : ""} onClick={() => changeControlMode("coop")} disabled={!running || replayRecording}>CO-OP</button>
+            <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording}>VERSUS</button>
+            <button onClick={phiBotObserveAndAct} disabled={!running || !authority || !["phi-bot", "coop"].includes(authority.mode)}>OBSERVE + ACT</button>
+            <small>{lastObservation ?? (authority?.agentId ? `${authority.agentId} // P${authority.agentSeat} // GRANT TO F${authority.expiresAtFrame}` : "NO AGENT GRANT")}</small>
           </div>
 
           <div className="replay-strip">
@@ -560,7 +642,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 5</div>
+          <div className="panel-title">RUNTIME // RUNG 6</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -576,6 +658,9 @@ export function App() {
             <div><dt>ACTIONS</dt><dd>{replayActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>CHECKPOINTS</dt><dd>{replayCheckpoints.toString().padStart(6, "0")}</dd></div>
             <div><dt>VERIFY</dt><dd>{lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
+            <div><dt>AUTHORITY</dt><dd>{authority?.mode.toUpperCase() ?? "OFFLINE"}</dd></div>
+            <div><dt>AGENT</dt><dd>{authority?.agentId ?? "NONE"}</dd></div>
+            <div><dt>REJECTED</dt><dd>{(authority?.rejectedActions ?? 0).toString().padStart(6, "0")}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -593,8 +678,18 @@ export function App() {
           )}
 
           <div className="rule" />
-          <div className="seat-card"><span>SEAT 1</span><strong>HUMAN → ACTION BUS</strong></div>
-          <div className="seat-card muted"><span>SEAT 2</span><strong>UNASSIGNED</strong></div>
+          <div className="seat-card">
+            <span>SEAT 1</span>
+            <strong>
+              {authority?.mode === "phi-bot"
+                ? "Φ-BOT → ACTION BUS"
+                : authority?.mode === "coop"
+                  ? "HUMAN + Φ-BOT → ACTION BUS"
+                  : "HUMAN → ACTION BUS"}
+            </strong>
+          </div>
+          <div className="seat-card muted"><span>SEAT 2</span><strong>SAMEBOY: NO SECOND PLAYABLE PORT</strong></div>
+          {authority?.lastReason && <p className="authority-reason">LAST AUTHORITY // {authority.lastReason}</p>}
         </aside>
       </section>
 
@@ -607,7 +702,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // FRAME-STAMPED ACTIONS // HASHED CHECKPOINTS // REPLAY RECEIPTS</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // OBSERVATION ≠ MEMORY ACCESS // ONE ACTION BUS // HUMAN TAKEOVER ALWAYS AVAILABLE</footer>
     </main>
   );
 }

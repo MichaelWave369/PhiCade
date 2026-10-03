@@ -50,14 +50,16 @@
 
 ## Rung 6 — Phi-Bot seat
 
-- [ ] Frame observation API
-- [ ] Scoped input authority
-- [ ] Human handoff / takeover
-- [ ] Agent-vs-human and co-op modes
-- [ ] No privileged side-channel input
+- [x] Frame observation API
+- [x] Scoped input authority
+- [x] Human handoff / takeover
+- [x] Same-seat human + agent co-op mode
+- [x] Two-seat versus topology with explicit single-port SameBoy refusal
+- [x] No privileged side-channel input
+- [x] CI human/agent parity + authority qualification receipt
 
 ## Later
 
-Metadata/cover art, additional systems, netplay, spectator mode, achievements,
-tournaments, CommonLine session rooms, and a shared Phi Game Runtime with
-Night Circuit.
+Metadata/cover art, additional systems, true multi-port versus play, netplay,
+spectator mode, achievements, tournaments, CommonLine session rooms, and a
+shared Phi Game Runtime with Night Circuit.

@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+fn default_seat_one() -> u8 {
+    1
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum ActionSource {
@@ -10,10 +14,12 @@ pub enum ActionSource {
     PhiBot {
         #[serde(rename = "agentId")]
         agent_id: String,
+        #[serde(default = "default_seat_one")]
+        seat: u8,
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SystemCommand {
     Pause,
@@ -55,6 +61,15 @@ impl ActionEnvelope {
         if let ActionSource::Human { seat } = &self.source {
             if *seat == 0 {
                 return Err("human seat numbers start at 1".to_owned());
+            }
+        }
+
+        if let ActionSource::PhiBot { agent_id, seat } = &self.source {
+            if agent_id.trim().is_empty() {
+                return Err("Phi-Bot source requires a non-empty agentId".to_owned());
+            }
+            if *seat == 0 {
+                return Err("Phi-Bot seat numbers start at 1".to_owned());
             }
         }
 
@@ -156,6 +171,7 @@ mod tests {
             frame: 34,
             source: ActionSource::PhiBot {
                 agent_id: "phi-7".to_owned(),
+                seat: 1,
             },
             action: ActionKind::System {
                 command: SystemCommand::SaveState,
@@ -166,6 +182,7 @@ mod tests {
         let json = serde_json::to_string(&event).expect("serialize action");
         assert!(json.contains("\"kind\":\"phi-bot\""));
         assert!(json.contains("\"agentId\":\"phi-7\""));
+        assert!(json.contains("\"seat\":1"));
         assert!(json.contains("\"command\":\"save-state\""));
 
         let decoded: ActionEnvelope = serde_json::from_str(&json).expect("deserialize action");

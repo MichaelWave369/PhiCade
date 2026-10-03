@@ -1,9 +1,10 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
-    ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification, ReplayVerificationResult,
-    SystemCommand, SystemId, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    ActionEnvelope, ActionKind, ActionSource, AgentGrant, AuthorityPolicy, AudioBuffer, ControlMode,
+    EmulatorCore, FrameBuffer, GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -68,6 +69,9 @@ struct EmulatorSession {
     last_frame: FrameBuffer,
     recording: Option<ReplayRecording>,
     last_replay: Option<ReplayExport>,
+    authority: AuthorityPolicy,
+    authority_rejections: u64,
+    last_authority_reason: Option<String>,
 }
 
 impl Drop for EmulatorSession {
@@ -168,6 +172,23 @@ struct FramePacket {
     replay_recording: bool,
     replay_actions: usize,
     replay_checkpoints: usize,
+    control_mode: ControlMode,
+    authority_rejections: u64,
+    last_authority_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AuthorityStatus {
+    mode: ControlMode,
+    playable_ports: u8,
+    agent_id: Option<String>,
+    agent_seat: Option<u8>,
+    allowed_buttons: Vec<String>,
+    allowed_axes: Vec<String>,
+    expires_at_frame: Option<u64>,
+    rejected_actions: u64,
+    last_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1093,6 +1114,9 @@ fn start_emulation(
         last_frame: FrameBuffer::default(),
         recording: None,
         last_replay: None,
+        authority: AuthorityPolicy::new(1),
+        authority_rejections: 0,
+        last_authority_reason: None,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -1140,6 +1164,163 @@ fn resample_stereo(input: &[f32], source_rate: u32, target_rate: u32) -> Vec<f32
     output
 }
 
+
+fn control_mode_label(mode: ControlMode) -> &'static str {
+    match mode {
+        ControlMode::Human => "human",
+        ControlMode::PhiBot => "phi-bot",
+        ControlMode::Coop => "coop",
+        ControlMode::Versus => "versus",
+    }
+}
+
+fn authority_status_for(session: &EmulatorSession) -> AuthorityStatus {
+    let grant = session.authority.agent_grant.as_ref();
+    AuthorityStatus {
+        mode: session.authority.mode,
+        playable_ports: session.authority.playable_ports,
+        agent_id: grant.map(|value| value.agent_id.clone()),
+        agent_seat: grant.map(|value| value.seat),
+        allowed_buttons: grant
+            .map(|value| value.allowed_buttons.iter().cloned().collect())
+            .unwrap_or_default(),
+        allowed_axes: grant
+            .map(|value| value.allowed_axes.iter().cloned().collect())
+            .unwrap_or_default(),
+        expires_at_frame: grant.and_then(|value| value.expires_at_frame),
+        rejected_actions: session.authority_rejections,
+        last_reason: session.last_authority_reason.clone(),
+    }
+}
+
+#[tauri::command]
+fn authority_status(state: State<'_, EmulatorState>) -> Result<AuthorityStatus, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(authority_status_for(session))
+}
+
+#[tauri::command]
+fn set_control_mode(
+    state: State<'_, EmulatorState>,
+    mode: ControlMode,
+    agent_id: Option<String>,
+    allowed_buttons: Option<Vec<String>>,
+    grant_frames: Option<u64>,
+) -> Result<AuthorityStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("control-mode changes are disabled during replay recording".into());
+    }
+
+    let grant = match mode {
+        ControlMode::Human => None,
+        ControlMode::PhiBot | ControlMode::Coop | ControlMode::Versus => {
+            let agent_id = agent_id
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| "Phi-Bot modes require a non-empty agentId".to_owned())?;
+            let seat = if mode == ControlMode::Versus { 2 } else { 1 };
+            let mut grant = AgentGrant::game_boy(agent_id, seat);
+
+            if let Some(buttons) = allowed_buttons {
+                let known = ["A", "B", "SELECT", "START", "UP", "DOWN", "LEFT", "RIGHT"];
+                let normalized: Vec<String> = buttons
+                    .into_iter()
+                    .map(|button| button.trim().to_ascii_uppercase())
+                    .collect();
+                if normalized.iter().any(|button| !known.contains(&button.as_str())) {
+                    return Err("allowedButtons contains an unsupported Game Boy button".into());
+                }
+                grant.allowed_buttons = normalized.into_iter().collect();
+            }
+
+            let lifetime = grant_frames.unwrap_or(3_600);
+            if !(1..=216_000).contains(&lifetime) {
+                return Err("grantFrames must be in 1..=216000".into());
+            }
+            grant.expires_at_frame = Some(session.core.frame_count().saturating_add(lifetime));
+            Some(grant)
+        }
+    };
+
+    session.authority.set_mode(mode, grant)?;
+    session.last_authority_reason = Some(format!(
+        "operator set control mode to {}",
+        control_mode_label(mode)
+    ));
+    Ok(authority_status_for(session))
+}
+
+#[tauri::command]
+fn phi_bot_observation(
+    state: State<'_, EmulatorState>,
+    agent_id: String,
+    seat: u8,
+) -> Result<PhiBotObservation, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let grant = session
+        .authority
+        .agent_grant
+        .as_ref()
+        .ok_or_else(|| "no Phi-Bot grant is active".to_owned())?;
+
+    if grant.agent_id != agent_id || grant.seat != seat {
+        return Err("observation request does not match the active Phi-Bot grant".into());
+    }
+    if grant
+        .expires_at_frame
+        .is_some_and(|expires| session.core.frame_count() > expires)
+    {
+        return Err("Phi-Bot grant has expired".into());
+    }
+    if session.last_frame.width == 0
+        || session.last_frame.height == 0
+        || session.last_frame.rgba8.is_empty()
+    {
+        return Err("no rendered framebuffer is available yet".into());
+    }
+
+    let observation = PhiBotObservation {
+        schema: PHIBOT_OBSERVATION_SCHEMA.to_owned(),
+        frame: session.core.frame_count(),
+        width: session.last_frame.width,
+        height: session.last_frame.height,
+        rgba_base64: BASE64.encode(&session.last_frame.rgba8),
+        frame_sha256: sha256_bytes(&session.last_frame.rgba8),
+        input_mask: session.core.input_mask_snapshot(),
+        game_sha256: session.game_key.clone(),
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        agent_id,
+        seat,
+        control_mode: control_mode_label(session.authority.mode).to_owned(),
+        allowed_buttons: grant.allowed_buttons.iter().cloned().collect(),
+        allowed_axes: grant.allowed_axes.iter().cloned().collect(),
+        expires_at_frame: grant.expires_at_frame,
+    };
+    observation.validate()?;
+    Ok(observation)
+}
+
 #[tauri::command]
 fn step_emulation(
     state: State<'_, EmulatorState>,
@@ -1153,16 +1334,32 @@ fn step_emulation(
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
-    validate_recording_actions(session, &actions)?;
-    record_applied_actions(session, &actions)?;
-    process_session_actions(session, &actions)?;
+    let authority_frame = session.core.frame_count();
+    let decisions = session.authority.authorize_batch(&actions, authority_frame);
+    let mut accepted_actions = Vec::with_capacity(actions.len());
+    for (event, decision) in decisions {
+        if decision.accepted {
+            accepted_actions.push(event);
+        } else {
+            session.authority_rejections = session.authority_rejections.saturating_add(1);
+            session.last_authority_reason = Some(decision.reason);
+        }
+    }
+
+    validate_recording_actions(session, &accepted_actions)?;
+    record_applied_actions(session, &accepted_actions)?;
+    process_session_actions(session, &accepted_actions)?;
 
     let speed = session.profile.fast_forward.clamp(1, 4);
     let mut video = FrameBuffer::default();
     let mut audio = AudioBuffer::default();
 
     for index in 0..speed {
-        let frame_actions = if index == 0 { actions.as_slice() } else { &[] };
+        let frame_actions = if index == 0 {
+            accepted_actions.as_slice()
+        } else {
+            &[]
+        };
         session
             .core
             .step_frame(frame_actions, &mut video, &mut audio)
@@ -1238,6 +1435,9 @@ fn step_emulation(
         replay_recording,
         replay_actions,
         replay_checkpoints,
+        control_mode: session.authority.mode,
+        authority_rejections: session.authority_rejections,
+        last_authority_reason: session.last_authority_reason.clone(),
     })
 }
 
@@ -1512,6 +1712,9 @@ pub fn run() {
             validate_action_envelope,
             start_emulation,
             step_emulation,
+            authority_status,
+            set_control_mode,
+            phi_bot_observation,
             set_game_profile,
             replay_status,
             start_replay_recording,

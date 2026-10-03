@@ -89,6 +89,39 @@ export interface ReplayArtifact {
   receipt: ReplayReceipt;
 }
 
+export type ControlMode = "human" | "phi-bot" | "coop" | "versus";
+
+export interface AuthorityStatus {
+  mode: ControlMode;
+  playablePorts: number;
+  agentId: string | null;
+  agentSeat: number | null;
+  allowedButtons: string[];
+  allowedAxes: string[];
+  expiresAtFrame: number | null;
+  rejectedActions: number;
+  lastReason: string | null;
+}
+
+export interface PhiBotObservation {
+  schema: string;
+  frame: number;
+  width: number;
+  height: number;
+  rgbaBase64: string;
+  frameSha256: string;
+  inputMask: number;
+  gameSha256: string;
+  coreName: string;
+  coreVersion: string;
+  agentId: string;
+  seat: number;
+  controlMode: string;
+  allowedButtons: string[];
+  allowedAxes: string[];
+  expiresAtFrame: number | null;
+}
+
 export interface FramePacket {
   frame: number;
   width: number;
@@ -102,6 +135,9 @@ export interface FramePacket {
   replayRecording: boolean;
   replayActions: number;
   replayCheckpoints: number;
+  controlMode: ControlMode;
+  authorityRejections: number;
+  lastAuthorityReason: string | null;
 }
 
 export const defaultSettings: AppSettings = {
@@ -204,4 +240,30 @@ export async function stopReplayRecording(): Promise<ReplayArtifact> {
 
 export async function verifyLastReplay(): Promise<ReplayArtifact> {
   return invoke<ReplayArtifact>("verify_last_replay");
+}
+
+
+export async function getAuthorityStatus(): Promise<AuthorityStatus> {
+  return invoke<AuthorityStatus>("authority_status");
+}
+
+export async function setControlMode(
+  mode: ControlMode,
+  agentId: string | null = null,
+  allowedButtons: string[] | null = null,
+  grantFrames: number | null = null,
+): Promise<AuthorityStatus> {
+  return invoke<AuthorityStatus>("set_control_mode", {
+    mode,
+    agentId,
+    allowedButtons,
+    grantFrames,
+  });
+}
+
+export async function observePhiBot(
+  agentId: string,
+  seat = 1,
+): Promise<PhiBotObservation> {
+  return invoke<PhiBotObservation>("phi_bot_observation", { agentId, seat });
 }
