@@ -178,10 +178,27 @@
 - [x] Digest-split, incomplete, and tamper CI controls
 - [x] Comparison Lab remains task-local
 
+## Rung 17 — Suite Comparison Lab
+- [x] Persistent Suite Report discovery
+- [x] Distinct report A/B selection
+- [x] Same suite/core/policy/trial-count compatibility gate
+- [x] Different provider/model identities allowed by design
+- [x] Exact Suite Report receipt SHA-256 binding
+- [x] Full report → campaign → trial provenance replay
+- [x] Exact task/source/ROM registry re-verification
+- [x] Per-task campaign Welch 95% CI reuse
+- [x] Per-task Hedges' g + success-rate delta reuse
+- [x] Macro paired task-mean A−B summary
+- [x] Trial-weighted overall success-rate A−B summary
+- [x] Task-delta min/max + population stddev
+- [x] Persistent suite-comparison receipts
+- [x] Desktop SUITE COMPARE evidence lane
+- [x] No winner/ranking field
+
 ## Later
 
-Adaptive observation cadence, additional benchmark tasks, suite-to-suite model
-comparison, additional uncertainty methods, provider capability profiles beyond
-Ollama, cloud-provider adapters, metadata/cover art, additional systems, true
-multi-port versus play, netplay, spectator mode, achievements, tournaments,
-CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.
+Adaptive observation cadence, additional benchmark tasks, additional uncertainty
+methods, provider capability profiles beyond Ollama, cloud-provider adapters,
+metadata/cover art, additional systems, true multi-port versus play, netplay,
+spectator mode, achievements, tournaments, CommonLine rooms, and a shared Phi Game
+Runtime with Night Circuit.
