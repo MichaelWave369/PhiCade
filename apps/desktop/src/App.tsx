@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["FUSE", "ACQUIRE", "Only the rendered fuse pedestal can create carried-fuse state; the opposite pedestal is a negative control."],
-  ["GENERATOR", "POWER", "The central generator refuses A before fuse acquisition and renders a distinct ON state only after valid install."],
-  ["GATE", "ORDERED", "The central gate refuses A until the generator is powered, then the same interaction removes the barrier."],
-  ["EVIDENCE", "CAUSAL", "CI proves wrong-order refusal plus post-fuse, powered, opened-gate, and final-success convergence across variants."],
+  ["SELECTOR", "OBSERVE", "Both modules are present; a visible central symbol determines which branch is valid for this run."],
+  ["BRANCH", "COMMIT", "A on the wrong module enters an irreversible FAIL state; blind trial-and-error cannot recover."],
+  ["CONVERGE", "CAUSAL", "A correct selection removes variant-specific evidence and rejoins the shared generator → gate → target chain."],
+  ["EVIDENCE", "PAIRED", "CI proves fail-state convergence, correct-state convergence, dead-end refusal, and exact source/ROM provenance."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>FIND FUSE // ACQUIRE // INSTALL // POWER SYSTEM // OPEN GATE // REACH TARGET // RECEIPT ORDER</footer>
+      <footer>READ SELECTOR // CHOOSE BRANCH // COMMIT // CONVERGE // POWER // OPEN GATE // RECEIPT DECISION</footer>
     </main>
   );
 }
