@@ -28,6 +28,7 @@ Highlights:
 - native scheduled driver inbox
 - host-canonical action sequencing
 - human-last same-frame co-op precedence
+- automatic HUMAN fallback + neutral input on grant expiry
 - deterministic desktop reference driver
 - CI driver-vs-direct behavioral parity qualification
 
