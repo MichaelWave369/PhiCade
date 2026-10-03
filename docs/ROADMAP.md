@@ -132,10 +132,25 @@
 - [x] Operator/end and core-shutdown evidence preservation
 - [x] Success rate + mean/median/min/max/population stddev
 
+## Rung 14 — Comparison Lab
+- [x] Persistent evidence IDs across app sessions
+- [x] Persistent campaign discovery
+- [x] Native strict campaign compatibility gate
+- [x] COMPLETE-only comparison
+- [x] Full-score/no-scoring-error requirement
+- [x] Same provider/Gym/core/policy/trial-count requirement
+- [x] Re-hash every referenced trial receipt before comparison
+- [x] Shared Welch 95% mean-difference confidence interval
+- [x] Shared Hedges' g effect size
+- [x] Success-rate difference
+- [x] Campaign receipt SHA-256 binding in comparison receipt
+- [x] Comparison Lab desktop selectors + telemetry
+- [x] Tamper/refusal/persistent-ID CI controls
+
 ## Later
 
-Adaptive observation cadence, cross-model comparison reports, confidence intervals,
-provider capability profiles beyond Ollama, cloud-provider adapters, metadata/cover
-art, additional systems, true multi-port versus play, netplay, spectator mode,
-achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
-Night Circuit.
+Adaptive observation cadence, larger benchmark suites, multi-task aggregate
+reports, additional uncertainty methods, provider capability profiles beyond
+Ollama, cloud-provider adapters, metadata/cover art, additional systems, true
+multi-port versus play, netplay, spectator mode, achievements, tournaments,
+CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.

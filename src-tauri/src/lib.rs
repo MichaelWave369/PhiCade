@@ -4,14 +4,15 @@ use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
-    BenchmarkTrialOutcome, ControlMode, EmulatorCore, FrameBuffer, GameImage, PhiBotObservation,
-    PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification,
-    ReplayVerificationResult, SystemCommand, SystemId, summarize_benchmark_trials,
+    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
+    GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
+    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    compare_campaign_samples, summarize_benchmark_trials,
     AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
     AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    BENCHMARK_CAMPAIGN_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
-    score_agent_gym_frame,
+    BENCHMARK_CAMPAIGN_SCHEMA, CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
+    REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA, score_agent_gym_frame,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -59,6 +60,7 @@ struct SessionPaths {
     autodrive_dir: PathBuf,
     model_benchmark_dir: PathBuf,
     benchmark_campaign_dir: PathBuf,
+    campaign_comparison_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -153,7 +155,7 @@ struct ModelBenchmarkStart {
 }
 
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CampaignTrialEvidence {
     benchmark_run_id: u64,
@@ -178,7 +180,7 @@ struct BenchmarkCampaignRun {
     trials: Vec<CampaignTrialEvidence>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkCampaignReceipt {
     schema: String,
@@ -235,6 +237,60 @@ struct BenchmarkCampaignStart {
     benchmark: ModelBenchmarkStart,
 }
 
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignListEntry {
+    campaign_id: u64,
+    receipt_sha256: String,
+    record_status: String,
+    model: String,
+    model_digest: String,
+    total_trials: u16,
+    completed_trials: u16,
+    mean_score_1000: Option<f64>,
+    success_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComparisonCampaignRef {
+    campaign_id: u64,
+    receipt_sha256: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    completed_trials: u16,
+    stats: BenchmarkCampaignStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignComparisonReceipt {
+    schema: String,
+    record_status: String,
+    comparison_id: u64,
+    benchmark_id: String,
+    gym_source_sha256: String,
+    gym_rom_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+    campaign_a: ComparisonCampaignRef,
+    campaign_b: ComparisonCampaignRef,
+    stats: CampaignComparisonStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignComparisonArtifact {
+    receipt_path: String,
+    receipt: CampaignComparisonReceipt,
+}
+
 struct EmulatorSession {
     core: LibretroCore,
     game_path: String,
@@ -263,6 +319,7 @@ struct EmulatorSession {
     benchmark_campaign: Option<BenchmarkCampaignRun>,
     last_benchmark_campaign: Option<BenchmarkCampaignExport>,
     next_benchmark_campaign_id: u64,
+    next_campaign_comparison_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -667,6 +724,31 @@ fn sanitize_component(value: &str) -> String {
     }
 }
 
+
+fn next_numbered_receipt_id(
+    directory: &Path,
+    prefix: &str,
+    suffix: &str,
+) -> Result<u64, String> {
+    let mut max_id = 0u64;
+    let entries = fs::read_dir(directory)
+        .map_err(|error| format!("cannot list {}: {error}", directory.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("cannot read directory entry: {error}"))?;
+        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
+            continue;
+        };
+        if !name.starts_with(prefix) || !name.ends_with(suffix) {
+            continue;
+        }
+        let numeric = &name[prefix.len()..name.len() - suffix.len()];
+        if let Ok(id) = numeric.parse::<u64>() {
+            max_id = max_id.max(id);
+        }
+    }
+    Ok(max_id.saturating_add(1).max(1))
+}
+
 fn session_paths(
     root: &Path,
     game_key: &str,
@@ -684,6 +766,7 @@ fn session_paths(
     let autodrive_dir = root.join("autodrive").join(game_key);
     let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
     let benchmark_campaign_dir = root.join("benchmark-campaigns").join(game_key);
+    let campaign_comparison_dir = root.join("campaign-comparisons").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -699,6 +782,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
     fs::create_dir_all(&benchmark_campaign_dir)
         .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
+    fs::create_dir_all(&campaign_comparison_dir)
+        .map_err(|error| format!("cannot create {}: {error}", campaign_comparison_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -708,6 +793,7 @@ fn session_paths(
         autodrive_dir,
         model_benchmark_dir,
         benchmark_campaign_dir,
+        campaign_comparison_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1413,6 +1499,15 @@ fn start_emulation(
         profile: profile.clone(),
     };
 
+    let next_autodrive_run_id =
+        next_numbered_receipt_id(&paths.autodrive_dir, "run-", ".json")?;
+    let next_model_benchmark_run_id =
+        next_numbered_receipt_id(&paths.model_benchmark_dir, "run-", ".json")?;
+    let next_benchmark_campaign_id =
+        next_numbered_receipt_id(&paths.benchmark_campaign_dir, "campaign-", ".json")?;
+    let next_campaign_comparison_id =
+        next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
+
     let mut emulator_session = EmulatorSession {
         core,
         game_path: info.game_path.clone(),
@@ -1434,13 +1529,14 @@ fn start_emulation(
         next_action_sequence: 0,
         autodrive: None,
         last_autodrive: None,
-        next_autodrive_run_id: 1,
+        next_autodrive_run_id,
         model_benchmark: None,
         last_model_benchmark: None,
-        next_model_benchmark_run_id: 1,
+        next_model_benchmark_run_id,
         benchmark_campaign: None,
         last_benchmark_campaign: None,
-        next_benchmark_campaign_id: 1,
+        next_benchmark_campaign_id,
+        next_campaign_comparison_id,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -2505,6 +2601,262 @@ fn benchmark_campaign_status(
         .map(benchmark_campaign_status_for))
 }
 
+fn benchmark_campaign_receipt_path(session: &EmulatorSession, campaign_id: u64) -> PathBuf {
+    session
+        .paths
+        .benchmark_campaign_dir
+        .join(format!("campaign-{campaign_id:06}.json"))
+}
+
+fn load_benchmark_campaign_receipt(
+    session: &EmulatorSession,
+    campaign_id: u64,
+) -> Result<(PathBuf, BenchmarkCampaignReceipt), String> {
+    let path = benchmark_campaign_receipt_path(session, campaign_id);
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read campaign {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<BenchmarkCampaignReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse campaign {}: {error}", path.display()))?;
+    if receipt.schema != BENCHMARK_CAMPAIGN_SCHEMA {
+        return Err(format!("unsupported campaign schema: {}", receipt.schema));
+    }
+    if receipt.campaign_id != campaign_id {
+        return Err("campaign file ID does not match receipt ID".into());
+    }
+    Ok((path, receipt))
+}
+
+fn verify_campaign_trial_receipts(
+    model_benchmark_dir: &Path,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    for trial in &campaign.trials {
+        let path = model_benchmark_dir
+            .join(format!("run-{:06}.json", trial.benchmark_run_id));
+        if !path.exists() {
+            return Err(format!(
+                "campaign {} references missing benchmark receipt {}",
+                campaign.campaign_id,
+                path.display()
+            ));
+        }
+        let observed = sha256_file(&path)?;
+        if observed != trial.receipt_sha256 {
+            return Err(format!(
+                "campaign {} trial {} receipt hash mismatch",
+                campaign.campaign_id, trial.benchmark_run_id
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_campaign_for_comparison(
+    model_benchmark_dir: &Path,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    if campaign.record_status != "COMPLETE" {
+        return Err(format!(
+            "campaign {} is {}, not COMPLETE",
+            campaign.campaign_id, campaign.record_status
+        ));
+    }
+    if campaign.completed_trials != campaign.total_trials
+        || campaign.trials.len() != usize::from(campaign.total_trials)
+    {
+        return Err(format!(
+            "campaign {} does not contain all configured trials",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.observed_trials != campaign.completed_trials {
+        return Err(format!(
+            "campaign {} observed-trial count does not match receipt",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scoring_error_trials != 0 {
+        return Err(format!(
+            "campaign {} contains scoring-error trials",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scored_trials != campaign.completed_trials {
+        return Err(format!(
+            "campaign {} does not have a numeric score for every trial",
+            campaign.campaign_id
+        ));
+    }
+    if campaign.stats.scored_trials < 2 {
+        return Err(format!(
+            "campaign {} needs at least two scored trials for comparison",
+            campaign.campaign_id
+        ));
+    }
+    verify_campaign_trial_receipts(model_benchmark_dir, campaign)
+}
+
+fn validate_campaign_compatibility(
+    a: &BenchmarkCampaignReceipt,
+    b: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    if a.campaign_id == b.campaign_id {
+        return Err("comparison requires two distinct campaign IDs".into());
+    }
+    if a.benchmark_id != b.benchmark_id {
+        return Err("campaign benchmark IDs differ".into());
+    }
+    if a.provider != b.provider {
+        return Err("campaign providers differ".into());
+    }
+    if a.gym_source_sha256 != b.gym_source_sha256 || a.gym_rom_sha256 != b.gym_rom_sha256 {
+        return Err("campaign Gym source/ROM hashes differ".into());
+    }
+    if a.core_sha256 != b.core_sha256
+        || a.core_name != b.core_name
+        || a.core_version != b.core_version
+    {
+        return Err("campaign emulator core provenance differs".into());
+    }
+    if a.policy != b.policy {
+        return Err("campaign Autodrive policies differ".into());
+    }
+    if a.total_trials != b.total_trials {
+        return Err("campaign configured trial counts differ".into());
+    }
+    Ok(())
+}
+
+fn comparison_campaign_ref(
+    receipt_path: &Path,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<ComparisonCampaignRef, String> {
+    Ok(ComparisonCampaignRef {
+        campaign_id: campaign.campaign_id,
+        receipt_sha256: sha256_file(receipt_path)?,
+        provider: campaign.provider.clone(),
+        model: campaign.model.clone(),
+        model_digest: campaign.model_digest.clone(),
+        model_qualification_sha256: campaign.model_qualification_sha256.clone(),
+        completed_trials: campaign.completed_trials,
+        stats: campaign.stats.clone(),
+    })
+}
+
+fn campaign_list_entry(
+    path: &Path,
+    receipt: &BenchmarkCampaignReceipt,
+) -> Result<CampaignListEntry, String> {
+    Ok(CampaignListEntry {
+        campaign_id: receipt.campaign_id,
+        receipt_sha256: sha256_file(path)?,
+        record_status: receipt.record_status.clone(),
+        model: receipt.model.clone(),
+        model_digest: receipt.model_digest.clone(),
+        total_trials: receipt.total_trials,
+        completed_trials: receipt.completed_trials,
+        mean_score_1000: receipt.stats.mean_score_1000,
+        success_rate: receipt.stats.success_rate,
+    })
+}
+
+#[tauri::command]
+fn list_benchmark_campaign_receipts(
+    state: State<'_, EmulatorState>,
+) -> Result<Vec<CampaignListEntry>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&session.paths.benchmark_campaign_dir)
+        .map_err(|error| format!("cannot list campaign receipts: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("cannot read campaign directory entry: {error}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let receipt = serde_json::from_slice::<BenchmarkCampaignReceipt>(&bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+        entries.push(campaign_list_entry(&path, &receipt)?);
+    }
+    entries.sort_by_key(|entry| entry.campaign_id);
+    Ok(entries)
+}
+
+#[tauri::command]
+fn compare_benchmark_campaigns(
+    state: State<'_, EmulatorState>,
+    campaign_a_id: u64,
+    campaign_b_id: u64,
+) -> Result<CampaignComparisonArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let (path_a, a) = load_benchmark_campaign_receipt(session, campaign_a_id)?;
+    let (path_b, b) = load_benchmark_campaign_receipt(session, campaign_b_id)?;
+
+    validate_campaign_for_comparison(&session.paths.model_benchmark_dir, &a)?;
+    validate_campaign_for_comparison(&session.paths.model_benchmark_dir, &b)?;
+    validate_campaign_compatibility(&a, &b)?;
+
+    let scores_a: Vec<u16> = a.trials.iter().filter_map(|trial| trial.score_1000).collect();
+    let scores_b: Vec<u16> = b.trials.iter().filter_map(|trial| trial.score_1000).collect();
+    let stats = compare_campaign_samples(
+        &scores_a,
+        a.stats.successful_trials,
+        a.stats.observed_trials,
+        &scores_b,
+        b.stats.successful_trials,
+        b.stats.observed_trials,
+    )?;
+
+    let comparison_id = session.next_campaign_comparison_id;
+    let receipt = CampaignComparisonReceipt {
+        schema: CAMPAIGN_COMPARISON_SCHEMA.to_owned(),
+        record_status: "COMPLETE".into(),
+        comparison_id,
+        benchmark_id: a.benchmark_id.clone(),
+        gym_source_sha256: a.gym_source_sha256.clone(),
+        gym_rom_sha256: a.gym_rom_sha256.clone(),
+        core_sha256: a.core_sha256.clone(),
+        core_name: a.core_name.clone(),
+        core_version: a.core_version.clone(),
+        policy: a.policy.clone(),
+        total_trials: a.total_trials,
+        campaign_a: comparison_campaign_ref(&path_a, &a)?,
+        campaign_b: comparison_campaign_ref(&path_b, &b)?,
+        stats,
+    };
+
+    let receipt_path = session
+        .paths
+        .campaign_comparison_dir
+        .join(format!("comparison-{comparison_id:06}.json"));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize campaign comparison receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+    session.next_campaign_comparison_id =
+        session.next_campaign_comparison_id.saturating_add(1);
+
+    Ok(CampaignComparisonArtifact {
+        receipt_path: receipt_path.to_string_lossy().to_string(),
+        receipt,
+    })
+}
+
 #[tauri::command]
 fn last_benchmark_campaign_receipt(
     state: State<'_, EmulatorState>,
@@ -3360,6 +3712,8 @@ pub fn run() {
             continue_benchmark_campaign,
             benchmark_campaign_status,
             last_benchmark_campaign_receipt,
+            list_benchmark_campaign_receipts,
+            compare_benchmark_campaigns,
             cancel_benchmark_campaign,
             autodrive_status,
             stop_autodrive,
@@ -3553,6 +3907,157 @@ mod tests {
         assert_eq!(json["stats"]["scoredTrials"], 2);
         assert_eq!(json["stats"]["scoringErrorTrials"], 1);
         assert_eq!(json["stats"]["meanScore1000"], 750.0);
+    }
+
+    fn comparison_test_campaign(
+        campaign_id: u64,
+        model: &str,
+        digest: &str,
+    ) -> BenchmarkCampaignReceipt {
+        let outcomes = [
+            BenchmarkTrialOutcome {
+                score_1000: Some(900),
+                task_success: true,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(750),
+                task_success: false,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(600),
+                task_success: false,
+            },
+        ];
+        BenchmarkCampaignReceipt {
+            schema: BENCHMARK_CAMPAIGN_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            campaign_id,
+            benchmark_id: AGENT_GYM_ID.into(),
+            provider: "ollama".into(),
+            model: model.into(),
+            model_digest: digest.into(),
+            model_qualification_sha256: format!("q-{digest}"),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            total_trials: 3,
+            completed_trials: 3,
+            trials: vec![
+                CampaignTrialEvidence {
+                    benchmark_run_id: 1,
+                    receipt_sha256: "a".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(900),
+                    task_success: true,
+                    stop_reason: AutodriveStopReason::TaskSuccess,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 2,
+                    receipt_sha256: "b".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(750),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 3,
+                    receipt_sha256: "d".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(600),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+            ],
+            stats: summarize_benchmark_trials(&outcomes),
+        }
+    }
+
+    fn comparison_test_dir(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "phicade-{name}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&path);
+        fs::create_dir_all(&path).expect("create test dir");
+        path
+    }
+
+    #[test]
+    fn comparison_accepts_different_models_on_identical_environment() {
+        let a = comparison_test_campaign(1, "model-a", "digest-a");
+        let b = comparison_test_campaign(2, "model-b", "digest-b");
+        validate_campaign_compatibility(&a, &b).expect("compatible campaigns");
+    }
+
+    #[test]
+    fn comparison_refuses_same_campaign_and_policy_drift() {
+        let a = comparison_test_campaign(1, "model-a", "digest-a");
+        let same = comparison_test_campaign(1, "model-b", "digest-b");
+        assert!(validate_campaign_compatibility(&a, &same).is_err());
+
+        let mut drifted = comparison_test_campaign(2, "model-b", "digest-b");
+        drifted.policy.max_turns += 1;
+        assert!(validate_campaign_compatibility(&a, &drifted).is_err());
+    }
+
+    #[test]
+    fn comparison_refuses_partial_and_scoring_error_campaigns_before_hash_walk() {
+        let directory = comparison_test_dir("comparison-refusal");
+
+        let mut partial = comparison_test_campaign(1, "model-a", "digest-a");
+        partial.record_status = "PARTIAL".into();
+        assert!(validate_campaign_for_comparison(&directory, &partial).is_err());
+
+        let mut scoring_error = comparison_test_campaign(2, "model-b", "digest-b");
+        scoring_error.trials[2].record_status = "SCORING_ERROR".into();
+        scoring_error.trials[2].score_1000 = None;
+        scoring_error.stats = summarize_benchmark_trials(&[
+            BenchmarkTrialOutcome { score_1000: Some(900), task_success: true },
+            BenchmarkTrialOutcome { score_1000: Some(750), task_success: false },
+            BenchmarkTrialOutcome { score_1000: None, task_success: false },
+        ]);
+        assert!(validate_campaign_for_comparison(&directory, &scoring_error).is_err());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn comparison_trial_hash_verifier_detects_mutation() {
+        let directory = comparison_test_dir("comparison-hash");
+        let mut campaign = comparison_test_campaign(1, "model-a", "digest-a");
+
+        for (index, trial) in campaign.trials.iter_mut().enumerate() {
+            let bytes = format!("trial-evidence-{index}").into_bytes();
+            let path = directory.join(format!("run-{:06}.json", trial.benchmark_run_id));
+            fs::write(&path, &bytes).expect("write trial");
+            trial.receipt_sha256 = sha256_bytes(&bytes);
+        }
+
+        verify_campaign_trial_receipts(&directory, &campaign).expect("hashes pass");
+
+        let first = directory.join("run-000001.json");
+        fs::write(&first, b"mutated-evidence").expect("mutate trial");
+        assert!(verify_campaign_trial_receipts(&directory, &campaign).is_err());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn numbered_receipt_ids_advance_past_existing_evidence() {
+        let directory = comparison_test_dir("receipt-ids");
+        fs::write(directory.join("run-000001.json"), b"one").expect("write one");
+        fs::write(directory.join("run-000007.json"), b"seven").expect("write seven");
+        fs::write(directory.join("ignore-me.txt"), b"noise").expect("write noise");
+
+        assert_eq!(
+            next_numbered_receipt_id(&directory, "run-", ".json").expect("next id"),
+            8
+        );
+
+        let _ = fs::remove_dir_all(directory);
     }
 
     #[test]

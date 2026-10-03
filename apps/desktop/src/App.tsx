@@ -16,6 +16,7 @@ import {
   cancelAgentTurn,
   cancelBenchmarkCampaign,
   completeOllamaTurn,
+  compareBenchmarkCampaigns,
   continueBenchmarkCampaign,
   failAutodriveProvider,
   flushGameSave,
@@ -28,6 +29,7 @@ import {
   getLastModelGameplayBenchmark,
   getOllamaQualificationStatus,
   issueAgentTurn,
+  listBenchmarkCampaignReceipts,
   listOllamaModels,
   qualifyOllamaModel,
   loadSettings,
@@ -56,6 +58,8 @@ import {
   type AuthorityStatus,
   type BenchmarkCampaignArtifact,
   type BenchmarkCampaignStatus,
+  type CampaignComparisonArtifact,
+  type CampaignListEntry,
   type ControlMode,
   type FramePacket,
   type GameProfile,
@@ -72,10 +76,10 @@ const PHIBOT_AGENT_ID = "phi-local";
 const AGENT_GYM_ROM_SHA256 = "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e";
 
 const milestones = [
-  ["TRIALS", "REPEATED", "Campaigns run 3–20 frozen trials; the desktop default is five."],
-  ["PINS", "RECHECKED", "Before every continuation trial, native PhiCade re-queries Ollama and rejects digest drift."],
-  ["EVIDENCE", "IMMUTABLE", "Campaign summaries reference SHA-256 hashes of individual Rung 12 trial receipts."],
-  ["STATS", "NATIVE", "Success rate, mean, median, min/max, and population standard deviation are computed by the shared runtime."],
+  ["COMPATIBILITY", "STRICT", "Comparison refuses partial, mismatched, scoring-error, or differently pinned campaigns."],
+  ["PROVENANCE", "REVERIFIED", "Every referenced trial receipt is re-hashed before comparison statistics are computed."],
+  ["UNCERTAINTY", "EXPLICIT", "Mean A−B uses a conservative Welch 95% confidence interval instead of a winner badge."],
+  ["EFFECT", "MEASURED", "Hedges’ g and success-rate delta complement raw score differences without collapsing evidence into one rank."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -132,6 +136,11 @@ export function App() {
   const [lastModelBenchmark, setLastModelBenchmark] = useState<ModelBenchmarkArtifact | null>(null);
   const [campaignStatus, setCampaignStatus] = useState<BenchmarkCampaignStatus | null>(null);
   const [lastCampaign, setLastCampaign] = useState<BenchmarkCampaignArtifact | null>(null);
+  const [campaignLedger, setCampaignLedger] = useState<CampaignListEntry[]>([]);
+  const [comparisonAId, setComparisonAId] = useState<number | null>(null);
+  const [comparisonBId, setComparisonBId] = useState<number | null>(null);
+  const [lastComparison, setLastComparison] = useState<CampaignComparisonArtifact | null>(null);
+  const [comparisonBusy, setComparisonBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -567,6 +576,53 @@ export function App() {
     }
   };
 
+  const refreshComparisonCampaigns = async () => {
+    try {
+      const entries = await listBenchmarkCampaignReceipts();
+      setCampaignLedger(entries);
+      const complete = entries.filter((entry) => entry.recordStatus === "COMPLETE");
+      if (complete.length >= 2) {
+        const newest = complete[complete.length - 1];
+        const previous = complete[complete.length - 2];
+        setComparisonAId((current) =>
+          current !== null && complete.some((entry) => entry.campaignId === current)
+            ? current
+            : previous.campaignId,
+        );
+        setComparisonBId((current) =>
+          current !== null && complete.some((entry) => entry.campaignId === current)
+            ? current
+            : newest.campaignId,
+        );
+      } else {
+        setComparisonAId(complete[0]?.campaignId ?? null);
+        setComparisonBId(null);
+      }
+    } catch (error) {
+      setNotice(`COMPARISON LEDGER ERROR // ${String(error)}`);
+    }
+  };
+
+  const runCampaignComparison = async () => {
+    if (comparisonAId === null || comparisonBId === null) {
+      setNotice("COMPARISON REQUIRES TWO CAMPAIGNS");
+      return;
+    }
+    setComparisonBusy(true);
+    try {
+      const artifact = await compareBenchmarkCampaigns(comparisonAId, comparisonBId);
+      setLastComparison(artifact);
+      const stats = artifact.receipt.stats;
+      setNotice(
+        `COMPARISON #${artifact.receipt.comparisonId} // ΔMEAN A−B ${stats.meanScoreDifferenceAMinusB.toFixed(1)} // 95% CI [${stats.meanDifferenceCi95Low.toFixed(1)}, ${stats.meanDifferenceCi95High.toFixed(1)}]`,
+      );
+    } catch (error) {
+      setLastComparison(null);
+      setNotice(`COMPARISON REFUSED // ${String(error)}`);
+    } finally {
+      setComparisonBusy(false);
+    }
+  };
   const beginModelBenchmark = async () => {
     if (!settings.ollamaModel) {
       setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
@@ -678,6 +734,7 @@ export function App() {
       const artifact = await cancelBenchmarkCampaign();
       setLastCampaign(artifact);
       setCampaignStatus(await getBenchmarkCampaignStatus());
+      await refreshComparisonCampaigns();
       setAutodrive(await getAutodriveStatus());
       setBenchmarkRunning(false);
       setBenchmarkRunId(null);
@@ -799,6 +856,7 @@ export function App() {
           if (summary) {
             setLastCampaign(summary);
             setBenchmarkRunId(null);
+            await refreshComparisonCampaigns();
             const stats = summary.receipt.stats;
             setNotice(
               `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.observedTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
@@ -975,6 +1033,10 @@ export function App() {
       setLastModelBenchmark(null);
       setCampaignStatus(null);
       setLastCampaign(null);
+      setCampaignLedger([]);
+      setComparisonAId(null);
+      setComparisonBId(null);
+      setLastComparison(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -987,7 +1049,15 @@ export function App() {
       setDriverQueuedActions(initialDriver.queuedActions);
       setProfile(info.profile);
       setRunning(true);
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName}`);
+      runningRef.current = true;
+      const priorCampaigns = await listBenchmarkCampaignReceipts();
+      setCampaignLedger(priorCampaigns);
+      const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
+      if (completeCampaigns.length >= 2) {
+        setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
+        setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
+      }
+      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS`);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
@@ -1018,6 +1088,11 @@ export function App() {
       setLastModelBenchmark(null);
       setCampaignStatus(null);
       setLastCampaign(null);
+      setCampaignLedger([]);
+      setComparisonAId(null);
+      setComparisonBId(null);
+      setLastComparison(null);
+      setComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -1045,6 +1120,7 @@ export function App() {
           <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
           <span><i className={`lamp ${campaignStatus?.active ? "lamp-amber" : lastCampaign ? "lamp-green" : "lamp-green"}`} /> CAMPAIGN {campaignStatus?.active ? `${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId}` : "STANDBY"}</span>
+          <span><i className={`lamp ${comparisonBusy ? "lamp-amber" : lastComparison ? "lamp-green" : "lamp-green"}`} /> COMPARE {comparisonBusy ? "VERIFYING" : lastComparison ? `#${lastComparison.receipt.comparisonId}` : "STANDBY"}</span>
         </div>
       </header>
 
@@ -1104,7 +1180,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 13 // BENCHMARK CAMPAIGNS ONLINE</small>
+                  <small>RUNG 14 // COMPARISON LAB ONLINE</small>
                 </div>
               )}
             </div>
@@ -1217,6 +1293,62 @@ export function App() {
             </small>
           </div>
 
+          <div className="comparison-strip">
+            <span>COMPARISON LAB</span>
+            <select
+              value={comparisonAId ?? ""}
+              onChange={(event) => {
+                setComparisonAId(event.target.value ? Number(event.target.value) : null);
+                setLastComparison(null);
+              }}
+              disabled={campaignLedger.length === 0 || comparisonBusy || autodrive?.active}
+              aria-label="Comparison campaign A"
+            >
+              <option value="">CAMPAIGN A</option>
+              {campaignLedger.map((entry) => (
+                <option key={`a-${entry.campaignId}`} value={entry.campaignId}>
+                  {`#${entry.campaignId} ${entry.model} ${entry.recordStatus} μ${entry.meanScore1000?.toFixed(1) ?? "ERR"}`}
+                </option>
+              ))}
+            </select>
+            <select
+              value={comparisonBId ?? ""}
+              onChange={(event) => {
+                setComparisonBId(event.target.value ? Number(event.target.value) : null);
+                setLastComparison(null);
+              }}
+              disabled={campaignLedger.length === 0 || comparisonBusy || autodrive?.active}
+              aria-label="Comparison campaign B"
+            >
+              <option value="">CAMPAIGN B</option>
+              {campaignLedger.map((entry) => (
+                <option key={`b-${entry.campaignId}`} value={entry.campaignId}>
+                  {`#${entry.campaignId} ${entry.model} ${entry.recordStatus} μ${entry.meanScore1000?.toFixed(1) ?? "ERR"}`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void runCampaignComparison()}
+              disabled={
+                comparisonBusy
+                || comparisonAId === null
+                || comparisonBId === null
+                || comparisonAId === comparisonBId
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {comparisonBusy ? "VERIFYING..." : "COMPARE"}
+            </button>
+            <button onClick={() => void refreshComparisonCampaigns()} disabled={comparisonBusy || autodrive?.active}>
+              REFRESH
+            </button>
+            <small>
+              {lastComparison
+                ? `#${lastComparison.receipt.comparisonId} // Δμ ${lastComparison.receipt.stats.meanScoreDifferenceAMinusB.toFixed(1)} // CI95 [${lastComparison.receipt.stats.meanDifferenceCi95Low.toFixed(1)}, ${lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1)}] // g ${lastComparison.receipt.stats.hedgesGAMinusB?.toFixed(2) ?? "UNDEFINED"}`
+                : `${campaignLedger.length} CAMPAIGN RECEIPTS // A−B, WELCH CI95, HEDGES g`}
+            </small>
+          </div>
           <div className="replay-strip">
             <span>REPLAY LEDGER</span>
             <button
@@ -1277,7 +1409,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 13</div>
+          <div className="panel-title">RUNTIME // RUNG 14</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1316,6 +1448,12 @@ export function App() {
             <div><dt>MEAN SCORE</dt><dd>{lastCampaign?.receipt.stats.meanScore1000 === null || lastCampaign?.receipt.stats.meanScore1000 === undefined ? "----" : lastCampaign.receipt.stats.meanScore1000.toFixed(1)}</dd></div>
             <div><dt>MEDIAN</dt><dd>{lastCampaign?.receipt.stats.medianScore1000 === null || lastCampaign?.receipt.stats.medianScore1000 === undefined ? "----" : lastCampaign.receipt.stats.medianScore1000.toFixed(1)}</dd></div>
             <div><dt>STDDEV</dt><dd>{lastCampaign?.receipt.stats.populationStddevScore1000 === null || lastCampaign?.receipt.stats.populationStddevScore1000 === undefined ? "----" : lastCampaign.receipt.stats.populationStddevScore1000.toFixed(1)}</dd></div>
+            <div><dt>COMPARE</dt><dd>{lastComparison ? `#${lastComparison.receipt.comparisonId} A#${lastComparison.receipt.campaignA.campaignId} / B#${lastComparison.receipt.campaignB.campaignId}` : "NONE"}</dd></div>
+            <div><dt>Δ MEAN A−B</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanScoreDifferenceAMinusB.toFixed(1) : "----"}</dd></div>
+            <div><dt>CI95 LOW</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95Low.toFixed(1) : "----"}</dd></div>
+            <div><dt>CI95 HIGH</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1) : "----"}</dd></div>
+            <div><dt>HEDGES g</dt><dd>{lastComparison?.receipt.stats.hedgesGAMinusB === null || lastComparison?.receipt.stats.hedgesGAMinusB === undefined ? "----" : lastComparison.receipt.stats.hedgesGAMinusB.toFixed(2)}</dd></div>
+            <div><dt>Δ SUCCESS</dt><dd>{lastComparison ? `${(lastComparison.receipt.stats.successRateDifferenceAMinusB * 100).toFixed(1)}pp` : "----"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -1357,7 +1495,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>ONE RUN IS EVIDENCE // REPEATED FROZEN TRIALS REVEAL CONSISTENCY // HASH EVERY TRIAL // AVERAGE NOTHING YOU DID NOT RECORD</footer>
+      <footer>COMPARE ONLY MATCHED WORLDS // VERIFY EVERY TRIAL HASH // REPORT DELTA + UNCERTAINTY + EFFECT SIZE // NO MAGIC WINNER BADGE</footer>
     </main>
   );
 }

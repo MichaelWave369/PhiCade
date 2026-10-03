@@ -330,6 +330,73 @@ export interface BenchmarkCampaignStart {
   benchmark: ModelBenchmarkStart;
 }
 
+
+export interface CampaignListEntry {
+  campaignId: number;
+  receiptSha256: string;
+  recordStatus: string;
+  model: string;
+  modelDigest: string;
+  totalTrials: number;
+  completedTrials: number;
+  meanScore1000: number | null;
+  successRate: number;
+}
+
+export interface CampaignSampleSummary {
+  scoredTrials: number;
+  successfulTrials: number;
+  observedTrials: number;
+  meanScore1000: number;
+  sampleVarianceScore1000: number;
+  successRate: number;
+}
+
+export interface CampaignComparisonStats {
+  sampleA: CampaignSampleSummary;
+  sampleB: CampaignSampleSummary;
+  meanScoreDifferenceAMinusB: number;
+  welchStandardError: number;
+  welchDegreesOfFreedom: number | null;
+  meanDifferenceCi95Low: number;
+  meanDifferenceCi95High: number;
+  hedgesGAMinusB: number | null;
+  successRateDifferenceAMinusB: number;
+}
+
+export interface ComparisonCampaignRef {
+  campaignId: number;
+  receiptSha256: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  completedTrials: number;
+  stats: BenchmarkCampaignStats;
+}
+
+export interface CampaignComparisonReceipt {
+  schema: string;
+  recordStatus: "COMPLETE";
+  comparisonId: number;
+  benchmarkId: string;
+  gymSourceSha256: string;
+  gymRomSha256: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  policy: AutodrivePolicy;
+  totalTrials: number;
+  campaignA: ComparisonCampaignRef;
+  campaignB: ComparisonCampaignRef;
+  stats: CampaignComparisonStats;
+}
+
+export interface CampaignComparisonArtifact {
+  receiptPath: string;
+  receipt: CampaignComparisonReceipt;
+}
+
 export const defaultAutodrivePolicy: AutodrivePolicy = {
   maxTurns: 32,
   maxTotalActions: 128,
@@ -688,4 +755,19 @@ export async function getLastBenchmarkCampaignReceipt(): Promise<BenchmarkCampai
 
 export async function cancelBenchmarkCampaign(): Promise<BenchmarkCampaignArtifact> {
   return invoke<BenchmarkCampaignArtifact>("cancel_benchmark_campaign");
+}
+
+
+export async function listBenchmarkCampaignReceipts(): Promise<CampaignListEntry[]> {
+  return invoke<CampaignListEntry[]>("list_benchmark_campaign_receipts");
+}
+
+export async function compareBenchmarkCampaigns(
+  campaignAId: number,
+  campaignBId: number,
+): Promise<CampaignComparisonArtifact> {
+  return invoke<CampaignComparisonArtifact>("compare_benchmark_campaigns", {
+    campaignAId,
+    campaignBId,
+  });
 }
