@@ -5,40 +5,29 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one core idea: every player enters through the same governed runtime seam.
 
-## Current status — Rung 7
+## Current status — Rung 8
 
-PhiCade now has a provider-neutral Agent Driver Protocol on top of its governed
-Phi-Bot seat, Replay Ledger, persistent session machinery, and qualified SameBoy
-runtime.
+PhiCade now has its first concrete AI provider adapter: **local Ollama vision**
+feeding the provider-neutral Agent Driver Protocol.
 
-Highlights:
+Current stack:
 
 - Tauri 2 + React/TypeScript desktop shell
-- qualified SameBoy 1.0.3 GB/GBC host
-- battery RAM, save states, rewind, screenshots, profiles
-- content-addressed deterministic Replay Ledger
+- qualified SameBoy 1.0.3 GB/GBC runtime
+- battery RAM, states, rewind, screenshots, profiles
+- deterministic content-addressed Replay Ledger
 - framebuffer-only Phi-Bot observation API
 - HUMAN / PHI-BOT / CO-OP authority modes
-- immediate human takeover
 - scoped and expiring agent grants
-- transport-neutral AgentTurnRequest / AgentTurnResponse
-- observation hash + frame binding
-- action-count and delayed-action budgets
-- stale/mismatched response rejection
-- native scheduled driver inbox
-- host-canonical action sequencing
-- human-last same-frame co-op precedence
-- automatic HUMAN fallback + neutral input on grant expiry
-- deterministic desktop reference driver
-- CI driver-vs-direct behavioral parity qualification
-
-No model provider is hard-coded into the game runtime.
-
-A local model, cloud model, script, or deterministic controller only needs to turn:
-
-`AgentTurnRequest -> AgentTurnResponse`
-
-Everything after that remains PhiCade's responsibility.
+- provider-neutral AgentTurnRequest / AgentTurnResponse
+- native scheduled driver inbox and canonical sequencing
+- loopback-only Ollama REST adapter
+- local model discovery
+- RGBA framebuffer → PNG vision input
+- JSON-schema-constrained button decisions
+- THINK PAUSE while local inference runs
+- explicit turn cancellation on provider failure
+- native mock-Ollama CI tests
 
 ## Run
 
@@ -47,19 +36,32 @@ npm install
 npm run desktop
 ```
 
-Choose a ROM directory, select a compatible SameBoy libretro core, choose a
-`.gb` or `.gbc` image, and use **LOAD / RUN**.
+For ordinary emulation, choose a ROM directory, select a compatible SameBoy
+libretro core, choose a `.gb` or `.gbc` image, then use **LOAD / RUN**.
 
-For the agent path:
+## Local Ollama gameplay
 
-1. select **HANDOFF** or **CO-OP**
-2. press **DRIVER TURN**
-3. PhiCade issues a real observation-bound turn request
-4. the reference driver produces a bounded response
-5. native PhiCade schedules it into the same authority/core path
+Run Ollama locally on its standard loopback endpoint, then in PhiCade:
 
-The reference driver is intentionally simple. Rung 7 proves the integration
-contract, not model intelligence.
+1. **SCAN MODELS**
+2. select an installed **vision-capable** model
+3. load a GB/GBC game
+4. select **HANDOFF**
+5. press **OLLAMA TURN**
+
+PhiCade freezes emulation on the observed frame while the model evaluates it,
+then submits the model's structured button proposal through the same Agent Driver
+and AuthorityPolicy used by every other Phi-Bot controller.
+
+The default endpoint is:
+
+`http://127.0.0.1:11434`
+
+Rung 8 is intentionally loopback-only. Remote model transport is not silently
+treated as equivalent to a local process.
+
+PhiCade does not guess which installed models support vision. Selecting a text-only
+model can fail cleanly without submitting gameplay actions.
 
 ## Qualification
 
@@ -67,12 +69,15 @@ contract, not model intelligence.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-Produces:
+Produces the frozen core/session/replay/driver receipts.
 
-- `artifacts/sameboy-qualification.json`
-- `artifacts/replay-qualification.json`
-- `artifacts/phibot-qualification.json`
-- `artifacts/agent-driver-qualification.json`
+Native CI additionally runs loopback mock-Ollama tests for:
+
+- model discovery
+- RGBA → PNG vision conversion
+- structured-output schema budgets
+- chat-response → AgentTurnResponse conversion
+- remote-host refusal
 
 See:
 
@@ -81,6 +86,7 @@ See:
 - `docs/REPLAY_LEDGER.md`
 - `docs/PHIBOT_SEAT.md`
 - `docs/AGENT_DRIVER_PROTOCOL.md`
+- `docs/OLLAMA_PROVIDER.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
@@ -91,5 +97,5 @@ software or software you are authorized to use.
 
 ## License
 
-PhiCade's own code is MIT. Third-party emulator cores retain their own licenses
-and notices.
+PhiCade's own code is MIT. Third-party emulator cores and model runtimes retain
+their own licenses and notices.
