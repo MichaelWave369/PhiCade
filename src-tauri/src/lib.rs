@@ -2297,6 +2297,277 @@ fn start_model_gameplay_benchmark(
     )
 }
 
+fn validate_campaign_trial_count(total_trials: u16) -> Result<(), String> {
+    if !(MIN_CAMPAIGN_TRIALS..=MAX_CAMPAIGN_TRIALS).contains(&total_trials) {
+        return Err(format!(
+            "benchmark campaign trials must be in {}..={}",
+            MIN_CAMPAIGN_TRIALS, MAX_CAMPAIGN_TRIALS
+        ));
+    }
+    Ok(())
+}
+
+async fn inspect_campaign_model_digest(
+    base_url: &str,
+    model: &str,
+    expected_digest: &str,
+) -> Result<(), String> {
+    let details = ollama::inspect_model(base_url, model).await?;
+    if details.digest != expected_digest {
+        return Err(format!(
+            "benchmark campaign digest drift: expected {}, installed {}",
+            expected_digest, details.digest
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_benchmark_campaign(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    base_url: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+) -> Result<BenchmarkCampaignStart, String> {
+    validate_campaign_trial_count(total_trials)?;
+    let provider_normalized = provider.trim().to_ascii_lowercase();
+    if provider_normalized != "ollama" {
+        return Err("benchmark campaigns currently support the ollama provider".into());
+    }
+    inspect_campaign_model_digest(&base_url, &model, &model_digest).await?;
+
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        return Err("a benchmark campaign is already active".into());
+    }
+
+    let benchmark = start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        provider_normalized,
+        model,
+        model_digest,
+        policy,
+    )?;
+    let run = session
+        .model_benchmark
+        .as_ref()
+        .ok_or_else(|| "benchmark start did not create native benchmark state".to_owned())?
+        .clone();
+
+    let campaign_id = session.next_benchmark_campaign_id;
+    session.next_benchmark_campaign_id =
+        session.next_benchmark_campaign_id.saturating_add(1);
+    session.last_benchmark_campaign = None;
+    session.benchmark_campaign = Some(BenchmarkCampaignRun {
+        campaign_id,
+        active: true,
+        total_trials,
+        provider: run.provider,
+        model: run.model,
+        model_digest: run.model_digest,
+        model_qualification_sha256: run.model_qualification_sha256,
+        core_sha256: run.core_sha256,
+        policy: benchmark.autodrive.policy.clone(),
+        trials: Vec::with_capacity(usize::from(total_trials)),
+    });
+
+    let status = benchmark_campaign_status_for(
+        session
+            .benchmark_campaign
+            .as_ref()
+            .ok_or_else(|| "benchmark campaign state disappeared".to_owned())?,
+    );
+    Ok(BenchmarkCampaignStart { status, benchmark })
+}
+
+#[tauri::command]
+async fn continue_benchmark_campaign(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    base_url: String,
+) -> Result<BenchmarkCampaignStart, String> {
+    let snapshot = {
+        let session = state
+            .session
+            .lock()
+            .map_err(|_| "emulator session lock poisoned".to_owned())?;
+        let session = session
+            .as_ref()
+            .ok_or_else(|| "no emulator session is running".to_owned())?;
+        let campaign = session
+            .benchmark_campaign
+            .as_ref()
+            .filter(|campaign| campaign.active)
+            .ok_or_else(|| "no active benchmark campaign".to_owned())?;
+        if campaign.trials.len() >= usize::from(campaign.total_trials) {
+            return Err("benchmark campaign already has all configured trials".into());
+        }
+        campaign.clone()
+    };
+
+    inspect_campaign_model_digest(&base_url, &snapshot.model, &snapshot.model_digest).await?;
+
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    let current = session
+        .benchmark_campaign
+        .as_ref()
+        .filter(|campaign| campaign.active)
+        .ok_or_else(|| "benchmark campaign stopped before continuation".to_owned())?;
+
+    if current.campaign_id != snapshot.campaign_id
+        || current.model_digest != snapshot.model_digest
+        || current.model_qualification_sha256 != snapshot.model_qualification_sha256
+        || current.core_sha256 != snapshot.core_sha256
+        || current.policy != snapshot.policy
+    {
+        return Err("benchmark campaign pins changed before continuation".into());
+    }
+    if session.model_benchmark.is_some()
+        || session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+    {
+        return Err("current campaign trial has not finished".into());
+    }
+
+    let qualification = load_ollama_qualification(&app, &snapshot.model_digest)?
+        .ok_or_else(|| "campaign qualification receipt disappeared".to_owned())?;
+    if !qualification_receipt_passes(
+        &qualification.receipt,
+        &snapshot.model,
+        &snapshot.model_digest,
+    ) {
+        return Err("campaign model qualification no longer passes".into());
+    }
+    if sha256_file(Path::new(&qualification.receipt_path))?
+        != snapshot.model_qualification_sha256
+    {
+        return Err("campaign model qualification receipt changed".into());
+    }
+    if sha256_file(session.core.core_path())? != snapshot.core_sha256 {
+        return Err("campaign emulator core binary changed".into());
+    }
+
+    let benchmark = start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        snapshot.provider,
+        snapshot.model,
+        snapshot.model_digest,
+        snapshot.policy,
+    )?;
+    let status = benchmark_campaign_status_for(
+        session
+            .benchmark_campaign
+            .as_ref()
+            .ok_or_else(|| "benchmark campaign state disappeared".to_owned())?,
+    );
+    Ok(BenchmarkCampaignStart { status, benchmark })
+}
+
+#[tauri::command]
+fn benchmark_campaign_status(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<BenchmarkCampaignStatus>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .benchmark_campaign
+        .as_ref()
+        .map(benchmark_campaign_status_for))
+}
+
+#[tauri::command]
+fn last_benchmark_campaign_receipt(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<BenchmarkCampaignArtifact>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .last_benchmark_campaign
+        .as_ref()
+        .map(benchmark_campaign_artifact))
+}
+
+#[tauri::command]
+fn cancel_benchmark_campaign(
+    state: State<'_, EmulatorState>,
+) -> Result<BenchmarkCampaignArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if !session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        if let Some(last) = session.last_benchmark_campaign.as_ref() {
+            return Ok(benchmark_campaign_artifact(last));
+        }
+        return Err("no active benchmark campaign".into());
+    }
+
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        let _ = finish_autodrive(session, AutodriveStopReason::OperatorStop)?;
+    }
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        finish_benchmark_campaign(session, "PARTIAL")
+    } else {
+        session
+            .last_benchmark_campaign
+            .as_ref()
+            .map(benchmark_campaign_artifact)
+            .ok_or_else(|| "campaign completed without a summary receipt".to_owned())
+    }
+}
+
 #[tauri::command]
 fn last_model_gameplay_benchmark(
     state: State<'_, EmulatorState>,
