@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 17
+## Current status — Rung 18
 
-PhiCade can now compare two complete Benchmark Suite reports across the same frozen
-task set while re-verifying the full campaign/trial evidence chain.
+PhiCade now governs when autonomous models may observe again after each turn, with
+action-aware settle timing and bounded empty-turn backoff enforced natively.
 
 Benchmark Suite v1 currently contains:
 
@@ -23,6 +23,9 @@ Current evidence stack includes:
 - provider-neutral Agent Driver Protocol
 - loopback-only Ollama vision adapter
 - bounded Autodrive
+- native adaptive observation cadence
+- action-aware settle + empty-turn backoff
+- cadence evidence in Autodrive receipts
 - digest-bound model qualification
 - exact-digest gameplay receipts
 - repeated task-local benchmark campaigns
@@ -41,6 +44,23 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Adaptive observation cadence
+
+Autodrive no longer requests the next model observation merely because the prior
+action queue is empty.
+
+The native runtime now freezes a cadence policy with:
+
+- 2-frame minimum observation spacing,
+- 2-frame post-action settle,
+- 8-frame initial empty-turn backoff,
+- exponential empty backoff capped at 60 frames.
+
+The desktop displays the next eligible observation frame, but native PhiCade remains
+authoritative and refuses early autonomous turns.
+
+See `docs/ADAPTIVE_OBSERVATION_CADENCE.md`.
 
 ## Benchmark Suite v1
 
@@ -136,6 +156,7 @@ cohort coverage, digest splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/ADAPTIVE_OBSERVATION_CADENCE.md`
 - `docs/BENCHMARK_SUITE_V1.md`
 - `docs/BENCHMARK_SUITE_REPORTS.md`
 - `docs/BENCHMARK_SUITE_COMPARISON.md`
