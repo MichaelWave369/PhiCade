@@ -216,6 +216,21 @@ ReadMove:
 
     bit 0, b
     jr z, .left
+
+    ld a, [wHasKey]
+    and a
+    jr z, .rightBounds
+    ld a, [wGateOpen]
+    and a
+    jr nz, .rightBounds
+    ld a, [wPlayerY]
+    cp KEY_Y
+    jr nz, .rightBounds
+    ld a, [wPlayerX]
+    cp GATE_CENTER_X
+    jr z, .left
+
+.rightBounds:
     ld a, [wPlayerX]
     cp 160
     jr nc, .left
@@ -225,6 +240,29 @@ ReadMove:
 .left:
     bit 1, b
     jr z, .up
+
+    ld a, [wHasKey]
+    and a
+    jr nz, .leftHasKey
+    ld a, [wPlayerY]
+    cp KEY_Y
+    jr nz, .leftBounds
+    ld a, [wPlayerX]
+    cp KEY_LEFT_X
+    jr z, .up
+    jr .leftBounds
+.leftHasKey:
+    ld a, [wGateOpen]
+    and a
+    jr nz, .leftBounds
+    ld a, [wPlayerY]
+    cp KEY_Y
+    jr nz, .leftBounds
+    ld a, [wPlayerX]
+    cp GATE_CENTER_X
+    jr z, .up
+
+.leftBounds:
     ld a, [wPlayerX]
     cp 10
     jr c, .up
@@ -242,6 +280,8 @@ ReadMove:
     jr z, .down
 .upBounds:
     ld a, [wPlayerY]
+    cp TARGET_Y
+    jr z, .down
     cp 18
     jr c, .down
     sub MOVE_STEP
