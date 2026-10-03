@@ -290,6 +290,26 @@
 - [x] v4 READY only at 7/7
 - [x] Freeze canonical relay source + ROM SHA-256 after qualification
 
+## Rung 23 — Stateful Key-Gate Dependency Benchmark
+- [x] Balanced LEFT/RIGHT source-first Key Gate tasks
+- [x] Visible prerequisite object on opposite sides
+- [x] Explicit A-to-acquire interaction
+- [x] World key disappears only after valid pickup
+- [x] Shared acquired-key badge
+- [x] Locked horizontal gate blocks target path
+- [x] Gate unlock requires acquired key + exact gate position + A
+- [x] Direct gate-without-key negative control
+- [x] Empty-side fake-pickup negative control
+- [x] Correct pickup changes rendered world
+- [x] Post-pickup center framebuffer convergence
+- [x] Open-gate framebuffer convergence
+- [x] Same provider instruction across variants
+- [x] Benchmark Suite v5 with exact v4 reuse + both Key Gate tasks
+- [x] v4 READY at 7/7 while v5 remains INCOMPLETE at 7/9
+- [x] v5 remains INCOMPLETE at 8/9
+- [x] v5 READY only at 9/9
+- [ ] Freeze canonical Key Gate source + ROM SHA-256 after qualification
+
 ## Later
 
 Additional benchmark capabilities/tasks, additional uncertainty methods, provider
