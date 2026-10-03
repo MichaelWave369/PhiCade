@@ -5,15 +5,18 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 18
+## Current status — Rung 19
 
-PhiCade now governs when autonomous models may observe again after each turn, with
-action-aware settle timing and bounded empty-turn backoff enforced natively.
+PhiCade now supports explicit, immutable benchmark-suite versioning. Suite v1
+remains frozen at two tasks, while Suite v2 reuses those exact tasks and adds a
+third obstacle-navigation task without rewriting historical evidence.
 
-Benchmark Suite v1 currently contains:
+Benchmark suites:
 
-- **Move the Block to the X** — top-left → bottom-right
-- **Mirror Dash** — bottom-right → top-left
+- **Suite v1** — Move the Block to the X + Mirror Dash
+- **Suite v2** — the exact v1 tasks + **Wall Detour**
+- **Wall Detour** — target is directly right, but a visible wall forces a
+  DOWN → RIGHT → UP route through a lower gap
 
 Current evidence stack includes:
 
@@ -30,8 +33,12 @@ Current evidence stack includes:
 - exact-digest gameplay receipts
 - repeated task-local benchmark campaigns
 - provenance-checked Comparison Lab
-- two-task source-first benchmark registry
-- cross-task cohort discovery
+- immutable source-first benchmark task registry
+- explicit versioned suite registry
+- Suite v1 preserved as the original two-task population
+- Suite v2 with Wall Detour obstacle navigation
+- arbitrary-length frozen oracle paths
+- suite-scoped cross-task cohort discovery
 - provenance-checked Benchmark Suite reports
 - provenance-checked Suite Comparison Lab
 - task-paired per-task Welch/Hedges comparisons
@@ -62,6 +69,19 @@ authoritative and refuses early autonomous turns.
 
 See `docs/ADAPTIVE_OBSERVATION_CADENCE.md`.
 
+## Versioned Benchmark Suites
+
+Suite membership is separate from frozen task identity.
+
+`benchmarks/suite-v1.json` remains the original two-task population. Rung 19 adds
+`benchmarks/suite-v2.json`, which reuses those exact task hashes and adds
+`wall-detour-v1`.
+
+The desktop **SUITE REPORT** lane exposes an explicit suite selector. READY coverage,
+report IDs, report storage, and Suite Comparison are all scoped by suite ID.
+
+See `docs/BENCHMARK_SUITE_V2.md`.
+
 ## Benchmark Suite v1
 
 Suite manifest:
@@ -87,11 +107,12 @@ With a registered benchmark ROM loaded and a qualified model handed off:
 ## Build a Suite Report
 
 Once the same model cohort has one COMPLETE fully scoreable campaign for every
-registered Suite v1 task:
+task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select a READY cohort,
-3. press **BUILD REPORT**.
+2. select **Suite v1** or **Suite v2**,
+3. select a READY cohort,
+4. press **BUILD REPORT**.
 
 A cohort pins:
 
@@ -117,11 +138,15 @@ Incomplete cohorts remain visible but cannot be built.
 
 ## Compare Suite Reports
 
-Once at least two complete Suite Reports exist:
+Once at least two complete reports exist for the same selected suite:
 
-1. open **SUITE COMPARE**,
-2. select report A and report B,
-3. press **COMPARE SUITES**.
+1. select the suite version,
+2. open **SUITE COMPARE**,
+3. select report A and report B,
+4. press **COMPARE SUITES**.
+
+Cross-version reports are never compared as though they covered the same task
+population.
 
 PhiCade re-opens both suite reports, re-hashes every referenced campaign, re-validates
 every underlying gameplay trial receipt, and recomputes the suite aggregates before
@@ -151,13 +176,15 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI continues to assemble and qualify both suite ROMs and now also tests cross-task
-cohort coverage, digest splitting, and trial-tamper refusal.
+CI assembles and qualifies all three registered benchmark ROMs from source and
+tests Suite v1 preservation, Suite v2 2/3 → 3/3 coverage, digest splitting, and
+trial-tamper refusal.
 
 See:
 
 - `docs/ADAPTIVE_OBSERVATION_CADENCE.md`
 - `docs/BENCHMARK_SUITE_V1.md`
+- `docs/BENCHMARK_SUITE_V2.md`
 - `docs/BENCHMARK_SUITE_REPORTS.md`
 - `docs/BENCHMARK_SUITE_COMPARISON.md`
 - `docs/BENCHMARK_CAMPAIGNS.md`
@@ -171,5 +198,5 @@ decryption keys, or copyrighted game assets.
 
 ## License
 
-PhiCade's own code, including Benchmark Suite v1 task sources, is MIT. Third-party
+PhiCade's own code, including the benchmark task sources, is MIT. Third-party
 emulator cores and model runtimes retain their own licenses and notices.

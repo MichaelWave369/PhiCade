@@ -60,8 +60,16 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$MIRROR_OBJ" "$MIRROR_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$MIRROR_ROM" "$MIRROR_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIMIRRORGYM" "$MIRROR_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task C / Wall Detour\n'
+WALL_SRC="$ROOT/benchmarks/agent-gym-wall-detour/main.asm"
+WALL_OBJ="$WORK/phi-agent-gym-wall-detour.o"
+WALL_ROM="$WORK/phi-agent-gym-wall-detour.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$WALL_OBJ" "$WALL_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$WALL_ROM" "$WALL_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIWALLGYM" "$WALL_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -111,6 +119,14 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "move-block-to-x-mirror-v1" \
   --receipt "$ROOT/artifacts/agent-gym-mirror-qualification.json"
 
+printf '==> running Phi-Agent Gym task C / Wall Detour qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$WALL_ROM" \
+  --source "$WALL_SRC" \
+  --task "wall-detour-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-wall-detour-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -119,3 +135,4 @@ printf '    %s\n' "$ROOT/artifacts/agent-driver-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/autodrive-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-mirror-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-wall-detour-qualification.json"

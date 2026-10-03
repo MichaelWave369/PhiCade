@@ -36,6 +36,7 @@ export interface GameProfile {
 
 export interface BenchmarkTaskInfo {
   suiteId: string;
+  suiteIds: string[];
   id: string;
   title: string;
   romSha256: string;
@@ -423,6 +424,22 @@ export interface CampaignComparisonArtifact {
 }
 
 
+export interface BenchmarkSuiteTaskEntry {
+  id: string;
+  title: string;
+  introducedInSuiteId: string;
+  romSha256: string;
+  sourceSha256: string;
+}
+
+export interface BenchmarkSuiteListEntry {
+  id: string;
+  title: string;
+  version: number;
+  taskCount: number;
+  tasks: BenchmarkSuiteTaskEntry[];
+}
+
 export interface BenchmarkSuiteAggregateStats {
   taskCount: number;
   totalObservedTrials: number;
@@ -477,6 +494,7 @@ export interface SuiteCandidateTask {
 }
 
 export interface BenchmarkSuiteReportCandidate {
+  suiteId: string;
   cohortId: string;
   provider: string;
   model: string;
@@ -938,14 +956,26 @@ export async function compareBenchmarkCampaigns(
 }
 
 
-export async function listBenchmarkSuiteReportCandidates(): Promise<BenchmarkSuiteReportCandidate[]> {
-  return invoke<BenchmarkSuiteReportCandidate[]>("list_benchmark_suite_report_candidates");
+export async function listBenchmarkSuites(): Promise<BenchmarkSuiteListEntry[]> {
+  return invoke<BenchmarkSuiteListEntry[]>("list_benchmark_suites");
+}
+
+export async function listBenchmarkSuiteReportCandidates(
+  suiteId: string,
+): Promise<BenchmarkSuiteReportCandidate[]> {
+  return invoke<BenchmarkSuiteReportCandidate[]>("list_benchmark_suite_report_candidates", {
+    suiteId,
+  });
 }
 
 export async function buildBenchmarkSuiteReport(
+  suiteId: string,
   cohortId: string,
 ): Promise<BenchmarkSuiteReportArtifact> {
-  return invoke<BenchmarkSuiteReportArtifact>("build_benchmark_suite_report", { cohortId });
+  return invoke<BenchmarkSuiteReportArtifact>("build_benchmark_suite_report", {
+    suiteId,
+    cohortId,
+  });
 }
 
 export async function listBenchmarkSuiteReports(): Promise<BenchmarkSuiteReportListEntry[]> {
@@ -953,10 +983,12 @@ export async function listBenchmarkSuiteReports(): Promise<BenchmarkSuiteReportL
 }
 
 export async function compareBenchmarkSuiteReports(
+  suiteId: string,
   reportAId: number,
   reportBId: number,
 ): Promise<BenchmarkSuiteComparisonArtifact> {
   return invoke<BenchmarkSuiteComparisonArtifact>("compare_benchmark_suite_reports", {
+    suiteId,
     reportAId,
     reportBId,
   });

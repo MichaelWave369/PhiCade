@@ -86,7 +86,7 @@ The scorer never reads emulator RAM.
 
 Each task entry freezes:
 
-- suite ID,
+- introduction-suite ID,
 - task ID,
 - title,
 - source SHA-256,
@@ -100,6 +100,10 @@ Each task entry freezes:
 - deterministic oracle legs.
 
 Runtime lookup is by exact ROM SHA-256.
+
+As of Rung 19, suite membership is stored separately from immutable task identity.
+Tasks A and B retain their original task/source/ROM identities and remain the exact
+Suite v1 population, while the Suite v2 membership list reuses them unchanged.
 
 A filename, display title, or directory path does not make a ROM a benchmark task.
 
@@ -185,8 +189,8 @@ That is intentional.
 
 Rung 15 establishes multiple independently frozen tasks.
 
-A later multi-task aggregation layer can combine task-level evidence explicitly,
-rather than weakening the existing like-for-like Comparison Lab gate.
+Rungs 16–17 add explicit Suite Reports and Suite Comparison above task-local
+Comparison Lab. Rung 19 adds Suite v2 without modifying this v1 task population.
 
 ## What Rung 15 proves
 
@@ -198,3 +202,12 @@ intelligence.
 
 It establishes the registry, qualification, runtime, campaign, and UI seams needed
 to grow the suite without creating a new bespoke evidence path for every task.
+
+
+## Rung 19 preservation note
+
+Suite v1 is still exactly two tasks. Its ID, manifest, task hashes, and historical
+report/comparison namespace are unchanged.
+
+See `docs/BENCHMARK_SUITE_V2.md` for the versioned membership model and Wall
+Detour.

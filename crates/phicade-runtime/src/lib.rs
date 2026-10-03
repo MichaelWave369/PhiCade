@@ -22,16 +22,20 @@ pub use action_bus::{
 };
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
 pub use agent_gym::{
-    agent_gym_distance, agent_gym_score_1000, agent_gym_success, benchmark_suite_v1_tasks,
-    benchmark_task_by_id, benchmark_task_by_rom_sha256, benchmark_task_distance,
-    benchmark_task_success, locate_agent_gym_player, score_agent_gym_frame,
-    score_benchmark_task_frame, AgentGymScore, BenchmarkTaskSpec, OracleLeg, PixelPoint,
-    AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_MIRROR_ID,
-    AGENT_GYM_MIRROR_ROM_SHA256, AGENT_GYM_MIRROR_SOURCE_SHA256,
+    agent_gym_distance, agent_gym_score_1000, agent_gym_success, benchmark_suite_by_id,
+    benchmark_suite_v1_tasks, benchmark_suite_v2_tasks, benchmark_suites,
+    benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
+    benchmark_task_distance, benchmark_task_success, locate_agent_gym_player,
+    score_agent_gym_frame, score_benchmark_task_frame, AgentGymScore, BenchmarkSuiteSpec,
+    BenchmarkTaskSpec, OracleLeg, PixelPoint, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
+    AGENT_GYM_MIRROR_ID, AGENT_GYM_MIRROR_ROM_SHA256, AGENT_GYM_MIRROR_SOURCE_SHA256,
     AGENT_GYM_MIRROR_START, AGENT_GYM_MIRROR_TARGET, AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START,
     AGENT_GYM_SUCCESS_DISTANCE, AGENT_GYM_TARGET, AGENT_GYM_TASK,
-    AGENT_GYM_WARMUP_FRAMES, BENCHMARK_SUITE_V1_ID,
+    AGENT_GYM_WALL_ID, AGENT_GYM_WALL_INITIAL_DISTANCE, AGENT_GYM_WALL_ROM_SHA256,
+    AGENT_GYM_WALL_SOURCE_SHA256, AGENT_GYM_WALL_START, AGENT_GYM_WALL_TARGET,
+    AGENT_GYM_WALL_TASK, AGENT_GYM_WARMUP_FRAMES, BENCHMARK_SUITE_V1_ID,
+    BENCHMARK_SUITE_V2_ID, BENCHMARK_TASKS,
 };
 pub use autodrive::{
     AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,
