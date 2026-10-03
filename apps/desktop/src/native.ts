@@ -264,6 +264,72 @@ export interface ModelBenchmarkStart {
   autodrive: AutodriveStatus;
 }
 
+
+export interface CampaignTrialEvidence {
+  benchmarkRunId: number;
+  receiptSha256: string;
+  recordStatus: string;
+  score1000: number | null;
+  taskSuccess: boolean;
+  stopReason: AutodriveStopReason;
+}
+
+export interface BenchmarkCampaignStats {
+  totalTrials: number;
+  scoredTrials: number;
+  scoringErrorTrials: number;
+  successfulTrials: number;
+  successRate: number;
+  meanScore1000: number | null;
+  medianScore1000: number | null;
+  minScore1000: number | null;
+  maxScore1000: number | null;
+  populationStddevScore1000: number | null;
+}
+
+export interface BenchmarkCampaignReceipt {
+  schema: string;
+  recordStatus: "COMPLETE" | "PARTIAL";
+  campaignId: number;
+  benchmarkId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  gymSourceSha256: string;
+  gymRomSha256: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  policy: AutodrivePolicy;
+  totalTrials: number;
+  completedTrials: number;
+  trials: CampaignTrialEvidence[];
+  stats: BenchmarkCampaignStats;
+}
+
+export interface BenchmarkCampaignArtifact {
+  receiptPath: string;
+  receipt: BenchmarkCampaignReceipt;
+}
+
+export interface BenchmarkCampaignStatus {
+  schema: string;
+  campaignId: number;
+  active: boolean;
+  totalTrials: number;
+  completedTrials: number;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  policy: AutodrivePolicy;
+}
+
+export interface BenchmarkCampaignStart {
+  status: BenchmarkCampaignStatus;
+  benchmark: ModelBenchmarkStart;
+}
+
 export const defaultAutodrivePolicy: AutodrivePolicy = {
   maxTurns: 32,
   maxTotalActions: 128,
@@ -585,4 +651,41 @@ export async function startModelGameplayBenchmark(
 
 export async function getLastModelGameplayBenchmark(): Promise<ModelBenchmarkArtifact | null> {
   return invoke<ModelBenchmarkArtifact | null>("last_model_gameplay_benchmark");
+}
+
+
+export async function startBenchmarkCampaign(
+  baseUrl: string,
+  provider: string,
+  model: string,
+  modelDigest: string,
+  policy: AutodrivePolicy = defaultAutodrivePolicy,
+  totalTrials = 5,
+): Promise<BenchmarkCampaignStart> {
+  return invoke<BenchmarkCampaignStart>("start_benchmark_campaign", {
+    baseUrl,
+    provider,
+    model,
+    modelDigest,
+    policy,
+    totalTrials,
+  });
+}
+
+export async function continueBenchmarkCampaign(
+  baseUrl: string,
+): Promise<BenchmarkCampaignStart> {
+  return invoke<BenchmarkCampaignStart>("continue_benchmark_campaign", { baseUrl });
+}
+
+export async function getBenchmarkCampaignStatus(): Promise<BenchmarkCampaignStatus | null> {
+  return invoke<BenchmarkCampaignStatus | null>("benchmark_campaign_status");
+}
+
+export async function getLastBenchmarkCampaignReceipt(): Promise<BenchmarkCampaignArtifact | null> {
+  return invoke<BenchmarkCampaignArtifact | null>("last_benchmark_campaign_receipt");
+}
+
+export async function cancelBenchmarkCampaign(): Promise<BenchmarkCampaignArtifact> {
+  return invoke<BenchmarkCampaignArtifact>("cancel_benchmark_campaign");
 }
