@@ -553,6 +553,428 @@ fn rewind_session(session: &mut EmulatorSession, seconds: u8) -> Result<(), Stri
     Ok(())
 }
 
+
+fn replay_status_for(session: &EmulatorSession) -> ReplayStatus {
+    let (action_count, checkpoint_count) = session
+        .recording
+        .as_ref()
+        .map(|recording| {
+            (
+                recording.ledger.actions.len(),
+                recording.ledger.checkpoints.len(),
+            )
+        })
+        .unwrap_or((0, 0));
+
+    ReplayStatus {
+        recording: session.recording.is_some(),
+        action_count,
+        checkpoint_count,
+        last_replay_path: session
+            .last_replay
+            .as_ref()
+            .map(|replay| replay.replay_path.to_string_lossy().to_string()),
+        last_receipt_path: session
+            .last_replay
+            .as_ref()
+            .map(|replay| replay.receipt_path.to_string_lossy().to_string()),
+        last_replay_sha256: session
+            .last_replay
+            .as_ref()
+            .map(|replay| replay.replay_sha256.clone()),
+    }
+}
+
+fn make_replay_checkpoint(
+    session: &EmulatorSession,
+    frame: &FrameBuffer,
+) -> Result<ReplayCheckpoint, String> {
+    let state = session
+        .core
+        .serialize_state()
+        .map_err(|error| format!("serialize replay checkpoint: {error:?}"))?;
+
+    Ok(ReplayCheckpoint {
+        frame: session.core.frame_count(),
+        state_sha256: sha256_bytes(&state),
+        frame_sha256: sha256_bytes(&frame.rgba8),
+        input_mask: session.core.input_mask_snapshot(),
+    })
+}
+
+fn upsert_replay_checkpoint(
+    session: &mut EmulatorSession,
+    checkpoint: ReplayCheckpoint,
+) -> Result<(), String> {
+    let recording = session
+        .recording
+        .as_mut()
+        .ok_or_else(|| "replay recorder is not active".to_owned())?;
+
+    if recording
+        .ledger
+        .checkpoints
+        .last()
+        .is_some_and(|last| last.frame == checkpoint.frame)
+    {
+        if let Some(last) = recording.ledger.checkpoints.last_mut() {
+            *last = checkpoint;
+        }
+    } else {
+        recording.ledger.checkpoints.push(checkpoint);
+    }
+
+    Ok(())
+}
+
+fn maybe_record_replay_checkpoint(session: &mut EmulatorSession) -> Result<(), String> {
+    let frame = session.core.frame_count();
+    let due = session
+        .recording
+        .as_ref()
+        .is_some_and(|recording| frame >= recording.next_checkpoint_frame);
+
+    if !due {
+        return Ok(());
+    }
+
+    let checkpoint = make_replay_checkpoint(session, &session.last_frame)?;
+    upsert_replay_checkpoint(session, checkpoint)?;
+
+    if let Some(recording) = session.recording.as_mut() {
+        recording.next_checkpoint_frame =
+            frame.saturating_add(REPLAY_CHECKPOINT_INTERVAL_FRAMES);
+    }
+
+    Ok(())
+}
+
+fn validate_recording_actions(
+    session: &EmulatorSession,
+    actions: &[ActionEnvelope],
+) -> Result<(), String> {
+    if session.recording.is_none() {
+        return Ok(());
+    }
+
+    for envelope in actions {
+        if let ActionKind::System { command, .. } = envelope.action {
+            if matches!(
+                command,
+                SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
+            ) {
+                return Err(format!(
+                    "{command:?} is disabled while deterministic replay recording is active"
+                ));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn record_applied_actions(
+    session: &mut EmulatorSession,
+    actions: &[ActionEnvelope],
+) -> Result<(), String> {
+    if session.recording.is_none() || actions.is_empty() {
+        return Ok(());
+    }
+
+    let applied_frame = session.core.frame_count();
+    let mut normalized = Vec::with_capacity(actions.len());
+
+    for envelope in actions {
+        let mut event = envelope.clone();
+        event.frame = applied_frame;
+        event.validate()?;
+        normalized.push(event);
+    }
+
+    let recording = session
+        .recording
+        .as_mut()
+        .ok_or_else(|| "replay recorder disappeared".to_owned())?;
+    recording.ledger.actions.extend(normalized);
+    Ok(())
+}
+
+fn replay_receipt(
+    ledger: &ReplayLedger,
+    replay_sha256: &str,
+    verification: Option<ReplayVerification>,
+) -> ReplayReceipt {
+    ReplayReceipt {
+        schema: REPLAY_RECEIPT_SCHEMA.to_owned(),
+        replay_sha256: replay_sha256.to_owned(),
+        game_sha256: ledger.game_sha256.clone(),
+        core_name: ledger.core_name.clone(),
+        core_version: ledger.core_version.clone(),
+        core_sha256: ledger.core_sha256.clone(),
+        start_frame: ledger.start_frame,
+        end_frame: ledger.end_frame,
+        action_count: ledger.actions.len(),
+        checkpoint_count: ledger.checkpoints.len(),
+        verification,
+    }
+}
+
+fn artifact_view(export: &ReplayExport) -> ReplayArtifact {
+    ReplayArtifact {
+        replay_path: export.replay_path.to_string_lossy().to_string(),
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        replay_sha256: export.replay_sha256.clone(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finalize_replay_recording(session: &mut EmulatorSession) -> Result<ReplayExport, String> {
+    let mut recording = session
+        .recording
+        .take()
+        .ok_or_else(|| "replay recorder is not active".to_owned())?;
+
+    let final_checkpoint = make_replay_checkpoint(session, &session.last_frame)?;
+    if recording
+        .ledger
+        .checkpoints
+        .last()
+        .is_some_and(|last| last.frame == final_checkpoint.frame)
+    {
+        if let Some(last) = recording.ledger.checkpoints.last_mut() {
+            *last = final_checkpoint.clone();
+        }
+    } else {
+        recording.ledger.checkpoints.push(final_checkpoint.clone());
+    }
+
+    recording.ledger.end_frame = session.core.frame_count();
+    recording.ledger.final_state_sha256 = final_checkpoint.state_sha256.clone();
+    recording.ledger.final_frame_sha256 = final_checkpoint.frame_sha256.clone();
+    recording.ledger.validate()?;
+
+    let replay_json = serde_json::to_vec_pretty(&recording.ledger)
+        .map_err(|error| format!("serialize replay ledger: {error}"))?;
+    let replay_sha256 = sha256_bytes(&replay_json);
+    let replay_path = session
+        .paths
+        .replay_dir
+        .join(format!("{replay_sha256}.replay.json"));
+    let receipt_path = session
+        .paths
+        .replay_dir
+        .join(format!("{replay_sha256}.receipt.json"));
+
+    write_atomic(&replay_path, &replay_json)?;
+
+    let receipt = replay_receipt(&recording.ledger, &replay_sha256, None);
+    let receipt_json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize replay receipt: {error}"))?;
+    write_atomic(&receipt_path, &receipt_json)?;
+
+    let export = ReplayExport {
+        replay_path,
+        receipt_path,
+        replay_sha256,
+        receipt,
+    };
+    session.last_replay = Some(export.clone());
+    Ok(export)
+}
+
+fn replay_divergence(
+    checked_checkpoints: usize,
+    frame: u64,
+    expected: &ReplayCheckpoint,
+    actual: &ReplayCheckpoint,
+) -> ReplayVerification {
+    ReplayVerification {
+        result: ReplayVerificationResult::Diverged,
+        checked_checkpoints,
+        first_divergence_frame: Some(frame),
+        expected_state_sha256: Some(expected.state_sha256.clone()),
+        actual_state_sha256: Some(actual.state_sha256.clone()),
+        expected_frame_sha256: Some(expected.frame_sha256.clone()),
+        actual_frame_sha256: Some(actual.frame_sha256.clone()),
+    }
+}
+
+fn compare_replay_checkpoint(
+    expected: &ReplayCheckpoint,
+    actual: &ReplayCheckpoint,
+    checked_checkpoints: usize,
+    compare_framebuffer: bool,
+) -> Option<ReplayVerification> {
+    let state_differs = expected.state_sha256 != actual.state_sha256;
+    let input_differs = expected.input_mask != actual.input_mask;
+    let frame_differs =
+        compare_framebuffer && expected.frame_sha256 != actual.frame_sha256;
+
+    if state_differs || input_differs || frame_differs {
+        Some(replay_divergence(
+            checked_checkpoints,
+            expected.frame,
+            expected,
+            actual,
+        ))
+    } else {
+        None
+    }
+}
+
+fn verify_replay_execution(
+    session: &mut EmulatorSession,
+    ledger: &ReplayLedger,
+) -> Result<ReplayVerification, String> {
+    ledger.validate()?;
+
+    if ledger.game_sha256 != session.game_key {
+        return Err("replay game fingerprint does not match running game".into());
+    }
+    if ledger.core_name != session.core.identity().library_name
+        || ledger.core_version != session.core.identity().library_version
+    {
+        return Err("replay core identity/version does not match running core".into());
+    }
+
+    let running_core_sha256 = sha256_file(session.core.core_path())?;
+    if ledger.core_sha256 != running_core_sha256 {
+        return Err("replay core binary hash does not match running core".into());
+    }
+
+    let initial_state = BASE64
+        .decode(&ledger.initial_state_base64)
+        .map_err(|error| format!("decode replay initial state: {error}"))?;
+    session
+        .core
+        .restore_state(&initial_state, ledger.start_frame)
+        .map_err(|error| format!("restore replay initial state: {error:?}"))?;
+    session.core.restore_input_mask(ledger.initial_input_mask);
+
+    let mut checked = 0usize;
+    let mut checkpoint_index = 0usize;
+    let mut video = FrameBuffer::default();
+    let mut audio = AudioBuffer::default();
+
+    if let Some(expected) = ledger.checkpoints.first() {
+        if expected.frame == ledger.start_frame {
+            let actual = make_replay_checkpoint(session, &FrameBuffer::default())?;
+            checked += 1;
+
+            let state_or_input_differs =
+                expected.state_sha256 != actual.state_sha256
+                    || expected.input_mask != actual.input_mask;
+
+            if state_or_input_differs {
+                return Ok(replay_divergence(
+                    checked,
+                    expected.frame,
+                    expected,
+                    &actual,
+                ));
+            }
+            checkpoint_index = 1;
+        }
+    }
+
+    let mut action_index = 0usize;
+
+    while session.core.frame_count() < ledger.end_frame {
+        let current_frame = session.core.frame_count();
+        let mut frame_actions = Vec::new();
+
+        while let Some(action) = ledger.actions.get(action_index) {
+            if action.frame != current_frame {
+                break;
+            }
+
+            if let ActionKind::System { command, .. } = action.action {
+                if matches!(
+                    command,
+                    SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
+                ) {
+                    return Err(
+                        "replay contains timeline-mutating session command unsupported by v1"
+                            .into(),
+                    );
+                }
+            }
+
+            let mut replay_action = action.clone();
+            replay_action.source = ActionSource::Replay;
+            frame_actions.push(replay_action);
+            action_index += 1;
+        }
+
+        session
+            .core
+            .step_frame(&frame_actions, &mut video, &mut audio)
+            .map_err(|error| format!("verify replay frame: {error:?}"))?;
+
+        while let Some(expected) = ledger.checkpoints.get(checkpoint_index) {
+            if expected.frame > session.core.frame_count() {
+                break;
+            }
+            if expected.frame < session.core.frame_count() {
+                return Err(format!(
+                    "replay checkpoint {} was skipped at runtime frame {}",
+                    expected.frame,
+                    session.core.frame_count()
+                ));
+            }
+
+            let actual = make_replay_checkpoint(session, &video)?;
+            checked += 1;
+            if let Some(divergence) =
+                compare_replay_checkpoint(expected, &actual, checked, true)
+            {
+                return Ok(divergence);
+            }
+            checkpoint_index += 1;
+        }
+    }
+
+    let final_state = session
+        .core
+        .serialize_state()
+        .map_err(|error| format!("serialize replay final state: {error:?}"))?;
+    let final_state_sha256 = sha256_bytes(&final_state);
+    let final_frame_sha256 = sha256_bytes(&video.rgba8);
+
+    if final_state_sha256 != ledger.final_state_sha256
+        || final_frame_sha256 != ledger.final_frame_sha256
+    {
+        let expected = ReplayCheckpoint {
+            frame: ledger.end_frame,
+            state_sha256: ledger.final_state_sha256.clone(),
+            frame_sha256: ledger.final_frame_sha256.clone(),
+            input_mask: session.core.input_mask_snapshot(),
+        };
+        let actual = ReplayCheckpoint {
+            frame: ledger.end_frame,
+            state_sha256: final_state_sha256,
+            frame_sha256: final_frame_sha256,
+            input_mask: session.core.input_mask_snapshot(),
+        };
+        return Ok(replay_divergence(
+            checked.saturating_add(1),
+            ledger.end_frame,
+            &expected,
+            &actual,
+        ));
+    }
+
+    Ok(ReplayVerification {
+        result: ReplayVerificationResult::Pass,
+        checked_checkpoints: checked,
+        first_divergence_frame: None,
+        expected_state_sha256: None,
+        actual_state_sha256: None,
+        expected_frame_sha256: None,
+        actual_frame_sha256: None,
+    })
+}
+
 fn process_session_actions(
     session: &mut EmulatorSession,
     actions: &[ActionEnvelope],
