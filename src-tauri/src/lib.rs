@@ -3037,13 +3037,55 @@ fn suite_cohort_id(identity: &SuiteCohortIdentity) -> Result<String, String> {
     Ok(sha256_bytes(&bytes))
 }
 
+fn suite_report_dir_for(session: &EmulatorSession, suite_id: &str) -> Result<PathBuf, String> {
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
+    Ok(session.paths.suite_report_root.join(suite.id))
+}
+
+fn suite_comparison_dir_for(
+    session: &EmulatorSession,
+    suite_id: &str,
+) -> Result<PathBuf, String> {
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
+    Ok(session.paths.suite_comparison_root.join(suite.id))
+}
+
+#[tauri::command]
+fn list_benchmark_suites() -> Vec<BenchmarkSuiteListEntry> {
+    benchmark_suites()
+        .iter()
+        .map(|suite| BenchmarkSuiteListEntry {
+            id: suite.id.to_owned(),
+            title: suite.title.to_owned(),
+            version: suite.version,
+            task_count: u16::try_from(suite.tasks.len()).unwrap_or(u16::MAX),
+            tasks: suite
+                .tasks
+                .iter()
+                .map(|task| BenchmarkSuiteTaskEntry {
+                    id: task.id.to_owned(),
+                    title: task.title.to_owned(),
+                    introduced_in_suite_id: task.suite_id.to_owned(),
+                    rom_sha256: task.rom_sha256.to_owned(),
+                    source_sha256: task.source_sha256.to_owned(),
+                })
+                .collect(),
+        })
+        .collect()
+}
+
 fn scan_benchmark_suite_cohorts_from_roots(
     benchmark_campaign_root: &Path,
     model_benchmark_root: &Path,
+    suite_id: &str,
 ) -> Result<std::collections::BTreeMap<String, SuiteCohortEvidence>, String> {
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
     let mut cohorts = std::collections::BTreeMap::new();
 
-    for task in benchmark_suite_v1_tasks() {
+    for task in suite.tasks {
         let campaign_dir = benchmark_campaign_root.join(task.rom_sha256);
         let model_benchmark_dir = model_benchmark_root.join(task.rom_sha256);
         if !campaign_dir.exists() {
@@ -3122,19 +3164,24 @@ fn scan_benchmark_suite_cohorts_from_roots(
 
 fn scan_benchmark_suite_cohorts(
     session: &EmulatorSession,
+    suite_id: &str,
 ) -> Result<std::collections::BTreeMap<String, SuiteCohortEvidence>, String> {
     scan_benchmark_suite_cohorts_from_roots(
         &session.paths.benchmark_campaign_root,
         &session.paths.model_benchmark_root,
+        suite_id,
     )
 }
 
 fn suite_report_candidate(
+    suite_id: &str,
     cohort_id: &str,
     evidence: &SuiteCohortEvidence,
 ) -> Result<BenchmarkSuiteReportCandidate, String> {
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
     let mut tasks = Vec::new();
-    for task in benchmark_suite_v1_tasks() {
+    for task in suite.tasks {
         let Some((_, campaign)) = evidence.tasks.get(task.id) else {
             continue;
         };
@@ -3151,11 +3198,11 @@ fn suite_report_candidate(
         });
     }
 
-    let suite_task_count =
-        u16::try_from(benchmark_suite_v1_tasks().len()).unwrap_or(u16::MAX);
+    let suite_task_count = u16::try_from(suite.tasks.len()).unwrap_or(u16::MAX);
     let covered_tasks = u16::try_from(tasks.len()).unwrap_or(u16::MAX);
 
     Ok(BenchmarkSuiteReportCandidate {
+        suite_id: suite.id.to_owned(),
         cohort_id: cohort_id.to_owned(),
         provider: evidence.identity.provider.clone(),
         model: evidence.identity.model.clone(),
@@ -3170,25 +3217,28 @@ fn suite_report_candidate(
 
 fn build_suite_report_from_cohort(
     session: &mut EmulatorSession,
+    suite_id: &str,
     cohort_id: &str,
 ) -> Result<BenchmarkSuiteReportArtifact, String> {
-    let cohorts = scan_benchmark_suite_cohorts(session)?;
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
+    let cohorts = scan_benchmark_suite_cohorts(session, suite.id)?;
     let evidence = cohorts
         .get(cohort_id)
         .ok_or_else(|| "suite cohort no longer exists".to_owned())?;
 
-    if evidence.tasks.len() != benchmark_suite_v1_tasks().len() {
+    if evidence.tasks.len() != suite.tasks.len() {
         return Err(format!(
             "suite cohort covers {}/{} tasks",
             evidence.tasks.len(),
-            benchmark_suite_v1_tasks().len()
+            suite.tasks.len()
         ));
     }
 
     let mut task_refs = Vec::new();
     let mut aggregate_inputs = Vec::new();
 
-    for task in benchmark_suite_v1_tasks() {
+    for task in suite.tasks {
         let (campaign_path, campaign) = evidence
             .tasks
             .get(task.id)
@@ -3228,13 +3278,14 @@ fn build_suite_report_from_cohort(
     }
 
     let stats = summarize_benchmark_suite(&aggregate_inputs)?;
-    let report_id = session.next_suite_report_id;
+    let report_dir = suite_report_dir_for(session, suite.id)?;
+    let report_id = next_numbered_receipt_id(&report_dir, "suite-report-", ".json")?;
     let identity = &evidence.identity;
     let receipt = BenchmarkSuiteReportReceipt {
         schema: BENCHMARK_SUITE_REPORT_SCHEMA.into(),
         record_status: "COMPLETE".into(),
         report_id,
-        suite_id: BENCHMARK_SUITE_V1_ID.into(),
+        suite_id: suite.id.into(),
         cohort_id: cohort_id.to_owned(),
         provider: identity.provider.clone(),
         model: identity.model.clone(),
@@ -3249,14 +3300,10 @@ fn build_suite_report_from_cohort(
         stats,
     };
 
-    let receipt_path = session
-        .paths
-        .suite_report_dir
-        .join(format!("suite-report-{report_id:06}.json"));
+    let receipt_path = report_dir.join(format!("suite-report-{report_id:06}.json"));
     let json = serde_json::to_vec_pretty(&receipt)
         .map_err(|error| format!("serialize Benchmark Suite report: {error}"))?;
     write_atomic(&receipt_path, &json)?;
-    session.next_suite_report_id = session.next_suite_report_id.saturating_add(1);
 
     Ok(BenchmarkSuiteReportArtifact {
         receipt_path: receipt_path.to_string_lossy().to_string(),
@@ -3267,6 +3314,7 @@ fn build_suite_report_from_cohort(
 #[tauri::command]
 fn list_benchmark_suite_report_candidates(
     state: State<'_, EmulatorState>,
+    suite_id: String,
 ) -> Result<Vec<BenchmarkSuiteReportCandidate>, String> {
     let session = state
         .session
@@ -3276,16 +3324,18 @@ fn list_benchmark_suite_report_candidates(
         .as_ref()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
-    let cohorts = scan_benchmark_suite_cohorts(session)?;
+    let suite_id = suite_id.trim();
+    let cohorts = scan_benchmark_suite_cohorts(session, suite_id)?;
     cohorts
         .iter()
-        .map(|(cohort_id, evidence)| suite_report_candidate(cohort_id, evidence))
+        .map(|(cohort_id, evidence)| suite_report_candidate(suite_id, cohort_id, evidence))
         .collect()
 }
 
 #[tauri::command]
 fn build_benchmark_suite_report(
     state: State<'_, EmulatorState>,
+    suite_id: String,
     cohort_id: String,
 ) -> Result<BenchmarkSuiteReportArtifact, String> {
     let mut session = state
@@ -3295,18 +3345,16 @@ fn build_benchmark_suite_report(
     let session = session
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
-    build_suite_report_from_cohort(session, cohort_id.trim())
+    build_suite_report_from_cohort(session, suite_id.trim(), cohort_id.trim())
 }
-
 
 fn load_benchmark_suite_report_receipt(
     session: &EmulatorSession,
+    suite_id: &str,
     report_id: u64,
 ) -> Result<(PathBuf, BenchmarkSuiteReportReceipt), String> {
-    let path = session
-        .paths
-        .suite_report_dir
-        .join(format!("suite-report-{report_id:06}.json"));
+    let report_dir = suite_report_dir_for(session, suite_id)?;
+    let path = report_dir.join(format!("suite-report-{report_id:06}.json"));
     let bytes = fs::read(&path)
         .map_err(|error| format!("cannot read suite report {}: {error}", path.display()))?;
     let receipt = serde_json::from_slice::<BenchmarkSuiteReportReceipt>(&bytes)
@@ -3315,6 +3363,12 @@ fn load_benchmark_suite_report_receipt(
         return Err(format!(
             "suite report path ID {} does not match receipt ID {}",
             report_id, receipt.report_id
+        ));
+    }
+    if receipt.suite_id != suite_id {
+        return Err(format!(
+            "suite report {} belongs to {}, not {}",
+            report_id, receipt.suite_id, suite_id
         ));
     }
     Ok((path, receipt))
@@ -3333,15 +3387,14 @@ fn validate_suite_report_provenance(
             receipt.report_id, receipt.record_status
         ));
     }
-    if receipt.suite_id != BENCHMARK_SUITE_V1_ID {
-        return Err(format!("suite report {} targets an unknown suite", receipt.report_id));
-    }
-    if receipt.tasks.len() != benchmark_suite_v1_tasks().len() {
+    let suite = benchmark_suite_by_id(&receipt.suite_id)
+        .ok_or_else(|| format!("suite report {} targets unknown suite {}", receipt.report_id, receipt.suite_id))?;
+    if receipt.tasks.len() != suite.tasks.len() {
         return Err(format!(
             "suite report {} covers {}/{} registered tasks",
             receipt.report_id,
             receipt.tasks.len(),
-            benchmark_suite_v1_tasks().len()
+            suite.tasks.len()
         ));
     }
     if usize::from(receipt.stats.task_count) != receipt.tasks.len() {
@@ -3351,7 +3404,7 @@ fn validate_suite_report_provenance(
     let mut campaigns = std::collections::BTreeMap::new();
     let mut aggregate_inputs = Vec::new();
 
-    for task in benchmark_suite_v1_tasks() {
+    for task in suite.tasks {
         let task_ref = receipt
             .tasks
             .iter()
@@ -3502,42 +3555,53 @@ fn list_benchmark_suite_reports(
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
     let mut entries = Vec::new();
-    for entry in fs::read_dir(&session.paths.suite_report_dir)
-        .map_err(|error| format!("cannot list suite reports: {error}"))?
-    {
-        let entry = entry.map_err(|error| format!("cannot read suite report entry: {error}"))?;
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("json") {
-            continue;
+    for suite in benchmark_suites() {
+        let report_dir = suite_report_dir_for(session, suite.id)?;
+        for entry in fs::read_dir(&report_dir)
+            .map_err(|error| format!("cannot list suite reports for {}: {error}", suite.id))?
+        {
+            let entry = entry.map_err(|error| format!("cannot read suite report entry: {error}"))?;
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                continue;
+            }
+            let bytes = fs::read(&path)
+                .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+            let receipt = serde_json::from_slice::<BenchmarkSuiteReportReceipt>(&bytes)
+                .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+            if receipt.schema != BENCHMARK_SUITE_REPORT_SCHEMA
+                || receipt.record_status != "COMPLETE"
+                || receipt.suite_id != suite.id
+            {
+                continue;
+            }
+            entries.push(BenchmarkSuiteReportListEntry {
+                report_id: receipt.report_id,
+                suite_id: receipt.suite_id.clone(),
+                provider: receipt.provider.clone(),
+                model: receipt.model.clone(),
+                model_digest: receipt.model_digest.clone(),
+                core_sha256: receipt.core_sha256.clone(),
+                trials_per_task: receipt.trials_per_task,
+                task_count: receipt.stats.task_count,
+                macro_mean_score_1000: receipt.stats.macro_mean_score_1000,
+                overall_success_rate: receipt.stats.overall_success_rate,
+                receipt_sha256: sha256_file(&path)?,
+            });
         }
-        let bytes = fs::read(&path)
-            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let receipt = serde_json::from_slice::<BenchmarkSuiteReportReceipt>(&bytes)
-            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
-        if receipt.schema != BENCHMARK_SUITE_REPORT_SCHEMA || receipt.record_status != "COMPLETE" {
-            continue;
-        }
-        entries.push(BenchmarkSuiteReportListEntry {
-            report_id: receipt.report_id,
-            suite_id: receipt.suite_id.clone(),
-            provider: receipt.provider.clone(),
-            model: receipt.model.clone(),
-            model_digest: receipt.model_digest.clone(),
-            core_sha256: receipt.core_sha256.clone(),
-            trials_per_task: receipt.trials_per_task,
-            task_count: receipt.stats.task_count,
-            macro_mean_score_1000: receipt.stats.macro_mean_score_1000,
-            overall_success_rate: receipt.stats.overall_success_rate,
-            receipt_sha256: sha256_file(&path)?,
-        });
     }
-    entries.sort_by_key(|entry| entry.report_id);
+    entries.sort_by(|a, b| {
+        a.suite_id
+            .cmp(&b.suite_id)
+            .then(a.report_id.cmp(&b.report_id))
+    });
     Ok(entries)
 }
 
 #[tauri::command]
 fn compare_benchmark_suite_reports(
     state: State<'_, EmulatorState>,
+    suite_id: String,
     report_a_id: u64,
     report_b_id: u64,
 ) -> Result<BenchmarkSuiteComparisonArtifact, String> {
@@ -3549,8 +3613,11 @@ fn compare_benchmark_suite_reports(
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
-    let (path_a, report_a) = load_benchmark_suite_report_receipt(session, report_a_id)?;
-    let (path_b, report_b) = load_benchmark_suite_report_receipt(session, report_b_id)?;
+    let suite_id = suite_id.trim();
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
+    let (path_a, report_a) = load_benchmark_suite_report_receipt(session, suite.id, report_a_id)?;
+    let (path_b, report_b) = load_benchmark_suite_report_receipt(session, suite.id, report_b_id)?;
     let campaigns_a = validate_suite_report_provenance(session, &report_a)?;
     let campaigns_b = validate_suite_report_provenance(session, &report_b)?;
     validate_suite_report_compatibility(&report_a, &report_b)?;
@@ -3558,7 +3625,7 @@ fn compare_benchmark_suite_reports(
     let mut aggregate_inputs = Vec::new();
     let mut task_refs = Vec::new();
 
-    for task in benchmark_suite_v1_tasks() {
+    for task in suite.tasks {
         let campaign_a = campaigns_a
             .get(task.id)
             .ok_or_else(|| format!("suite report A is missing task {}", task.id))?;
@@ -3606,7 +3673,8 @@ fn compare_benchmark_suite_reports(
         report_a.stats.overall_success_rate,
         report_b.stats.overall_success_rate,
     )?;
-    let comparison_id = session.next_suite_comparison_id;
+    let comparison_dir = suite_comparison_dir_for(session, suite.id)?;
+    let comparison_id = next_numbered_receipt_id(&comparison_dir, "comparison-", ".json")?;
     let receipt = BenchmarkSuiteComparisonReceipt {
         schema: BENCHMARK_SUITE_COMPARISON_SCHEMA.into(),
         record_status: "COMPLETE".into(),
@@ -3623,14 +3691,10 @@ fn compare_benchmark_suite_reports(
         tasks: task_refs,
     };
 
-    let receipt_path = session
-        .paths
-        .suite_comparison_dir
-        .join(format!("comparison-{comparison_id:06}.json"));
+    let receipt_path = comparison_dir.join(format!("comparison-{comparison_id:06}.json"));
     let json = serde_json::to_vec_pretty(&receipt)
         .map_err(|error| format!("serialize suite comparison receipt: {error}"))?;
     write_atomic(&receipt_path, &json)?;
-    session.next_suite_comparison_id = session.next_suite_comparison_id.saturating_add(1);
 
     Ok(BenchmarkSuiteComparisonArtifact {
         receipt_path: receipt_path.to_string_lossy().to_string(),
