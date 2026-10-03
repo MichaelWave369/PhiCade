@@ -734,6 +734,7 @@ export function App() {
       const artifact = await cancelBenchmarkCampaign();
       setLastCampaign(artifact);
       setCampaignStatus(await getBenchmarkCampaignStatus());
+      await refreshComparisonCampaigns();
       setAutodrive(await getAutodriveStatus());
       setBenchmarkRunning(false);
       setBenchmarkRunId(null);
@@ -855,6 +856,7 @@ export function App() {
           if (summary) {
             setLastCampaign(summary);
             setBenchmarkRunId(null);
+            await refreshComparisonCampaigns();
             const stats = summary.receipt.stats;
             setNotice(
               `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.observedTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
@@ -1031,6 +1033,10 @@ export function App() {
       setLastModelBenchmark(null);
       setCampaignStatus(null);
       setLastCampaign(null);
+      setCampaignLedger([]);
+      setComparisonAId(null);
+      setComparisonBId(null);
+      setLastComparison(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -1043,7 +1049,15 @@ export function App() {
       setDriverQueuedActions(initialDriver.queuedActions);
       setProfile(info.profile);
       setRunning(true);
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName}`);
+      runningRef.current = true;
+      const priorCampaigns = await listBenchmarkCampaignReceipts();
+      setCampaignLedger(priorCampaigns);
+      const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
+      if (completeCampaigns.length >= 2) {
+        setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
+        setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
+      }
+      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS`);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
@@ -1074,6 +1088,11 @@ export function App() {
       setLastModelBenchmark(null);
       setCampaignStatus(null);
       setLastCampaign(null);
+      setCampaignLedger([]);
+      setComparisonAId(null);
+      setComparisonBId(null);
+      setLastComparison(null);
+      setComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
