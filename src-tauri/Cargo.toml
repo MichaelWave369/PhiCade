@@ -1,6 +1,6 @@
 [package]
 name = "phicade"
-version = "0.2.0"
+version = "0.3.0"
 description = "PhiCade native desktop shell"
 authors = ["Michael Hughes"]
 edition = "2021"
@@ -14,6 +14,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+base64 = "0.22"
+phicade-libretro = { path = "../crates/phicade-libretro" }
 phicade-runtime = { path = "../crates/phicade-runtime" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
