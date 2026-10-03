@@ -5147,6 +5147,70 @@ mod tests {
     }
 
     #[test]
+    fn suite_v2_adds_wall_detour_without_mutating_v1_coverage() {
+        let root = comparison_test_dir("suite-v2-membership");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        for task in benchmark_suite_v1_tasks() {
+            write_suite_test_campaign(&campaign_root, &model_root, task, 1, "digest-suite");
+        }
+
+        let v1_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V1_ID,
+        )
+        .expect("scan v1 suite");
+        let (v1_id, v1_evidence) = v1_cohorts.iter().next().expect("v1 cohort");
+        let v1_candidate =
+            suite_report_candidate(BENCHMARK_SUITE_V1_ID, v1_id, v1_evidence)
+                .expect("v1 candidate");
+        assert!(v1_candidate.ready);
+        assert_eq!(v1_candidate.covered_tasks, 2);
+        assert_eq!(v1_candidate.suite_task_count, 2);
+
+        let v2_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V2_ID,
+        )
+        .expect("scan incomplete v2 suite");
+        let (v2_id, v2_evidence) = v2_cohorts.iter().next().expect("v2 cohort");
+        let v2_candidate =
+            suite_report_candidate(BENCHMARK_SUITE_V2_ID, v2_id, v2_evidence)
+                .expect("v2 candidate");
+        assert!(!v2_candidate.ready);
+        assert_eq!(v2_candidate.covered_tasks, 2);
+        assert_eq!(v2_candidate.suite_task_count, 3);
+
+        let v2 = benchmark_suite_by_id(BENCHMARK_SUITE_V2_ID).expect("v2 registry");
+        let wall = v2.tasks.iter().find(|task| task.id == "wall-detour-v1").expect("wall task");
+        write_suite_test_campaign(&campaign_root, &model_root, wall, 1, "digest-suite");
+
+        let v2_complete = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V2_ID,
+        )
+        .expect("scan complete v2 suite");
+        let (v2_complete_id, v2_complete_evidence) =
+            v2_complete.iter().next().expect("complete v2 cohort");
+        let v2_complete_candidate = suite_report_candidate(
+            BENCHMARK_SUITE_V2_ID,
+            v2_complete_id,
+            v2_complete_evidence,
+        )
+        .expect("complete v2 candidate");
+        assert!(v2_complete_candidate.ready);
+        assert_eq!(v2_complete_candidate.covered_tasks, 3);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
     fn suite_cohort_stays_incomplete_when_one_task_is_missing() {
         let root = comparison_test_dir("suite-incomplete");
         let campaign_root = root.join("campaigns");
