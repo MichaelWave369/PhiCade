@@ -5,13 +5,12 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 20
+## Current status — Rung 21
 
-PhiCade now supports governed, bounded agent working memory. Every agent turn
-binds the rendered framebuffer and the exact current memory SHA-256, while the
-native runtime alone decides whether a proposed memory replacement is accepted.
-Autodrive freezes memory limits into its policy and receipts seal the full memory
-provenance for the run.
+PhiCade now has a balanced temporal-cue benchmark pair that tests whether
+earlier visible evidence can affect a later choice after that evidence disappears
+from the framebuffer. Suite v3 preserves every Suite v2 task and adds opposite
+LEFT/RIGHT cue variants with an identical later decision screen.
 
 Benchmark suites:
 
@@ -32,6 +31,11 @@ Current evidence stack includes:
 - action-aware settle + empty-turn backoff
 - governed UTF-8 agent working-memory capsules
 - framebuffer + memory hash-bound Agent Driver Protocol v2
+- balanced Temporal Cue LEFT/RIGHT memory probes
+- identical later decision framebuffer across opposite cue variants
+- task-scoped benchmark control grants
+- carry-through refusal + neutral re-arm qualification
+- Benchmark Suite v3 with exact 5-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -57,6 +61,23 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Temporal Cue memory benchmark
+
+Suite v3 adds two source-first Game Boy tasks:
+
+- `temporal-cue-left-v1`
+- `temporal-cue-right-v1`
+
+Both show an initial arrow, require A to dismiss it, enforce a 90-frame lockout,
+then present the same two-door decision screen. The correct later choice is
+opposite across the pair.
+
+A neutral-arm rule prevents a direction scheduled during the cue turn from being
+carried through the delay. CI jointly verifies that the cue frames differ while
+the later decision frames are pixel-identical.
+
+See `docs/TEMPORAL_CUE_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V3.md`.
 
 ## Governed agent working memory
 
@@ -207,6 +228,8 @@ trial-tamper refusal.
 
 See:
 
+- `docs/TEMPORAL_CUE_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V3.md`
 - `docs/GOVERNED_AGENT_MEMORY.md`
 - `docs/ADAPTIVE_OBSERVATION_CADENCE.md`
 - `docs/BENCHMARK_SUITE_V1.md`
