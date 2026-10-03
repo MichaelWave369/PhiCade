@@ -86,7 +86,7 @@ Both temporal variants begin 48 Manhattan pixels from their correct endpoint:
 A successful oracle performs:
 
 - A for 1 frame
-- WAIT for 100 frames
+- WAIT for 101 frames
 - the correct direction for 24 frames
 
 The extra neutral wait exceeds the 90-frame ROM lockout and arms the later
