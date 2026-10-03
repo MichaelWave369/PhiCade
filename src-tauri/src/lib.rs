@@ -3909,6 +3909,157 @@ mod tests {
         assert_eq!(json["stats"]["meanScore1000"], 750.0);
     }
 
+    fn comparison_test_campaign(
+        campaign_id: u64,
+        model: &str,
+        digest: &str,
+    ) -> BenchmarkCampaignReceipt {
+        let outcomes = [
+            BenchmarkTrialOutcome {
+                score_1000: Some(900),
+                task_success: true,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(750),
+                task_success: false,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(600),
+                task_success: false,
+            },
+        ];
+        BenchmarkCampaignReceipt {
+            schema: BENCHMARK_CAMPAIGN_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            campaign_id,
+            benchmark_id: AGENT_GYM_ID.into(),
+            provider: "ollama".into(),
+            model: model.into(),
+            model_digest: digest.into(),
+            model_qualification_sha256: format!("q-{digest}"),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            total_trials: 3,
+            completed_trials: 3,
+            trials: vec![
+                CampaignTrialEvidence {
+                    benchmark_run_id: 1,
+                    receipt_sha256: "a".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(900),
+                    task_success: true,
+                    stop_reason: AutodriveStopReason::TaskSuccess,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 2,
+                    receipt_sha256: "b".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(750),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 3,
+                    receipt_sha256: "d".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(600),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+            ],
+            stats: summarize_benchmark_trials(&outcomes),
+        }
+    }
+
+    fn comparison_test_dir(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "phicade-{name}-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&path);
+        fs::create_dir_all(&path).expect("create test dir");
+        path
+    }
+
+    #[test]
+    fn comparison_accepts_different_models_on_identical_environment() {
+        let a = comparison_test_campaign(1, "model-a", "digest-a");
+        let b = comparison_test_campaign(2, "model-b", "digest-b");
+        validate_campaign_compatibility(&a, &b).expect("compatible campaigns");
+    }
+
+    #[test]
+    fn comparison_refuses_same_campaign_and_policy_drift() {
+        let a = comparison_test_campaign(1, "model-a", "digest-a");
+        let same = comparison_test_campaign(1, "model-b", "digest-b");
+        assert!(validate_campaign_compatibility(&a, &same).is_err());
+
+        let mut drifted = comparison_test_campaign(2, "model-b", "digest-b");
+        drifted.policy.max_turns += 1;
+        assert!(validate_campaign_compatibility(&a, &drifted).is_err());
+    }
+
+    #[test]
+    fn comparison_refuses_partial_and_scoring_error_campaigns_before_hash_walk() {
+        let directory = comparison_test_dir("comparison-refusal");
+
+        let mut partial = comparison_test_campaign(1, "model-a", "digest-a");
+        partial.record_status = "PARTIAL".into();
+        assert!(validate_campaign_for_comparison(&directory, &partial).is_err());
+
+        let mut scoring_error = comparison_test_campaign(2, "model-b", "digest-b");
+        scoring_error.trials[2].record_status = "SCORING_ERROR".into();
+        scoring_error.trials[2].score_1000 = None;
+        scoring_error.stats = summarize_benchmark_trials(&[
+            BenchmarkTrialOutcome { score_1000: Some(900), task_success: true },
+            BenchmarkTrialOutcome { score_1000: Some(750), task_success: false },
+            BenchmarkTrialOutcome { score_1000: None, task_success: false },
+        ]);
+        assert!(validate_campaign_for_comparison(&directory, &scoring_error).is_err());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn comparison_trial_hash_verifier_detects_mutation() {
+        let directory = comparison_test_dir("comparison-hash");
+        let mut campaign = comparison_test_campaign(1, "model-a", "digest-a");
+
+        for (index, trial) in campaign.trials.iter_mut().enumerate() {
+            let bytes = format!("trial-evidence-{index}").into_bytes();
+            let path = directory.join(format!("run-{:06}.json", trial.benchmark_run_id));
+            fs::write(&path, &bytes).expect("write trial");
+            trial.receipt_sha256 = sha256_bytes(&bytes);
+        }
+
+        verify_campaign_trial_receipts(&directory, &campaign).expect("hashes pass");
+
+        let first = directory.join("run-000001.json");
+        fs::write(&first, b"mutated-evidence").expect("mutate trial");
+        assert!(verify_campaign_trial_receipts(&directory, &campaign).is_err());
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn numbered_receipt_ids_advance_past_existing_evidence() {
+        let directory = comparison_test_dir("receipt-ids");
+        fs::write(directory.join("run-000001.json"), b"one").expect("write one");
+        fs::write(directory.join("run-000007.json"), b"seven").expect("write seven");
+        fs::write(directory.join("ignore-me.txt"), b"noise").expect("write noise");
+
+        assert_eq!(
+            next_numbered_receipt_id(&directory, "run-", ".json").expect("next id"),
+            8
+        );
+
+        let _ = fs::remove_dir_all(directory);
+    }
+
     #[test]
     fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
         let receipt = ModelGameplayBenchmarkReceipt {
