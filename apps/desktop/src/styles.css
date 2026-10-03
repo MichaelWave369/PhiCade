@@ -479,3 +479,56 @@ footer {
   }
 }
 
+/* Rung 5: Replay Ledger */
+.replay-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #2f4738;
+  background: #070d09;
+}
+
+.replay-strip > span {
+  color: var(--green);
+  font-size: 9px;
+  letter-spacing: .12em;
+  margin-right: 4px;
+}
+
+.replay-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.replay-strip button:hover:not(:disabled) {
+  border-color: #4e765a;
+  background: #0c1710;
+}
+
+.replay-strip button.recording {
+  color: var(--amber);
+  border-color: var(--amber);
+  box-shadow: inset 0 0 14px rgba(255, 200, 87, .08);
+}
+
+.replay-strip > small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .replay-strip > small {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
