@@ -40,6 +40,55 @@ export interface SessionInfo {
   profile: GameProfile;
 }
 
+export interface ReplayCheckpoint {
+  frame: number;
+  stateSha256: string;
+  frameSha256: string;
+  inputMask: number;
+}
+
+export type ReplayVerificationResult = "pass" | "diverged";
+
+export interface ReplayVerification {
+  result: ReplayVerificationResult;
+  checkedCheckpoints: number;
+  firstDivergenceFrame: number | null;
+  expectedStateSha256: string | null;
+  actualStateSha256: string | null;
+  expectedFrameSha256: string | null;
+  actualFrameSha256: string | null;
+}
+
+export interface ReplayReceipt {
+  schema: string;
+  replaySha256: string;
+  gameSha256: string;
+  coreName: string;
+  coreVersion: string;
+  coreSha256: string;
+  startFrame: number;
+  endFrame: number;
+  actionCount: number;
+  checkpointCount: number;
+  verification: ReplayVerification | null;
+}
+
+export interface ReplayStatus {
+  recording: boolean;
+  actionCount: number;
+  checkpointCount: number;
+  lastReplayPath: string | null;
+  lastReceiptPath: string | null;
+  lastReplaySha256: string | null;
+}
+
+export interface ReplayArtifact {
+  replayPath: string;
+  receiptPath: string;
+  replaySha256: string;
+  receipt: ReplayReceipt;
+}
+
 export interface FramePacket {
   frame: number;
   width: number;
@@ -50,6 +99,9 @@ export interface FramePacket {
   shutdownRequested: boolean;
   rewindSnapshots: number;
   fastForward: number;
+  replayRecording: boolean;
+  replayActions: number;
+  replayCheckpoints: number;
 }
 
 export const defaultSettings: AppSettings = {
@@ -135,4 +187,21 @@ export async function flushGameSave(): Promise<void> {
 export async function stopEmulation(): Promise<void> {
   if (!isNativeShell()) return;
   await invoke("stop_emulation");
+}
+
+
+export async function getReplayStatus(): Promise<ReplayStatus> {
+  return invoke<ReplayStatus>("replay_status");
+}
+
+export async function startReplayRecording(): Promise<ReplayStatus> {
+  return invoke<ReplayStatus>("start_replay_recording");
+}
+
+export async function stopReplayRecording(): Promise<ReplayArtifact> {
+  return invoke<ReplayArtifact>("stop_replay_recording");
+}
+
+export async function verifyLastReplay(): Promise<ReplayArtifact> {
+  return invoke<ReplayArtifact>("verify_last_replay");
 }
