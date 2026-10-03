@@ -34,6 +34,7 @@ import {
   listBenchmarkCampaignReceipts,
   listBenchmarkSuiteReportCandidates,
   listBenchmarkSuiteReports,
+  listBenchmarkSuites,
   listOllamaModels,
   qualifyOllamaModel,
   loadSettings,
@@ -65,6 +66,7 @@ import {
   type CampaignComparisonArtifact,
   type CampaignListEntry,
   type BenchmarkSuiteComparisonArtifact,
+  type BenchmarkSuiteListEntry,
   type BenchmarkSuiteReportArtifact,
   type BenchmarkSuiteReportCandidate,
   type BenchmarkSuiteReportListEntry,
@@ -148,6 +150,8 @@ export function App() {
   const [comparisonBId, setComparisonBId] = useState<number | null>(null);
   const [lastComparison, setLastComparison] = useState<CampaignComparisonArtifact | null>(null);
   const [comparisonBusy, setComparisonBusy] = useState(false);
+  const [suiteRegistry, setSuiteRegistry] = useState<BenchmarkSuiteListEntry[]>([]);
+  const [selectedSuiteId, setSelectedSuiteId] = useState("");
   const [suiteCandidates, setSuiteCandidates] = useState<BenchmarkSuiteReportCandidate[]>([]);
   const [selectedSuiteCohortId, setSelectedSuiteCohortId] = useState<string | null>(null);
   const [lastSuiteReport, setLastSuiteReport] = useState<BenchmarkSuiteReportArtifact | null>(null);
@@ -158,6 +162,8 @@ export function App() {
   const [lastSuiteComparison, setLastSuiteComparison] = useState<BenchmarkSuiteComparisonArtifact | null>(null);
   const [suiteComparisonBusy, setSuiteComparisonBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+
+  const selectedSuite = suiteRegistry.find((suite) => suite.id === selectedSuiteId) ?? null;
 
   useEffect(() => {
     runningRef.current = running;
@@ -594,9 +600,14 @@ export function App() {
     }
   };
 
-  const refreshSuiteReportCandidates = async () => {
+  const refreshSuiteReportCandidates = async (suiteId = selectedSuiteId) => {
+    if (!suiteId) {
+      setSuiteCandidates([]);
+      setSelectedSuiteCohortId(null);
+      return;
+    }
     try {
-      const candidates = await listBenchmarkSuiteReportCandidates();
+      const candidates = await listBenchmarkSuiteReportCandidates(suiteId);
       setSuiteCandidates(candidates);
       const ready = candidates.filter((candidate) => candidate.ready);
       setSelectedSuiteCohortId((current) => {
@@ -614,9 +625,16 @@ export function App() {
     }
   };
 
-  const refreshSuiteReportLedger = async () => {
+  const refreshSuiteReportLedger = async (suiteId = selectedSuiteId) => {
+    if (!suiteId) {
+      setSuiteReportLedger([]);
+      setSuiteComparisonAId(null);
+      setSuiteComparisonBId(null);
+      return;
+    }
     try {
-      const reports = await listBenchmarkSuiteReports();
+      const reports = (await listBenchmarkSuiteReports())
+        .filter((entry) => entry.suiteId === suiteId);
       setSuiteReportLedger(reports);
       if (reports.length >= 2) {
         const newest = reports[reports.length - 1];
@@ -640,7 +658,26 @@ export function App() {
     }
   };
 
+  const changeSelectedSuite = async (suiteId: string) => {
+    setSelectedSuiteId(suiteId);
+    setSuiteCandidates([]);
+    setSelectedSuiteCohortId(null);
+    setLastSuiteReport(null);
+    setSuiteReportLedger([]);
+    setSuiteComparisonAId(null);
+    setSuiteComparisonBId(null);
+    setLastSuiteComparison(null);
+    await Promise.all([
+      refreshSuiteReportCandidates(suiteId),
+      refreshSuiteReportLedger(suiteId),
+    ]);
+  };
+
   const runSuiteComparison = async () => {
+    if (!selectedSuiteId) {
+      setNotice("SELECT A BENCHMARK SUITE FIRST");
+      return;
+    }
     if (suiteComparisonAId === null || suiteComparisonBId === null) {
       setNotice("SUITE COMPARISON REQUIRES TWO REPORTS");
       return;
@@ -653,13 +690,14 @@ export function App() {
     setSuiteComparisonBusy(true);
     try {
       const artifact = await compareBenchmarkSuiteReports(
+        selectedSuiteId,
         suiteComparisonAId,
         suiteComparisonBId,
       );
       setLastSuiteComparison(artifact);
       const stats = artifact.receipt.stats;
       setNotice(
-        `SUITE COMPARISON #${artifact.receipt.comparisonId} // ΔMACRO ${stats.macroMeanScoreDifferenceAMinusB.toFixed(1)} // ΔSUCCESS ${(stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp // ${stats.taskCount} TASKS`,
+        `${artifact.receipt.suiteId.toUpperCase()} // SUITE COMPARISON #${artifact.receipt.comparisonId} // ΔMACRO ${stats.macroMeanScoreDifferenceAMinusB.toFixed(1)} // ΔSUCCESS ${(stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp // ${stats.taskCount} TASKS`,
       );
     } catch (error) {
       setLastSuiteComparison(null);
@@ -670,20 +708,23 @@ export function App() {
   };
 
   const buildSelectedSuiteReport = async () => {
-    if (!selectedSuiteCohortId) {
-      setNotice("SUITE REPORT REQUIRES A READY 2/2 COHORT");
+    if (!selectedSuiteId || !selectedSuiteCohortId) {
+      setNotice("SUITE REPORT REQUIRES A SELECTED SUITE AND READY COHORT");
       return;
     }
     setSuiteReportBusy(true);
     try {
-      const artifact = await buildBenchmarkSuiteReport(selectedSuiteCohortId);
+      const artifact = await buildBenchmarkSuiteReport(
+        selectedSuiteId,
+        selectedSuiteCohortId,
+      );
       setLastSuiteReport(artifact);
       const stats = artifact.receipt.stats;
       setNotice(
-        `SUITE REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
+        `${artifact.receipt.suiteId.toUpperCase()} // REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
       );
-      await refreshSuiteReportCandidates();
-      await refreshSuiteReportLedger();
+      await refreshSuiteReportCandidates(selectedSuiteId);
+      await refreshSuiteReportLedger(selectedSuiteId);
     } catch (error) {
       setLastSuiteReport(null);
       setNotice(`SUITE REPORT REFUSED // ${String(error)}`);
@@ -1159,6 +1200,7 @@ export function App() {
       setLastComparison(null);
       setSuiteCandidates([]);
       setSelectedSuiteCohortId(null);
+      setSelectedSuiteId("");
       setLastSuiteReport(null);
       setSuiteReportBusy(false);
       setSuiteReportLedger([]);
@@ -1179,11 +1221,16 @@ export function App() {
       setProfile(info.profile);
       setRunning(true);
       runningRef.current = true;
-      const [priorCampaigns, priorSuiteCandidates, priorSuiteReports] = await Promise.all([
+      const suites = await listBenchmarkSuites();
+      setSuiteRegistry(suites);
+      const defaultSuiteId = suites[suites.length - 1]?.id ?? "";
+      setSelectedSuiteId(defaultSuiteId);
+      const [priorCampaigns, priorSuiteCandidates, allSuiteReports] = await Promise.all([
         listBenchmarkCampaignReceipts(),
-        listBenchmarkSuiteReportCandidates(),
+        defaultSuiteId ? listBenchmarkSuiteReportCandidates(defaultSuiteId) : Promise.resolve([]),
         listBenchmarkSuiteReports(),
       ]);
+      const priorSuiteReports = allSuiteReports.filter((entry) => entry.suiteId === defaultSuiteId);
       setCampaignLedger(priorCampaigns);
       setSuiteCandidates(priorSuiteCandidates);
       setSuiteReportLedger(priorSuiteReports);
