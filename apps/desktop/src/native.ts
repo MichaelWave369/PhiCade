@@ -34,12 +34,26 @@ export interface GameProfile {
   saveSlot: number;
 }
 
+export interface BenchmarkTaskInfo {
+  suiteId: string;
+  id: string;
+  title: string;
+  romSha256: string;
+  sourceSha256: string;
+  start: PixelPoint;
+  target: PixelPoint;
+  initialDistance: number;
+  successDistance: number;
+  warmupFrames: number;
+}
+
 export interface SessionInfo {
   gamePath: string;
   gameKey: string;
   corePath: string;
   core: CoreIdentity;
   profile: GameProfile;
+  benchmarkTask: BenchmarkTaskInfo | null;
 }
 
 export interface ReplayCheckpoint {
