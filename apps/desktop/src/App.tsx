@@ -73,7 +73,6 @@ import {
 
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
 const PHIBOT_AGENT_ID = "phi-local";
-const AGENT_GYM_ROM_SHA256 = "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e";
 
 const milestones = [
   ["COMPATIBILITY", "STRICT", "Comparison refuses partial, mismatched, scoring-error, or differently pinned campaigns."],
@@ -628,8 +627,8 @@ export function App() {
       setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
       return;
     }
-    if (!session || session.gameKey !== AGENT_GYM_ROM_SHA256) {
-      setNotice("BENCHMARK REQUIRES THE EXACT PHI-AGENT GYM ROM");
+    if (!session?.benchmarkTask) {
+      setNotice("BENCHMARK REQUIRES A REGISTERED SUITE ROM");
       return;
     }
 
@@ -663,7 +662,7 @@ export function App() {
       setLastModelBenchmark(null);
       setLastAutodrive(null);
       setNotice(
-        `MODEL BENCHMARK #${started.benchmarkRunId} // ${settings.ollamaModel} // GYM RESET + WARMED // SCORE PENDING`,
+        `MODEL BENCHMARK #${started.benchmarkRunId} // ${session.benchmarkTask.title} // ${settings.ollamaModel} // RESET + WARMED // SCORE PENDING`,
       );
     } catch (error) {
       setNotice(`MODEL BENCHMARK START ERROR // ${String(error)}`);
@@ -678,8 +677,8 @@ export function App() {
       setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
       return;
     }
-    if (!session || session.gameKey !== AGENT_GYM_ROM_SHA256) {
-      setNotice("CAMPAIGN REQUIRES THE EXACT PHI-AGENT GYM ROM");
+    if (!session?.benchmarkTask) {
+      setNotice("CAMPAIGN REQUIRES A REGISTERED SUITE ROM");
       return;
     }
 
@@ -1256,10 +1255,10 @@ export function App() {
                 || authority?.mode !== "phi-bot"
                 || !modelQualification?.qualified
                 || !session
-                || session.gameKey !== AGENT_GYM_ROM_SHA256
+                || !session.benchmarkTask
               }
             >
-              {benchmarkRunning && !campaignStatus?.active ? "BENCH RUNNING" : "BENCH GYM"}
+              {benchmarkRunning && !campaignStatus?.active ? "BENCH RUNNING" : "BENCH TASK"}
             </button>
             <button
               className={campaignStatus?.active ? "campaign-active" : ""}
@@ -1274,7 +1273,7 @@ export function App() {
                   || authority?.mode !== "phi-bot"
                   || !modelQualification?.qualified
                   || !session
-                  || session.gameKey !== AGENT_GYM_ROM_SHA256
+                  || !session.benchmarkTask
                 )
               }
             >
@@ -1439,7 +1438,9 @@ export function App() {
             <div><dt>AUTO TURNS</dt><dd>{autodrive ? `${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}` : "0/0"}</dd></div>
             <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
             <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
-            <div><dt>GYM ROM</dt><dd>{session?.gameKey === AGENT_GYM_ROM_SHA256 ? "FROZEN V1" : "NO"}</dd></div>
+            <div><dt>BENCH TASK</dt><dd>{session?.benchmarkTask ? session.benchmarkTask.title.toUpperCase() : "NONE"}</dd></div>
+            <div><dt>TASK ID</dt><dd>{session?.benchmarkTask?.id ?? "----"}</dd></div>
+            <div><dt>SUITE</dt><dd>{session?.benchmarkTask?.suiteId ?? "----"}</dd></div>
             <div><dt>BENCH RUN</dt><dd>{benchmarkRunning ? `#${benchmarkRunId} ACTIVE` : lastModelBenchmark ? `#${lastModelBenchmark.receipt.benchmarkRunId}` : "NONE"}</dd></div>
             <div><dt>BENCH SCORE</dt><dd>{lastModelBenchmark?.receipt.score1000 === null || lastModelBenchmark?.receipt.score1000 === undefined ? "----" : `${lastModelBenchmark.receipt.score1000}/1000`}</dd></div>
             <div><dt>BENCH OUTCOME</dt><dd>{lastModelBenchmark ? lastModelBenchmark.receipt.taskSuccess ? "TARGET REACHED" : lastModelBenchmark.receipt.recordStatus : "UNRUN"}</dd></div>
