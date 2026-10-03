@@ -41,11 +41,12 @@
 
 ## Rung 5 — Replay Ledger
 
-- [ ] Deterministic input recording
-- [ ] Replay verification
-- [ ] State checkpoints
-- [ ] Exportable session receipt
-- [ ] Divergence detector
+- [x] Deterministic input recording
+- [x] Replay verification
+- [x] State/frame/input checkpoints
+- [x] Exportable content-addressed session receipt
+- [x] Divergence detector
+- [x] CI positive + mutated-replay negative controls
 
 ## Rung 6 — Phi-Bot seat
 
