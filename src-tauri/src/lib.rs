@@ -208,6 +208,39 @@ fn start_emulation(
     Ok(info)
 }
 
+const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
+
+fn resample_stereo(input: &[f32], source_rate: u32, target_rate: u32) -> Vec<f32> {
+    let source_frames = input.len() / 2;
+    if source_frames == 0 || source_rate == 0 || target_rate == 0 {
+        return Vec::new();
+    }
+    if source_rate == target_rate {
+        return input[..source_frames * 2].to_vec();
+    }
+
+    let output_frames =
+        ((source_frames as u64 * target_rate as u64 + source_rate as u64 - 1) / source_rate as u64)
+            .max(1) as usize;
+    let ratio = source_rate as f64 / target_rate as f64;
+    let mut output = Vec::with_capacity(output_frames * 2);
+
+    for output_frame in 0..output_frames {
+        let position = (output_frame as f64 * ratio).min((source_frames - 1) as f64);
+        let left_index = position.floor() as usize;
+        let right_index = (left_index + 1).min(source_frames - 1);
+        let fraction = (position - left_index as f64) as f32;
+
+        for channel in 0..2 {
+            let left = input[left_index * 2 + channel];
+            let right = input[right_index * 2 + channel];
+            output.push(left + (right - left) * fraction);
+        }
+    }
+
+    output
+}
+
 #[tauri::command]
 fn step_emulation(
     state: State<'_, EmulatorState>,
@@ -220,8 +253,18 @@ fn step_emulation(
     session.core.step_frame(&actions, &mut video, &mut audio)
         .map_err(|error| format!("core frame failed: {error:?}"))?;
 
-    let mut audio_bytes = Vec::with_capacity(audio.interleaved_stereo_f32.len() * 2);
-    for sample in audio.interleaved_stereo_f32 {
+    let output_rate = if audio.sample_rate_hz > 96_000 {
+        WEB_AUDIO_SAMPLE_RATE_HZ
+    } else {
+        audio.sample_rate_hz
+    };
+    let output_samples = resample_stereo(
+        &audio.interleaved_stereo_f32,
+        audio.sample_rate_hz,
+        output_rate,
+    );
+    let mut audio_bytes = Vec::with_capacity(output_samples.len() * 2);
+    for sample in output_samples {
         let quantized = (sample.clamp(-1.0, 1.0) * 32767.0).round() as i16;
         audio_bytes.extend_from_slice(&quantized.to_le_bytes());
     }
@@ -232,7 +275,7 @@ fn step_emulation(
         height: video.height,
         rgba_base64: BASE64.encode(video.rgba8),
         audio_base64: BASE64.encode(audio_bytes),
-        sample_rate_hz: audio.sample_rate_hz,
+        sample_rate_hz: output_rate,
         shutdown_requested: session.core.shutdown_requested(),
     })
 }
@@ -279,6 +322,14 @@ mod tests {
         assert_eq!(classify_extension("exe"), None);
         assert_eq!(classify_extension("zip"), None);
     }
+    #[test]
+    fn resamples_core_audio_into_web_audio_range() {
+        let input = vec![0.25, -0.25, 0.25, -0.25, 0.25, -0.25, 0.25, -0.25];
+        let output = resample_stereo(&input, 96_000, 48_000);
+        assert_eq!(output.len(), 4);
+        assert!(output.iter().all(|sample| sample.abs() <= 0.25));
+    }
+
     #[test]
     fn rung_three_maps_game_boy_extensions() {
         assert_eq!(system_id_from_extension("gb"), Some(SystemId::GameBoy));
