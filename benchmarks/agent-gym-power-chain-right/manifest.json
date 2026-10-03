@@ -36,8 +36,8 @@
     "successDistancePixels": 4
   },
   "controlsQualification": {
-    "oracle": ["RIGHT", "A", "LEFT", "A", "UP", "A", "UP"],
-    "oracleFrames": [28, 1, 28, 1, 20, 1, 32],
+    "oracle": ["RIGHT", "A", "LEFT", "WAIT", "A", "WAIT", "UP", "A", "WAIT", "UP"],
+    "oracleFrames": [28, 1, 28, 2, 1, 2, 20, 1, 2, 32],
     "noInputExpectedProgress": 0,
     "oracleMinimumScore": 980,
     "deterministicReplayRequired": true
