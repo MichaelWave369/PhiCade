@@ -1,10 +1,11 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, ActionSource, AgentGrant, AuthorityPolicy, AudioBuffer, ControlMode,
-    EmulatorCore, FrameBuffer, GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger,
-    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    compile_agent_turn, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnRequest,
+    AgentTurnResponse, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
+    GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
+    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    AGENT_TURN_REQUEST_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -72,6 +73,10 @@ struct EmulatorSession {
     authority: AuthorityPolicy,
     authority_rejections: u64,
     last_authority_reason: Option<String>,
+    pending_agent_turn: Option<AgentTurnRequest>,
+    agent_inbox: VecDeque<ActionEnvelope>,
+    next_driver_turn_id: u64,
+    next_action_sequence: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -189,6 +194,14 @@ struct AuthorityStatus {
     expires_at_frame: Option<u64>,
     rejected_actions: u64,
     last_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DriverStatus {
+    pending_turn_id: Option<u64>,
+    queued_actions: usize,
+    next_turn_id: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1117,6 +1130,10 @@ fn start_emulation(
         authority: AuthorityPolicy::new(1),
         authority_rejections: 0,
         last_authority_reason: None,
+        pending_agent_turn: None,
+        agent_inbox: VecDeque::new(),
+        next_driver_turn_id: 1,
+        next_action_sequence: 0,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
