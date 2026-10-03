@@ -3,13 +3,14 @@ use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
-    AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore,
-    FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
-    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
+    BenchmarkTrialOutcome, ControlMode, EmulatorCore, FrameBuffer, GameImage, PhiBotObservation,
+    PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification,
+    ReplayVerificationResult, SystemCommand, SystemId, summarize_benchmark_trials,
     AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
-    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
-    AUTODRIVE_STATUS_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
+    BENCHMARK_CAMPAIGN_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
     score_agent_gym_frame,
 };
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,8 @@ const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
 const REPLAY_CHECKPOINT_INTERVAL_FRAMES: u64 = 60;
 const STATE_MAGIC: &[u8] = b"PHICADE_STATE_V1\0";
 const MODEL_GAMEPLAY_BENCHMARK_SCHEMA: &str = "phicade.model-gameplay-benchmark.v1";
+const MIN_CAMPAIGN_TRIALS: u16 = 3;
+const MAX_CAMPAIGN_TRIALS: u16 = 20;
 
 #[derive(Default)]
 struct EmulatorState {
@@ -55,6 +58,7 @@ struct SessionPaths {
     replay_dir: PathBuf,
     autodrive_dir: PathBuf,
     model_benchmark_dir: PathBuf,
+    benchmark_campaign_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -148,6 +152,89 @@ struct ModelBenchmarkStart {
     autodrive: AutodriveStatus,
 }
 
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CampaignTrialEvidence {
+    benchmark_run_id: u64,
+    receipt_sha256: String,
+    record_status: String,
+    score_1000: Option<u16>,
+    task_success: bool,
+    stop_reason: AutodriveStopReason,
+}
+
+#[derive(Debug, Clone)]
+struct BenchmarkCampaignRun {
+    campaign_id: u64,
+    active: bool,
+    total_trials: u16,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    policy: AutodrivePolicy,
+    trials: Vec<CampaignTrialEvidence>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkCampaignReceipt {
+    schema: String,
+    record_status: String,
+    campaign_id: u64,
+    benchmark_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    gym_source_sha256: String,
+    gym_rom_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+    completed_trials: u16,
+    trials: Vec<CampaignTrialEvidence>,
+    stats: BenchmarkCampaignStats,
+}
+
+#[derive(Debug, Clone)]
+struct BenchmarkCampaignExport {
+    receipt_path: PathBuf,
+    receipt: BenchmarkCampaignReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkCampaignArtifact {
+    receipt_path: String,
+    receipt: BenchmarkCampaignReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkCampaignStatus {
+    schema: String,
+    campaign_id: u64,
+    active: bool,
+    total_trials: u16,
+    completed_trials: u16,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkCampaignStart {
+    status: BenchmarkCampaignStatus,
+    benchmark: ModelBenchmarkStart,
+}
+
 struct EmulatorSession {
     core: LibretroCore,
     game_path: String,
@@ -173,6 +260,9 @@ struct EmulatorSession {
     model_benchmark: Option<ModelBenchmarkRun>,
     last_model_benchmark: Option<ModelBenchmarkExport>,
     next_model_benchmark_run_id: u64,
+    benchmark_campaign: Option<BenchmarkCampaignRun>,
+    last_benchmark_campaign: Option<BenchmarkCampaignExport>,
+    next_benchmark_campaign_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -593,6 +683,7 @@ fn session_paths(
     let replay_dir = root.join("replays").join(game_key);
     let autodrive_dir = root.join("autodrive").join(game_key);
     let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
+    let benchmark_campaign_dir = root.join("benchmark-campaigns").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -606,6 +697,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", autodrive_dir.display()))?;
     fs::create_dir_all(&model_benchmark_dir)
         .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
+    fs::create_dir_all(&benchmark_campaign_dir)
+        .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -614,6 +707,7 @@ fn session_paths(
         replay_dir,
         autodrive_dir,
         model_benchmark_dir,
+        benchmark_campaign_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1344,6 +1438,9 @@ fn start_emulation(
         model_benchmark: None,
         last_model_benchmark: None,
         next_model_benchmark_run_id: 1,
+        benchmark_campaign: None,
+        last_benchmark_campaign: None,
+        next_benchmark_campaign_id: 1,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -1593,6 +1690,145 @@ fn model_benchmark_artifact(export: &ModelBenchmarkExport) -> ModelBenchmarkArti
     }
 }
 
+fn benchmark_campaign_status_for(
+    campaign: &BenchmarkCampaignRun,
+) -> BenchmarkCampaignStatus {
+    BenchmarkCampaignStatus {
+        schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
+        campaign_id: campaign.campaign_id,
+        active: campaign.active,
+        total_trials: campaign.total_trials,
+        completed_trials: u16::try_from(campaign.trials.len()).unwrap_or(u16::MAX),
+        provider: campaign.provider.clone(),
+        model: campaign.model.clone(),
+        model_digest: campaign.model_digest.clone(),
+        policy: campaign.policy.clone(),
+    }
+}
+
+fn benchmark_campaign_artifact(
+    export: &BenchmarkCampaignExport,
+) -> BenchmarkCampaignArtifact {
+    BenchmarkCampaignArtifact {
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finish_benchmark_campaign(
+    session: &mut EmulatorSession,
+    record_status: &str,
+) -> Result<BenchmarkCampaignArtifact, String> {
+    let snapshot = session
+        .benchmark_campaign
+        .as_ref()
+        .ok_or_else(|| "no benchmark campaign has been started".to_owned())?
+        .clone();
+
+    let outcomes: Vec<BenchmarkTrialOutcome> = snapshot
+        .trials
+        .iter()
+        .map(|trial| BenchmarkTrialOutcome {
+            score_1000: trial.score_1000,
+            task_success: trial.task_success,
+        })
+        .collect();
+    let stats = summarize_benchmark_trials(&outcomes);
+
+    let receipt = BenchmarkCampaignReceipt {
+        schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
+        record_status: record_status.to_owned(),
+        campaign_id: snapshot.campaign_id,
+        benchmark_id: AGENT_GYM_ID.to_owned(),
+        provider: snapshot.provider,
+        model: snapshot.model,
+        model_digest: snapshot.model_digest,
+        model_qualification_sha256: snapshot.model_qualification_sha256,
+        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
+        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        core_sha256: snapshot.core_sha256,
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        policy: snapshot.policy,
+        total_trials: snapshot.total_trials,
+        completed_trials: u16::try_from(snapshot.trials.len()).unwrap_or(u16::MAX),
+        trials: snapshot.trials,
+        stats,
+    };
+
+    let receipt_path = session
+        .paths
+        .benchmark_campaign_dir
+        .join(format!("campaign-{:06}.json", receipt.campaign_id));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize benchmark campaign receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+
+    if let Some(campaign) = session.benchmark_campaign.as_mut() {
+        campaign.active = false;
+    }
+
+    let export = BenchmarkCampaignExport {
+        receipt_path,
+        receipt,
+    };
+    session.last_benchmark_campaign = Some(export.clone());
+    Ok(benchmark_campaign_artifact(&export))
+}
+
+fn note_benchmark_campaign_trial(
+    session: &mut EmulatorSession,
+    export: &ModelBenchmarkExport,
+) -> Result<(), String> {
+    let Some(campaign) = session
+        .benchmark_campaign
+        .as_ref()
+        .filter(|campaign| campaign.active)
+        .cloned()
+    else {
+        return Ok(());
+    };
+
+    let receipt = &export.receipt;
+    if receipt.provider != campaign.provider
+        || receipt.model != campaign.model
+        || receipt.model_digest != campaign.model_digest
+        || receipt.model_qualification_sha256 != campaign.model_qualification_sha256
+        || receipt.core_sha256 != campaign.core_sha256
+        || receipt.gym_source_sha256 != AGENT_GYM_SOURCE_SHA256
+        || receipt.gym_rom_sha256 != AGENT_GYM_ROM_SHA256
+        || receipt.policy != campaign.policy
+    {
+        return Err("benchmark campaign trial does not match pinned campaign evidence".into());
+    }
+
+    let evidence = CampaignTrialEvidence {
+        benchmark_run_id: receipt.benchmark_run_id,
+        receipt_sha256: sha256_file(&export.receipt_path)?,
+        record_status: receipt.record_status.clone(),
+        score_1000: receipt.score_1000,
+        task_success: receipt.task_success,
+        stop_reason: receipt.stop_reason,
+    };
+
+    let completed = {
+        let campaign = session
+            .benchmark_campaign
+            .as_mut()
+            .ok_or_else(|| "benchmark campaign disappeared during trial finalization".to_owned())?;
+        if campaign.trials.len() >= usize::from(campaign.total_trials) {
+            return Err("benchmark campaign received more trials than configured".into());
+        }
+        campaign.trials.push(evidence);
+        campaign.trials.len() == usize::from(campaign.total_trials)
+    };
+
+    if completed {
+        let _ = finish_benchmark_campaign(session, "COMPLETE")?;
+    }
+    Ok(())
+}
+
 fn finish_model_benchmark(
     session: &mut EmulatorSession,
     autodrive: &AutodriveExport,
@@ -1683,6 +1919,7 @@ fn finish_model_benchmark(
     };
     session.last_model_benchmark = Some(export.clone());
     session.model_benchmark = None;
+    note_benchmark_campaign_trial(session, &export)?;
     Ok(Some(model_benchmark_artifact(&export)))
 }
 
@@ -1898,23 +2135,14 @@ fn start_autodrive(
         .map(|(status, _)| status)
 }
 
-#[tauri::command]
-fn start_model_gameplay_benchmark(
-    app: AppHandle,
-    state: State<'_, EmulatorState>,
+fn start_model_gameplay_benchmark_inner(
+    app: &AppHandle,
+    session: &mut EmulatorSession,
     provider: String,
     model: String,
     model_digest: String,
     policy: AutodrivePolicy,
 ) -> Result<ModelBenchmarkStart, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_mut()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
     if session.game_key != AGENT_GYM_ROM_SHA256 {
         return Err(format!(
             "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
@@ -2031,6 +2259,313 @@ fn start_model_gameplay_benchmark(
         benchmark_run_id,
         autodrive,
     })
+
+}
+
+#[tauri::command]
+fn start_model_gameplay_benchmark(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<ModelBenchmarkStart, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        return Err("single benchmark start is disabled while a campaign is active".into());
+    }
+
+    start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        provider,
+        model,
+        model_digest,
+        policy,
+    )
+}
+
+fn validate_campaign_trial_count(total_trials: u16) -> Result<(), String> {
+    if !(MIN_CAMPAIGN_TRIALS..=MAX_CAMPAIGN_TRIALS).contains(&total_trials) {
+        return Err(format!(
+            "benchmark campaign trials must be in {}..={}",
+            MIN_CAMPAIGN_TRIALS, MAX_CAMPAIGN_TRIALS
+        ));
+    }
+    Ok(())
+}
+
+async fn inspect_campaign_model_digest(
+    base_url: &str,
+    model: &str,
+    expected_digest: &str,
+) -> Result<(), String> {
+    let details = ollama::inspect_model(base_url, model).await?;
+    if details.digest != expected_digest {
+        return Err(format!(
+            "benchmark campaign digest drift: expected {}, installed {}",
+            expected_digest, details.digest
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_benchmark_campaign(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    base_url: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+) -> Result<BenchmarkCampaignStart, String> {
+    validate_campaign_trial_count(total_trials)?;
+    let provider_normalized = provider.trim().to_ascii_lowercase();
+    if provider_normalized != "ollama" {
+        return Err("benchmark campaigns currently support the ollama provider".into());
+    }
+    inspect_campaign_model_digest(&base_url, &model, &model_digest).await?;
+
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        return Err("a benchmark campaign is already active".into());
+    }
+
+    let benchmark = start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        provider_normalized,
+        model,
+        model_digest,
+        policy,
+    )?;
+    let run = session
+        .model_benchmark
+        .as_ref()
+        .ok_or_else(|| "benchmark start did not create native benchmark state".to_owned())?
+        .clone();
+
+    let campaign_id = session.next_benchmark_campaign_id;
+    session.next_benchmark_campaign_id =
+        session.next_benchmark_campaign_id.saturating_add(1);
+    session.last_benchmark_campaign = None;
+    session.benchmark_campaign = Some(BenchmarkCampaignRun {
+        campaign_id,
+        active: true,
+        total_trials,
+        provider: run.provider,
+        model: run.model,
+        model_digest: run.model_digest,
+        model_qualification_sha256: run.model_qualification_sha256,
+        core_sha256: run.core_sha256,
+        policy: benchmark.autodrive.policy.clone(),
+        trials: Vec::with_capacity(usize::from(total_trials)),
+    });
+
+    let status = benchmark_campaign_status_for(
+        session
+            .benchmark_campaign
+            .as_ref()
+            .ok_or_else(|| "benchmark campaign state disappeared".to_owned())?,
+    );
+    Ok(BenchmarkCampaignStart { status, benchmark })
+}
+
+#[tauri::command]
+async fn continue_benchmark_campaign(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    base_url: String,
+) -> Result<BenchmarkCampaignStart, String> {
+    let snapshot = {
+        let session = state
+            .session
+            .lock()
+            .map_err(|_| "emulator session lock poisoned".to_owned())?;
+        let session = session
+            .as_ref()
+            .ok_or_else(|| "no emulator session is running".to_owned())?;
+        let campaign = session
+            .benchmark_campaign
+            .as_ref()
+            .filter(|campaign| campaign.active)
+            .ok_or_else(|| "no active benchmark campaign".to_owned())?;
+        if campaign.trials.len() >= usize::from(campaign.total_trials) {
+            return Err("benchmark campaign already has all configured trials".into());
+        }
+        campaign.clone()
+    };
+
+    inspect_campaign_model_digest(&base_url, &snapshot.model, &snapshot.model_digest).await?;
+
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    let current = session
+        .benchmark_campaign
+        .as_ref()
+        .filter(|campaign| campaign.active)
+        .ok_or_else(|| "benchmark campaign stopped before continuation".to_owned())?;
+
+    if current.campaign_id != snapshot.campaign_id
+        || current.model_digest != snapshot.model_digest
+        || current.model_qualification_sha256 != snapshot.model_qualification_sha256
+        || current.core_sha256 != snapshot.core_sha256
+        || current.policy != snapshot.policy
+    {
+        return Err("benchmark campaign pins changed before continuation".into());
+    }
+    if session.model_benchmark.is_some()
+        || session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+    {
+        return Err("current campaign trial has not finished".into());
+    }
+
+    let qualification = load_ollama_qualification(&app, &snapshot.model_digest)?
+        .ok_or_else(|| "campaign qualification receipt disappeared".to_owned())?;
+    if !qualification_receipt_passes(
+        &qualification.receipt,
+        &snapshot.model,
+        &snapshot.model_digest,
+    ) {
+        return Err("campaign model qualification no longer passes".into());
+    }
+    if sha256_file(Path::new(&qualification.receipt_path))?
+        != snapshot.model_qualification_sha256
+    {
+        return Err("campaign model qualification receipt changed".into());
+    }
+    if sha256_file(session.core.core_path())? != snapshot.core_sha256 {
+        return Err("campaign emulator core binary changed".into());
+    }
+
+    let benchmark = start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        snapshot.provider,
+        snapshot.model,
+        snapshot.model_digest,
+        snapshot.policy,
+    )?;
+    let status = benchmark_campaign_status_for(
+        session
+            .benchmark_campaign
+            .as_ref()
+            .ok_or_else(|| "benchmark campaign state disappeared".to_owned())?,
+    );
+    Ok(BenchmarkCampaignStart { status, benchmark })
+}
+
+#[tauri::command]
+fn benchmark_campaign_status(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<BenchmarkCampaignStatus>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .benchmark_campaign
+        .as_ref()
+        .map(benchmark_campaign_status_for))
+}
+
+#[tauri::command]
+fn last_benchmark_campaign_receipt(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<BenchmarkCampaignArtifact>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .last_benchmark_campaign
+        .as_ref()
+        .map(benchmark_campaign_artifact))
+}
+
+#[tauri::command]
+fn cancel_benchmark_campaign(
+    state: State<'_, EmulatorState>,
+) -> Result<BenchmarkCampaignArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if !session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        if let Some(last) = session.last_benchmark_campaign.as_ref() {
+            return Ok(benchmark_campaign_artifact(last));
+        }
+        return Err("no active benchmark campaign".into());
+    }
+
+    if session
+        .autodrive
+        .as_ref()
+        .is_some_and(|status| status.active)
+    {
+        let _ = finish_autodrive(session, AutodriveStopReason::OperatorStop)?;
+    }
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        finish_benchmark_campaign(session, "PARTIAL")
+    } else {
+        session
+            .last_benchmark_campaign
+            .as_ref()
+            .map(benchmark_campaign_artifact)
+            .ok_or_else(|| "campaign completed without a summary receipt".to_owned())
+    }
 }
 
 #[tauri::command]
@@ -2766,6 +3301,13 @@ fn stop_emulation(state: State<'_, EmulatorState>) -> Result<(), String> {
         {
             let _ = finish_autodrive(active, AutodriveStopReason::CoreShutdown)?;
         }
+        if active
+            .benchmark_campaign
+            .as_ref()
+            .is_some_and(|campaign| campaign.active)
+        {
+            let _ = finish_benchmark_campaign(active, "PARTIAL")?;
+        }
         flush_save_ram(active)?;
     }
     *session = None;
@@ -2814,6 +3356,11 @@ pub fn run() {
             start_autodrive,
             start_model_gameplay_benchmark,
             last_model_gameplay_benchmark,
+            start_benchmark_campaign,
+            continue_benchmark_campaign,
+            benchmark_campaign_status,
+            last_benchmark_campaign_receipt,
+            cancel_benchmark_campaign,
             autodrive_status,
             stop_autodrive,
             fail_autodrive_provider,
@@ -2928,6 +3475,84 @@ mod tests {
             "vision-model",
             "digest-b"
         ));
+    }
+
+    #[test]
+    fn campaign_trial_count_is_bounded() {
+        assert!(validate_campaign_trial_count(2).is_err());
+        assert!(validate_campaign_trial_count(3).is_ok());
+        assert!(validate_campaign_trial_count(20).is_ok());
+        assert!(validate_campaign_trial_count(21).is_err());
+    }
+
+    #[test]
+    fn campaign_receipt_serializes_trial_hashes_and_stats() {
+        let stats = summarize_benchmark_trials(&[
+            BenchmarkTrialOutcome {
+                score_1000: Some(1000),
+                task_success: true,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(500),
+                task_success: false,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: None,
+                task_success: false,
+            },
+        ]);
+        let receipt = BenchmarkCampaignReceipt {
+            schema: BENCHMARK_CAMPAIGN_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            campaign_id: 3,
+            benchmark_id: AGENT_GYM_ID.into(),
+            provider: "ollama".into(),
+            model: "vision-model".into(),
+            model_digest: "digest-a".into(),
+            model_qualification_sha256: "q".repeat(64),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            total_trials: 3,
+            completed_trials: 3,
+            trials: vec![
+                CampaignTrialEvidence {
+                    benchmark_run_id: 1,
+                    receipt_sha256: "a".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(1000),
+                    task_success: true,
+                    stop_reason: AutodriveStopReason::TaskSuccess,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 2,
+                    receipt_sha256: "b".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(500),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 3,
+                    receipt_sha256: "d".repeat(64),
+                    record_status: "SCORING_ERROR".into(),
+                    score_1000: None,
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::ProviderFailure,
+                },
+            ],
+            stats,
+        };
+
+        let json = serde_json::to_value(&receipt).expect("serialize campaign receipt");
+        assert_eq!(json["schema"], BENCHMARK_CAMPAIGN_SCHEMA);
+        assert_eq!(json["trials"][0]["receiptSha256"], "a".repeat(64));
+        assert_eq!(json["stats"]["scoredTrials"], 2);
+        assert_eq!(json["stats"]["scoringErrorTrials"], 1);
+        assert_eq!(json["stats"]["meanScore1000"], 750.0);
     }
 
     #[test]

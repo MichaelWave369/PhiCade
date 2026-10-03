@@ -377,3 +377,48 @@ benchmark receipt.
 A model benchmark receipt hashes both the model qualification receipt and the
 underlying Autodrive receipt, binding capability evidence to gameplay execution
 without treating either artifact as self-authenticating folklore.
+
+
+## Benchmark Campaigns
+
+Rung 13 composes repeated Rung 12 benchmark receipts into a pinned campaign.
+
+```text
+qualified model digest
+        |
+        v
+campaign pins
+(model + qualification hash + core hash + policy)
+        |
+        v
+trial 1 -> gameplay receipt -> SHA-256
+        |
+        +--> live Ollama digest re-check
+        |
+        v
+trial 2 -> gameplay receipt -> SHA-256
+        |
+       ...
+        |
+        v
+shared campaign statistics
+        |
+        v
+campaign summary receipt
+```
+
+The campaign summary never substitutes for trial evidence. It stores the SHA-256
+of each individual Rung 12 receipt plus only the minimal trial outcome fields needed
+for aggregate inspection.
+
+Before every continuation trial, native PhiCade re-queries Ollama and requires the
+currently installed model digest to match the campaign pin. It also re-hashes the
+model qualification receipt and SameBoy binary.
+
+The shared runtime computes campaign statistics. Score statistics use only
+scoreable trials. Scoring errors remain explicit and are not coerced to zero.
+Success rate uses all observed trials.
+
+A campaign is COMPLETE only when all configured trials have been sealed. Operator
+termination or core shutdown writes a PARTIAL summary so completed evidence is not
+discarded.

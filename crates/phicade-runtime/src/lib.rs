@@ -7,6 +7,7 @@ pub mod action_bus;
 pub mod authority;
 pub mod agent_gym;
 pub mod autodrive;
+pub mod benchmark_campaign;
 pub mod core;
 pub mod driver;
 pub mod library;
@@ -26,6 +27,10 @@ pub use agent_gym::{
 pub use autodrive::{
     AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,
     AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
+};
+pub use benchmark_campaign::{
+    summarize_benchmark_trials, BenchmarkCampaignStats, BenchmarkTrialOutcome,
+    BENCHMARK_CAMPAIGN_SCHEMA,
 };
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use driver::{

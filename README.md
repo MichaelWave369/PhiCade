@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 12
+## Current status — Rung 13
 
-PhiCade can now produce **scored gameplay receipts for an exact qualified local
-model digest** in the frozen Φ-Agent Gym world.
+PhiCade can now run **repeated exact-digest gameplay benchmark campaigns** against
+the frozen Φ-Agent Gym environment.
 
 Current stack:
 
@@ -21,12 +21,14 @@ Current stack:
 - bounded multi-turn Autodrive
 - digest-bound local model qualification
 - source-first Φ-Agent Gym benchmark ROM
-- shared rendered-pixel benchmark scorer
-- exact-gym-hash model benchmark gate
-- D-pad-only benchmark authority
-- automatic task-success stop
-- exact model/qualification/core/autodrive evidence binding
-- persistent model gameplay score receipts
+- shared rendered-pixel scorer
+- exact-digest single-run gameplay receipts
+- 3–20 trial native benchmark campaigns
+- live Ollama digest re-check before every trial
+- qualification/core/policy drift refusal
+- immutable per-trial receipt hashes
+- success rate, mean, median, min/max, and population standard deviation
+- COMPLETE and PARTIAL campaign receipts
 
 ## Run
 
@@ -44,32 +46,47 @@ With Ollama running locally:
 3. press **QUALIFY MODEL**
 
 A PASS receipt binds the selected provider/model to the exact currently installed
-digest. **OLLAMA TURN** remains available for one-shot experimentation.
-**AUTO DRIVE** requires a current digest-bound qualification PASS.
+digest.
 
-## Score a qualified model
+## Score one run
 
-Load the exact Φ-Agent Gym ROM whose SHA-256 is:
+Load the exact Φ-Agent Gym ROM, choose **HANDOFF**, then press **BENCH GYM**.
 
-`353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e`
+PhiCade creates one Rung 12 model gameplay receipt.
 
-Then:
+## Run a repeated campaign
 
-1. select a Rung 10-qualified model,
-2. choose **HANDOFF**,
-3. press **BENCH GYM**.
+With the same frozen gym and a qualified model selected:
 
-PhiCade resets and warms the gym to the frozen start, narrows the grant to D-pad
-only, starts governed Autodrive, and automatically scores the rendered frame when
-the run ends.
+1. choose **HANDOFF**,
+2. press **CAMPAIGN 5×**.
 
-If the model reaches the target, the run stops immediately with `task-success`.
+The desktop runs five trials by default.
 
-The persisted gameplay receipt binds the exact model digest, model qualification
-receipt hash, gym source/ROM hashes, SameBoy binary hash, Autodrive receipt hash,
-policy, stop reason, score, and final frame hash.
+Before every continuation trial, native PhiCade re-queries Ollama and confirms the
+installed model digest still matches the campaign pin.
 
-A complete receipt does not imply success. A model can honestly score 0/1000.
+Each trial writes its own Rung 12 receipt. The final campaign receipt references
+those trial receipts by SHA-256 and reports:
+
+- observed/scored/error trial counts,
+- success rate,
+- mean score,
+- median score,
+- min/max score,
+- population standard deviation.
+
+Pressing **END CAMPAIGN** writes a PARTIAL summary instead of discarding completed
+evidence.
+
+## Evidence semantics
+
+A COMPLETE campaign means all configured trials were recorded.
+
+It does **not** mean the model succeeded.
+
+Score statistics exclude scoring-error trials rather than inventing numeric values.
+Success rate uses all observed trials.
 
 ## CI qualification
 
@@ -77,10 +94,14 @@ A complete receipt does not imply success. A model can honestly score 0/1000.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI qualifies the frozen environment and scoring machinery. Real model gameplay
+CI qualifies the frozen environment and campaign machinery. Real model campaign
 receipts are local runtime evidence and are not fabricated by CI.
 
-See `docs/MODEL_GAMEPLAY_BENCHMARK.md` for the full receipt contract.
+See:
+
+- `docs/MODEL_GAMEPLAY_BENCHMARK.md`
+- `docs/BENCHMARK_CAMPAIGNS.md`
+- `docs/ARCHITECTURE.md`
 
 ## Content policy
 
