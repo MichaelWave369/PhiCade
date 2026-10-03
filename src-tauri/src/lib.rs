@@ -667,14 +667,9 @@ fn validate_recording_actions(
 
     for envelope in actions {
         if let ActionKind::System { command, .. } = &envelope.action {
-            if matches!(
-                command,
-                SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
-            ) {
-                return Err(format!(
-                    "{command:?} is disabled while deterministic replay recording is active"
-                ));
-            }
+            return Err(format!(
+                "{command:?} is disabled while Replay v1 recording is active; v1 records controller/axis input only"
+            ));
         }
     }
 
@@ -907,15 +902,9 @@ fn verify_replay_execution(
             }
 
             if let ActionKind::System { command, .. } = &action.action {
-                if matches!(
-                    command,
-                    SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
-                ) {
-                    return Err(
-                        "replay contains timeline-mutating session command unsupported by v1"
-                            .into(),
-                    );
-                }
+                return Err(format!(
+                    "Replay v1 contains unsupported system command {command:?}"
+                ));
             }
 
             let mut replay_action = action.clone();
