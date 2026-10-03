@@ -350,7 +350,7 @@
 - [x] v6 READY at 11/11 while v7 remains INCOMPLETE at 11/13
 - [x] v7 remains INCOMPLETE at 12/13
 - [x] v7 READY only at 13/13
-- [ ] Freeze canonical Branch Selector source + ROM SHA-256 after qualification
+- [x] Freeze canonical Branch Selector source + ROM SHA-256 after qualification
 
 ## Later
 
