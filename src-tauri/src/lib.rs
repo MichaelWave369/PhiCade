@@ -1534,6 +1534,7 @@ fn start_emulation(
         core_path: core_file.to_string_lossy().to_string(),
         core: identity,
         profile: profile.clone(),
+        benchmark_task: benchmark_task_by_rom_sha256(&game_key).map(benchmark_task_info),
     };
 
     let next_autodrive_run_id =
@@ -2276,12 +2277,8 @@ fn start_model_gameplay_benchmark_inner(
     model_digest: String,
     policy: AutodrivePolicy,
 ) -> Result<ModelBenchmarkStart, String> {
-    if session.game_key != AGENT_GYM_ROM_SHA256 {
-        return Err(format!(
-            "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
-            AGENT_GYM_ROM_SHA256
-        ));
-    }
+    let task = benchmark_task_by_rom_sha256(&session.game_key)
+        .ok_or_else(|| "model gameplay benchmark requires a registered benchmark-suite ROM".to_owned())?;
     if session
         .model_benchmark
         .as_ref()
@@ -2319,26 +2316,32 @@ fn start_model_gameplay_benchmark_inner(
     session
         .core
         .reset()
-        .map_err(|error| format!("reset Phi-Agent Gym: {error:?}"))?;
+        .map_err(|error| format!("reset benchmark {}: {error:?}", task.id))?;
     session.last_frame = FrameBuffer::default();
     session.rewind.clear();
     session.next_rewind_frame = 0;
 
     let mut warmup_audio = AudioBuffer::default();
-    for _ in 0..AGENT_GYM_WARMUP_FRAMES {
+    for _ in 0..task.warmup_frames {
         session
             .core
             .step_frame(&[], &mut session.last_frame, &mut warmup_audio)
-            .map_err(|error| format!("warm Phi-Agent Gym: {error:?}"))?;
+            .map_err(|error| format!("warm benchmark {}: {error:?}", task.id))?;
     }
 
-    let start_score = score_agent_gym_frame(&session.last_frame)?;
-    if start_score.player != AGENT_GYM_START
-        || start_score.final_distance != AGENT_GYM_INITIAL_DISTANCE
+    let start_score = score_benchmark_task_frame(&session.last_frame, task)?;
+    if start_score.player != task.start
+        || start_score.final_distance != task.initial_distance
     {
         return Err(format!(
-            "Phi-Agent Gym start geometry drifted: player=({}, {}) distance={}",
-            start_score.player.x, start_score.player.y, start_score.final_distance
+            "benchmark {} start geometry drifted: expected ({}, {}) / {} got ({}, {}) / {}",
+            task.id,
+            task.start.x,
+            task.start.y,
+            task.initial_distance,
+            start_score.player.x,
+            start_score.player.y,
+            start_score.final_distance
         ));
     }
 
@@ -2379,6 +2382,9 @@ fn start_model_gameplay_benchmark_inner(
     session.model_benchmark = Some(ModelBenchmarkRun {
         run_id: benchmark_run_id,
         autodrive_run_id: autodrive.run_id,
+        benchmark_id: task.id.into(),
+        benchmark_source_sha256: task.source_sha256.into(),
+        benchmark_rom_sha256: task.rom_sha256.into(),
         provider: provider.trim().to_ascii_lowercase(),
         model,
         model_digest,
@@ -2386,6 +2392,8 @@ fn start_model_gameplay_benchmark_inner(
         core_sha256,
         started_frame: session.core.frame_count(),
         start_player: start_score.player,
+        target: task.target,
+        initial_distance: task.initial_distance,
     });
 
     Ok(ModelBenchmarkStart {
