@@ -12,7 +12,7 @@ pub struct BenchmarkTrialOutcome {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenchmarkCampaignStats {
-    pub total_trials: u16,
+    pub observed_trials: u16,
     pub scored_trials: u16,
     pub scoring_error_trials: u16,
     pub successful_trials: u16,
@@ -27,7 +27,7 @@ pub struct BenchmarkCampaignStats {
 pub fn summarize_benchmark_trials(
     outcomes: &[BenchmarkTrialOutcome],
 ) -> BenchmarkCampaignStats {
-    let total_trials = u16::try_from(outcomes.len()).unwrap_or(u16::MAX);
+    let observed_trials = u16::try_from(outcomes.len()).unwrap_or(u16::MAX);
     let successful_trials = u16::try_from(
         outcomes.iter().filter(|outcome| outcome.task_success).count(),
     )
@@ -40,16 +40,16 @@ pub fn summarize_benchmark_trials(
     scores.sort_unstable();
 
     let scored_trials = u16::try_from(scores.len()).unwrap_or(u16::MAX);
-    let scoring_error_trials = total_trials.saturating_sub(scored_trials);
-    let success_rate = if total_trials == 0 {
+    let scoring_error_trials = observed_trials.saturating_sub(scored_trials);
+    let success_rate = if observed_trials == 0 {
         0.0
     } else {
-        f64::from(successful_trials) / f64::from(total_trials)
+        f64::from(successful_trials) / f64::from(observed_trials)
     };
 
     if scores.is_empty() {
         return BenchmarkCampaignStats {
-            total_trials,
+            observed_trials,
             scored_trials,
             scoring_error_trials,
             successful_trials,
@@ -81,7 +81,7 @@ pub fn summarize_benchmark_trials(
         / count;
 
     BenchmarkCampaignStats {
-        total_trials,
+        observed_trials,
         scored_trials,
         scoring_error_trials,
         successful_trials,
@@ -119,7 +119,7 @@ mod tests {
             },
         ]);
 
-        assert_eq!(stats.total_trials, 3);
+        assert_eq!(stats.observed_trials, 3);
         assert_eq!(stats.scored_trials, 3);
         assert_eq!(stats.successful_trials, 1);
         close(stats.success_rate, 1.0 / 3.0);
@@ -146,7 +146,7 @@ mod tests {
             },
         ]);
 
-        assert_eq!(stats.total_trials, 2);
+        assert_eq!(stats.observed_trials, 2);
         assert_eq!(stats.scored_trials, 1);
         assert_eq!(stats.scoring_error_trials, 1);
         assert_eq!(stats.mean_score_1000, Some(250.0));
@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn empty_campaign_has_no_score_statistics() {
         let stats = summarize_benchmark_trials(&[]);
-        assert_eq!(stats.total_trials, 0);
+        assert_eq!(stats.observed_trials, 0);
         assert_eq!(stats.success_rate, 0.0);
         assert_eq!(stats.mean_score_1000, None);
         assert_eq!(stats.population_stddev_score_1000, None);
