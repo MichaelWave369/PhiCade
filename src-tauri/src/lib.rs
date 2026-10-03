@@ -1690,6 +1690,145 @@ fn model_benchmark_artifact(export: &ModelBenchmarkExport) -> ModelBenchmarkArti
     }
 }
 
+fn benchmark_campaign_status_for(
+    campaign: &BenchmarkCampaignRun,
+) -> BenchmarkCampaignStatus {
+    BenchmarkCampaignStatus {
+        schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
+        campaign_id: campaign.campaign_id,
+        active: campaign.active,
+        total_trials: campaign.total_trials,
+        completed_trials: u16::try_from(campaign.trials.len()).unwrap_or(u16::MAX),
+        provider: campaign.provider.clone(),
+        model: campaign.model.clone(),
+        model_digest: campaign.model_digest.clone(),
+        policy: campaign.policy.clone(),
+    }
+}
+
+fn benchmark_campaign_artifact(
+    export: &BenchmarkCampaignExport,
+) -> BenchmarkCampaignArtifact {
+    BenchmarkCampaignArtifact {
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finish_benchmark_campaign(
+    session: &mut EmulatorSession,
+    record_status: &str,
+) -> Result<BenchmarkCampaignArtifact, String> {
+    let snapshot = session
+        .benchmark_campaign
+        .as_ref()
+        .ok_or_else(|| "no benchmark campaign has been started".to_owned())?
+        .clone();
+
+    let outcomes: Vec<BenchmarkTrialOutcome> = snapshot
+        .trials
+        .iter()
+        .map(|trial| BenchmarkTrialOutcome {
+            score_1000: trial.score_1000,
+            task_success: trial.task_success,
+        })
+        .collect();
+    let stats = summarize_benchmark_trials(&outcomes);
+
+    let receipt = BenchmarkCampaignReceipt {
+        schema: BENCHMARK_CAMPAIGN_SCHEMA.to_owned(),
+        record_status: record_status.to_owned(),
+        campaign_id: snapshot.campaign_id,
+        benchmark_id: AGENT_GYM_ID.to_owned(),
+        provider: snapshot.provider,
+        model: snapshot.model,
+        model_digest: snapshot.model_digest,
+        model_qualification_sha256: snapshot.model_qualification_sha256,
+        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
+        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        core_sha256: snapshot.core_sha256,
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        policy: snapshot.policy,
+        total_trials: snapshot.total_trials,
+        completed_trials: u16::try_from(snapshot.trials.len()).unwrap_or(u16::MAX),
+        trials: snapshot.trials,
+        stats,
+    };
+
+    let receipt_path = session
+        .paths
+        .benchmark_campaign_dir
+        .join(format!("campaign-{:06}.json", receipt.campaign_id));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize benchmark campaign receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+
+    if let Some(campaign) = session.benchmark_campaign.as_mut() {
+        campaign.active = false;
+    }
+
+    let export = BenchmarkCampaignExport {
+        receipt_path,
+        receipt,
+    };
+    session.last_benchmark_campaign = Some(export.clone());
+    Ok(benchmark_campaign_artifact(&export))
+}
+
+fn note_benchmark_campaign_trial(
+    session: &mut EmulatorSession,
+    export: &ModelBenchmarkExport,
+) -> Result<(), String> {
+    let Some(campaign) = session
+        .benchmark_campaign
+        .as_ref()
+        .filter(|campaign| campaign.active)
+        .cloned()
+    else {
+        return Ok(());
+    };
+
+    let receipt = &export.receipt;
+    if receipt.provider != campaign.provider
+        || receipt.model != campaign.model
+        || receipt.model_digest != campaign.model_digest
+        || receipt.model_qualification_sha256 != campaign.model_qualification_sha256
+        || receipt.core_sha256 != campaign.core_sha256
+        || receipt.gym_source_sha256 != AGENT_GYM_SOURCE_SHA256
+        || receipt.gym_rom_sha256 != AGENT_GYM_ROM_SHA256
+        || receipt.policy != campaign.policy
+    {
+        return Err("benchmark campaign trial does not match pinned campaign evidence".into());
+    }
+
+    let evidence = CampaignTrialEvidence {
+        benchmark_run_id: receipt.benchmark_run_id,
+        receipt_sha256: sha256_file(&export.receipt_path)?,
+        record_status: receipt.record_status.clone(),
+        score_1000: receipt.score_1000,
+        task_success: receipt.task_success,
+        stop_reason: receipt.stop_reason,
+    };
+
+    let completed = {
+        let campaign = session
+            .benchmark_campaign
+            .as_mut()
+            .ok_or_else(|| "benchmark campaign disappeared during trial finalization".to_owned())?;
+        if campaign.trials.len() >= usize::from(campaign.total_trials) {
+            return Err("benchmark campaign received more trials than configured".into());
+        }
+        campaign.trials.push(evidence);
+        campaign.trials.len() == usize::from(campaign.total_trials)
+    };
+
+    if completed {
+        let _ = finish_benchmark_campaign(session, "COMPLETE")?;
+    }
+    Ok(())
+}
+
 fn finish_model_benchmark(
     session: &mut EmulatorSession,
     autodrive: &AutodriveExport,
@@ -1780,6 +1919,7 @@ fn finish_model_benchmark(
     };
     session.last_model_benchmark = Some(export.clone());
     session.model_benchmark = None;
+    note_benchmark_campaign_trial(session, &export)?;
     Ok(Some(model_benchmark_artifact(&export)))
 }
 
