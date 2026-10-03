@@ -9,6 +9,8 @@ use phicade_runtime::{
     ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
     benchmark_task_by_id, benchmark_task_by_rom_sha256, compare_campaign_samples,
     score_benchmark_task_frame, summarize_benchmark_trials, AGENT_TURN_REQUEST_SCHEMA,
+    AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256,
+    AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
     AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA,
     CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
