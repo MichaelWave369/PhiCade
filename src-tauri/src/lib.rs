@@ -1273,6 +1273,8 @@ fn set_control_mode(
     };
 
     session.authority.set_mode(mode, grant)?;
+    session.pending_agent_turn = None;
+    session.agent_inbox.clear();
     session.last_authority_reason = Some(format!(
         "operator set control mode to {}",
         control_mode_label(mode)
@@ -1280,20 +1282,11 @@ fn set_control_mode(
     Ok(authority_status_for(session))
 }
 
-#[tauri::command]
-fn phi_bot_observation(
-    state: State<'_, EmulatorState>,
+fn build_phi_bot_observation(
+    session: &EmulatorSession,
     agent_id: String,
     seat: u8,
 ) -> Result<PhiBotObservation, String> {
-    let session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_ref()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
     let grant = session
         .authority
         .agent_grant
@@ -1336,6 +1329,121 @@ fn phi_bot_observation(
     };
     observation.validate()?;
     Ok(observation)
+}
+
+#[tauri::command]
+fn phi_bot_observation(
+    state: State<'_, EmulatorState>,
+    agent_id: String,
+    seat: u8,
+) -> Result<PhiBotObservation, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    build_phi_bot_observation(session, agent_id, seat)
+}
+
+fn driver_status_for(session: &EmulatorSession) -> DriverStatus {
+    DriverStatus {
+        pending_turn_id: session.pending_agent_turn.as_ref().map(|request| request.turn_id),
+        queued_actions: session.agent_inbox.len(),
+        next_turn_id: session.next_driver_turn_id,
+    }
+}
+
+#[tauri::command]
+fn driver_status(state: State<'_, EmulatorState>) -> Result<DriverStatus, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(driver_status_for(session))
+}
+
+#[tauri::command]
+fn issue_agent_turn(
+    state: State<'_, EmulatorState>,
+    agent_id: String,
+    seat: u8,
+) -> Result<AgentTurnRequest, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("agent turn issuance is disabled during replay recording".into());
+    }
+
+    if session
+        .pending_agent_turn
+        .as_ref()
+        .is_some_and(|request| session.core.frame_count() <= request.valid_until_frame)
+    {
+        return Err("an unexpired agent turn is already pending".into());
+    }
+
+    let observation = build_phi_bot_observation(session, agent_id, seat)?;
+    let request = AgentTurnRequest {
+        schema: AGENT_TURN_REQUEST_SCHEMA.to_owned(),
+        turn_id: session.next_driver_turn_id,
+        max_actions: 8,
+        max_delay_frames: 30,
+        valid_until_frame: observation.frame.saturating_add(120),
+        observation,
+    };
+    request.validate()?;
+
+    session.next_driver_turn_id = session.next_driver_turn_id.saturating_add(1);
+    session.pending_agent_turn = Some(request.clone());
+    Ok(request)
+}
+
+#[tauri::command]
+fn submit_agent_turn(
+    state: State<'_, EmulatorState>,
+    response: AgentTurnResponse,
+) -> Result<DriverStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("agent turn submission is disabled during replay recording".into());
+    }
+
+    let request = session
+        .pending_agent_turn
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| "no agent turn is pending".to_owned())?;
+    let apply_frame = session.core.frame_count();
+    let compiled = compile_agent_turn(&request, &response, apply_frame)?;
+
+    for action in compiled {
+        session.agent_inbox.push_back(action);
+    }
+    session
+        .agent_inbox
+        .make_contiguous()
+        .sort_by_key(|action| action.frame);
+    session.pending_agent_turn = None;
+
+    Ok(driver_status_for(session))
 }
 
 #[tauri::command]
