@@ -1,0 +1,45 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "power-chain-right-v1",
+  "title": "Power Chain: Right",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["A", "UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": { "startScreen": [72, 112] },
+  "fuse": {
+    "screen": [120, 112],
+    "pickupButton": "A",
+    "pickupRequiresOverlap": true
+  },
+  "generator": {
+    "screen": [72, 104],
+    "interactionPlayerScreen": [72, 112],
+    "installButton": "A",
+    "requiresFuse": true,
+    "rendersPoweredState": true
+  },
+  "gate": {
+    "screenY": [72, 79],
+    "playerStopScreenY": 80,
+    "switchScreen": [72, 80],
+    "unlockButton": "A",
+    "requiresPower": true
+  },
+  "target": { "screen": [72, 24] },
+  "score": {
+    "metric": "manhattan-distance-progress-to-target",
+    "initialDistancePixels": 88,
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["RIGHT", "A", "LEFT", "A", "UP", "A", "UP"],
+    "oracleFrames": [28, 1, 28, 1, 20, 1, 32],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}
