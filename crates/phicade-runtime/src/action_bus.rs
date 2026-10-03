@@ -59,6 +59,15 @@ impl ActionEnvelope {
             }
         }
 
+        if let ActionSource::PhiBot { agent_id, seat } = &self.source {
+            if agent_id.trim().is_empty() {
+                return Err("Phi-Bot source requires a non-empty agentId".to_owned());
+            }
+            if *seat == 0 {
+                return Err("Phi-Bot seat numbers start at 1".to_owned());
+            }
+        }
+
         if let ActionKind::System {
             slot: Some(slot), ..
         } = &self.action
