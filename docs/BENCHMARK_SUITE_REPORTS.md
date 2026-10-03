@@ -32,18 +32,20 @@ is the same.
 ## Task coverage
 
 A cohort is READY only when it contains one verified COMPLETE campaign for every
-registered task in Benchmark Suite v1.
+task in the explicitly selected suite.
 
-Suite v1 currently requires:
+Suite v1 requires 2/2:
 
 - move-block-to-x-v1
 - move-block-to-x-mirror-v1
 
-Incomplete cohorts remain visible as evidence coverage, for example:
+Suite v2 requires 3/3:
 
-`1/2 TASKS // INCOMPLETE`
+- the exact two frozen Suite v1 tasks
+- wall-detour-v1
 
-but native PhiCade refuses to build a suite report from them.
+Incomplete cohorts remain visible as evidence coverage, for example
+`2/3 TASKS // INCOMPLETE`, but native PhiCade refuses to build a report from them.
 
 When more than one campaign exists for the same cohort/task, the highest campaign ID
 is selected deterministically.
@@ -90,11 +92,18 @@ A report binds:
 - each task's original campaign statistics,
 - suite aggregate statistics.
 
-Reports are stored under:
+Reports are namespaced by suite ID:
+
+`suite-reports/<suite-id>/suite-report-000001.json`
+
+For example:
 
 `suite-reports/phicade-agent-gym-suite-v1/suite-report-000001.json`
 
-Report IDs persist across emulator sessions.
+`suite-reports/phicade-agent-gym-suite-v2/suite-report-000001.json`
+
+Report IDs persist inside each suite namespace. Suite v1 report #1 and Suite v2
+report #1 are therefore distinct, unambiguous evidence artifacts.
 
 ## Aggregate statistics
 
@@ -170,7 +179,8 @@ artifact.
 
 ## Desktop
 
-The new SUITE REPORT lane shows all discovered cohorts.
+The SUITE REPORT lane first requires an explicit suite version and then shows
+cohorts for that selected task population.
 
 Each cohort displays:
 
@@ -182,7 +192,7 @@ Each cohort displays:
 
 BUILD REPORT is enabled only for a READY cohort.
 
-The UI passes only the cohort ID.
+The UI passes the suite ID and cohort ID.
 
 Native PhiCade rescans the evidence, walks campaign and trial hashes again, computes
 the aggregate statistics, and writes the report receipt.
@@ -192,8 +202,9 @@ the aggregate statistics, and writes the report receipt.
 CI proves Rung 16 through:
 
 - shared suite-statistics tests,
-- 2/2 task READY cohort control,
-- 1/2 task INCOMPLETE control,
+- Suite v1 2/2 READY cohort control,
+- Suite v1 incomplete control,
+- Suite v2 2/3 INCOMPLETE → 3/3 READY control,
 - exact-digest split control,
 - mutated underlying trial refusal,
 - full native governance tests,
