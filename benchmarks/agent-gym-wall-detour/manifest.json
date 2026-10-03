@@ -1,0 +1,44 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "wall-detour-v1",
+  "title": "Wall Detour",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "shape": "solid-8x8",
+    "startScreenX": 16,
+    "startScreenY": 24
+  },
+  "target": {
+    "shape": "x-8x8",
+    "screenX": 136,
+    "screenY": 24
+  },
+  "obstacles": [
+    {
+      "shape": "striped-wall",
+      "screenX": 72,
+      "screenY": 0,
+      "width": 8,
+      "height": 96,
+      "gapBeginsScreenY": 96
+    }
+  ],
+  "score": {
+    "metric": "manhattan-distance-progress",
+    "range": [0, 1000],
+    "successDistancePixels": 4,
+    "note": "The optimal collision-valid route initially increases Manhattan distance before progress can resume."
+  },
+  "controlsQualification": {
+    "oracle": ["DOWN", "RIGHT", "UP"],
+    "oracleFrames": [40, 60, 40],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}
