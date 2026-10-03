@@ -180,6 +180,8 @@ struct FramePacket {
     control_mode: ControlMode,
     authority_rejections: u64,
     last_authority_reason: Option<String>,
+    driver_pending_turn_id: Option<u64>,
+    driver_queued_actions: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1446,6 +1448,15 @@ fn submit_agent_turn(
     Ok(driver_status_for(session))
 }
 
+fn action_source_order(source: &ActionSource) -> u8 {
+    match source {
+        ActionSource::Replay => 0,
+        ActionSource::Script { .. } => 1,
+        ActionSource::PhiBot { .. } => 2,
+        ActionSource::Human { .. } => 3,
+    }
+}
+
 #[tauri::command]
 fn step_emulation(
     state: State<'_, EmulatorState>,
@@ -1460,10 +1471,35 @@ fn step_emulation(
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
     let authority_frame = session.core.frame_count();
-    let decisions = session.authority.authorize_batch(&actions, authority_frame);
-    let mut accepted_actions = Vec::with_capacity(actions.len());
-    for (event, decision) in decisions {
+    let mut incoming_actions = actions;
+
+    while session
+        .agent_inbox
+        .front()
+        .is_some_and(|event| event.frame <= authority_frame)
+    {
+        if let Some(event) = session.agent_inbox.pop_front() {
+            incoming_actions.push(event);
+        }
+    }
+
+    incoming_actions.sort_by_key(|event| {
+        (
+            event.frame,
+            action_source_order(&event.source),
+            event.sequence,
+        )
+    });
+
+    let decisions = session
+        .authority
+        .authorize_batch(&incoming_actions, authority_frame);
+    let mut accepted_actions = Vec::with_capacity(incoming_actions.len());
+    for (mut event, decision) in decisions {
         if decision.accepted {
+            event.sequence = session.next_action_sequence;
+            event.frame = authority_frame;
+            session.next_action_sequence = session.next_action_sequence.saturating_add(1);
             accepted_actions.push(event);
         } else {
             session.authority_rejections = session.authority_rejections.saturating_add(1);
@@ -1563,6 +1599,11 @@ fn step_emulation(
         control_mode: session.authority.mode,
         authority_rejections: session.authority_rejections,
         last_authority_reason: session.last_authority_reason.clone(),
+        driver_pending_turn_id: session
+            .pending_agent_turn
+            .as_ref()
+            .map(|request| request.turn_id),
+        driver_queued_actions: session.agent_inbox.len(),
     })
 }
 
@@ -1840,6 +1881,9 @@ pub fn run() {
             authority_status,
             set_control_mode,
             phi_bot_observation,
+            driver_status,
+            issue_agent_turn,
+            submit_agent_turn,
             set_game_profile,
             replay_status,
             start_replay_recording,
