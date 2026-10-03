@@ -239,7 +239,6 @@ pub async fn complete_turn(
     let body = json!({
         "model": model,
         "stream": false,
-        "think": false,
         "format": schema,
         "messages": [{
             "role": "user",
