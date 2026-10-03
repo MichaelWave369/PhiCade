@@ -77,15 +77,15 @@ pub const AGENT_GYM_POWER_CHAIN_RIGHT_SOURCE_SHA256: &str =
 
 pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID: &str = "branch-selector-triangle-v1";
 pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256: &str =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    "80c1dbd415f14a16823a7903b7117564b352ee2fe7d151d9c41c9f51fef20505";
 pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_SOURCE_SHA256: &str =
-    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    "b58ad96706d25724f85d6802afc499353419aeb09bd0f421b02e764f08d6e071";
 
 pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID: &str = "branch-selector-square-v1";
 pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256: &str =
-    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+    "300d827be392f9859fe85e0b0eb06a0af329b3148ba222295ee47dcd5290e10a";
 pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_SOURCE_SHA256: &str =
-    "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+    "0dc8ba01a974cc467349058cd92e0a50e2168a67bcbff3dea36f64ddfc376a35";
 
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
