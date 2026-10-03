@@ -2530,4 +2530,43 @@ mod tests {
         assert_eq!(system_id_from_extension("gbc"), Some(SystemId::GameBoyColor));
         assert_eq!(system_id_from_extension("gba"), None);
     }
+
+    fn qualified_receipt(digest: &str) -> OllamaQualificationReceipt {
+        OllamaQualificationReceipt {
+            schema: "phicade.ollama-model-qualification.v1".into(),
+            result: "PASS".into(),
+            provider: "ollama".into(),
+            model: "vision-model".into(),
+            digest: digest.into(),
+            capabilities: vec!["completion".into(), "vision".into()],
+            vision_advertised: true,
+            structured_output_pass: true,
+            vision_probe_pass: true,
+            probe_expected: "red".into(),
+            probe_observed: Some("red".into()),
+            total_duration_ns: Some(1),
+            eval_count: Some(1),
+            error: None,
+        }
+    }
+
+    #[test]
+    fn model_qualification_gate_accepts_exact_digest() {
+        let receipt = qualified_receipt("digest-a");
+        assert!(qualification_receipt_passes(
+            &receipt,
+            "vision-model",
+            "digest-a"
+        ));
+    }
+
+    #[test]
+    fn model_qualification_gate_rejects_changed_digest() {
+        let receipt = qualified_receipt("digest-a");
+        assert!(!qualification_receipt_passes(
+            &receipt,
+            "vision-model",
+            "digest-b"
+        ));
+    }
 }
