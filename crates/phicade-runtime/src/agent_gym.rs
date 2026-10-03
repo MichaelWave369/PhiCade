@@ -1064,7 +1064,7 @@ mod tests {
             Some(AGENT_GYM_POWER_CHAIN_RIGHT_ID)
         );
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[1].button, "A");
-        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[3].button, "A");
+        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[3].button, "WAIT");
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[4].button, "A");
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[7].button, "A");
     }
