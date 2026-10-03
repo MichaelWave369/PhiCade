@@ -172,3 +172,43 @@ conflict.
 
 Control-mode changes and grant expiry neutralize the frontend input mask and clear
 pending driver work. Grant expiry falls back to HUMAN authority.
+
+
+## Local provider adapters
+
+Rung 8 adds the first concrete provider behind Agent Driver Protocol: Ollama on
+loopback HTTP.
+
+The provider layer is deliberately outside the authority/core seam:
+
+```text
+AgentTurnRequest
+      |
+      +--> local Ollama adapter
+      |        |
+      |        +--> PNG vision payload
+      |        +--> constrained JSON decision
+      |
+      v
+AgentTurnResponse
+      |
+      v
+Rung 7 validation/scheduling
+      |
+      v
+Rung 6 authority
+      |
+      v
+core
+```
+
+The native Ollama adapter accepts only loopback HTTP endpoints. It cannot use an
+arbitrary LAN/internet URL.
+
+The desktop uses THINK PAUSE for model turns: emulation stops advancing while the
+vision request is in flight, preserving the exact observation frame. A provider
+failure cancels the pending turn before emulation resumes.
+
+Provider adapters are not trusted authorities. They translate an observation-bound
+request into a proposed AgentTurnResponse. Existing turn validation and gameplay
+authority remain downstream and unchanged.
