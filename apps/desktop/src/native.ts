@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ActionEnvelope } from "./actionBus";
+import type { ActionEnvelope, GameAction } from "./actionBus";
 
 export interface AppSettings {
   romDirectory: string | null;
@@ -122,6 +122,37 @@ export interface PhiBotObservation {
   expiresAtFrame: number | null;
 }
 
+
+export interface AgentTurnAction {
+  delayFrames: number;
+  action: GameAction;
+}
+
+export interface AgentTurnRequest {
+  schema: string;
+  turnId: number;
+  observation: PhiBotObservation;
+  maxActions: number;
+  maxDelayFrames: number;
+  validUntilFrame: number;
+}
+
+export interface AgentTurnResponse {
+  schema: string;
+  turnId: number;
+  agentId: string;
+  seat: number;
+  observationFrame: number;
+  observationSha256: string;
+  actions: AgentTurnAction[];
+}
+
+export interface DriverStatus {
+  pendingTurnId: number | null;
+  queuedActions: number;
+  nextTurnId: number;
+}
+
 export interface FramePacket {
   frame: number;
   width: number;
@@ -138,6 +169,8 @@ export interface FramePacket {
   controlMode: ControlMode;
   authorityRejections: number;
   lastAuthorityReason: string | null;
+  driverPendingTurnId: number | null;
+  driverQueuedActions: number;
 }
 
 export const defaultSettings: AppSettings = {
@@ -266,4 +299,22 @@ export async function observePhiBot(
   seat = 1,
 ): Promise<PhiBotObservation> {
   return invoke<PhiBotObservation>("phi_bot_observation", { agentId, seat });
+}
+
+
+export async function getDriverStatus(): Promise<DriverStatus> {
+  return invoke<DriverStatus>("driver_status");
+}
+
+export async function issueAgentTurn(
+  agentId: string,
+  seat = 1,
+): Promise<AgentTurnRequest> {
+  return invoke<AgentTurnRequest>("issue_agent_turn", { agentId, seat });
+}
+
+export async function submitAgentTurn(
+  response: AgentTurnResponse,
+): Promise<DriverStatus> {
+  return invoke<DriverStatus>("submit_agent_turn", { response });
 }

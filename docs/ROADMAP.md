@@ -58,8 +58,21 @@
 - [x] No privileged side-channel input
 - [x] CI human/agent parity + authority qualification receipt
 
+## Rung 7 — Agent Driver Protocol
+
+- [x] Transport-neutral request/response schemas
+- [x] Observation-bound turn IDs + hashes
+- [x] Bounded action count and delay budgets
+- [x] Turn expiry / stale-response rejection
+- [x] Native scheduled driver inbox
+- [x] Host-canonical live action sequencing
+- [x] Deterministic human-last co-op precedence
+- [x] Desktop reference driver
+- [x] CI driver/direct behavioral parity receipt
+
 ## Later
 
-Metadata/cover art, additional systems, true multi-port versus play, netplay,
-spectator mode, achievements, tournaments, CommonLine session rooms, and a
-shared Phi Game Runtime with Night Circuit.
+Provider adapters (Ollama/local HTTP, cloud APIs), metadata/cover art, additional
+systems, true multi-port versus play, netplay, spectator mode, achievements,
+tournaments, CommonLine session rooms, and a shared Phi Game Runtime with
+Night Circuit.

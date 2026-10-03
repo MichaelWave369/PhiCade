@@ -1,10 +1,11 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, ActionSource, AgentGrant, AuthorityPolicy, AudioBuffer, ControlMode,
-    EmulatorCore, FrameBuffer, GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger,
-    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnRequest,
+    AgentTurnResponse, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
+    GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
+    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    AGENT_TURN_REQUEST_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -72,6 +73,10 @@ struct EmulatorSession {
     authority: AuthorityPolicy,
     authority_rejections: u64,
     last_authority_reason: Option<String>,
+    pending_agent_turn: Option<AgentTurnRequest>,
+    agent_inbox: VecDeque<ActionEnvelope>,
+    next_driver_turn_id: u64,
+    next_action_sequence: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -175,6 +180,8 @@ struct FramePacket {
     control_mode: ControlMode,
     authority_rejections: u64,
     last_authority_reason: Option<String>,
+    driver_pending_turn_id: Option<u64>,
+    driver_queued_actions: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -189,6 +196,14 @@ struct AuthorityStatus {
     expires_at_frame: Option<u64>,
     rejected_actions: u64,
     last_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DriverStatus {
+    pending_turn_id: Option<u64>,
+    queued_actions: usize,
+    next_turn_id: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1117,6 +1132,10 @@ fn start_emulation(
         authority: AuthorityPolicy::new(1),
         authority_rejections: 0,
         last_authority_reason: None,
+        pending_agent_turn: None,
+        agent_inbox: VecDeque::new(),
+        next_driver_turn_id: 1,
+        next_action_sequence: 0,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -1256,6 +1275,9 @@ fn set_control_mode(
     };
 
     session.authority.set_mode(mode, grant)?;
+    session.pending_agent_turn = None;
+    session.agent_inbox.clear();
+    session.core.restore_input_mask(0);
     session.last_authority_reason = Some(format!(
         "operator set control mode to {}",
         control_mode_label(mode)
@@ -1263,20 +1285,11 @@ fn set_control_mode(
     Ok(authority_status_for(session))
 }
 
-#[tauri::command]
-fn phi_bot_observation(
-    state: State<'_, EmulatorState>,
+fn build_phi_bot_observation(
+    session: &EmulatorSession,
     agent_id: String,
     seat: u8,
 ) -> Result<PhiBotObservation, String> {
-    let session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_ref()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
     let grant = session
         .authority
         .agent_grant
@@ -1322,6 +1335,121 @@ fn phi_bot_observation(
 }
 
 #[tauri::command]
+fn phi_bot_observation(
+    state: State<'_, EmulatorState>,
+    agent_id: String,
+    seat: u8,
+) -> Result<PhiBotObservation, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    build_phi_bot_observation(session, agent_id, seat)
+}
+
+fn driver_status_for(session: &EmulatorSession) -> DriverStatus {
+    DriverStatus {
+        pending_turn_id: session.pending_agent_turn.as_ref().map(|request| request.turn_id),
+        queued_actions: session.agent_inbox.len(),
+        next_turn_id: session.next_driver_turn_id,
+    }
+}
+
+#[tauri::command]
+fn driver_status(state: State<'_, EmulatorState>) -> Result<DriverStatus, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(driver_status_for(session))
+}
+
+#[tauri::command]
+fn issue_agent_turn(
+    state: State<'_, EmulatorState>,
+    agent_id: String,
+    seat: u8,
+) -> Result<AgentTurnRequest, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("agent turn issuance is disabled during replay recording".into());
+    }
+
+    if session
+        .pending_agent_turn
+        .as_ref()
+        .is_some_and(|request| session.core.frame_count() <= request.valid_until_frame)
+    {
+        return Err("an unexpired agent turn is already pending".into());
+    }
+
+    let observation = build_phi_bot_observation(session, agent_id, seat)?;
+    let request = AgentTurnRequest {
+        schema: AGENT_TURN_REQUEST_SCHEMA.to_owned(),
+        turn_id: session.next_driver_turn_id,
+        max_actions: 8,
+        max_delay_frames: 30,
+        valid_until_frame: observation.frame.saturating_add(120),
+        observation,
+    };
+    request.validate()?;
+
+    session.next_driver_turn_id = session.next_driver_turn_id.saturating_add(1);
+    session.pending_agent_turn = Some(request.clone());
+    Ok(request)
+}
+
+#[tauri::command]
+fn submit_agent_turn(
+    state: State<'_, EmulatorState>,
+    response: AgentTurnResponse,
+) -> Result<DriverStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("agent turn submission is disabled during replay recording".into());
+    }
+
+    let request = session
+        .pending_agent_turn
+        .as_ref()
+        .cloned()
+        .ok_or_else(|| "no agent turn is pending".to_owned())?;
+    let apply_frame = session.core.frame_count();
+    let compiled = compile_agent_turn(&request, &response, apply_frame)?;
+
+    for action in compiled {
+        session.agent_inbox.push_back(action);
+    }
+    session
+        .agent_inbox
+        .make_contiguous()
+        .sort_by_key(|action| action.frame);
+    session.pending_agent_turn = None;
+
+    Ok(driver_status_for(session))
+}
+
+#[tauri::command]
 fn step_emulation(
     state: State<'_, EmulatorState>,
     actions: Vec<ActionEnvelope>,
@@ -1335,10 +1463,62 @@ fn step_emulation(
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
     let authority_frame = session.core.frame_count();
-    let decisions = session.authority.authorize_batch(&actions, authority_frame);
-    let mut accepted_actions = Vec::with_capacity(actions.len());
-    for (event, decision) in decisions {
+
+    let grant_expired = session
+        .authority
+        .agent_grant
+        .as_ref()
+        .and_then(|grant| grant.expires_at_frame)
+        .is_some_and(|expires| authority_frame > expires);
+
+    if grant_expired {
+        session.authority.set_mode(ControlMode::Human, None)?;
+        session.pending_agent_turn = None;
+        session.agent_inbox.clear();
+        session.core.restore_input_mask(0);
+        session.last_authority_reason =
+            Some("Phi-Bot grant expired; control returned to HUMAN".to_owned());
+    }
+
+    if session
+        .pending_agent_turn
+        .as_ref()
+        .is_some_and(|request| authority_frame > request.valid_until_frame)
+    {
+        session.pending_agent_turn = None;
+        session.last_authority_reason =
+            Some("agent driver turn expired before response".to_owned());
+    }
+
+    let mut incoming_actions = actions;
+
+    while session
+        .agent_inbox
+        .front()
+        .is_some_and(|event| event.frame <= authority_frame)
+    {
+        if let Some(event) = session.agent_inbox.pop_front() {
+            incoming_actions.push(event);
+        }
+    }
+
+    incoming_actions.sort_by_key(|event| {
+        (
+            event.frame,
+            live_source_order(&event.source),
+            event.sequence,
+        )
+    });
+
+    let decisions = session
+        .authority
+        .authorize_batch(&incoming_actions, authority_frame);
+    let mut accepted_actions = Vec::with_capacity(incoming_actions.len());
+    for (mut event, decision) in decisions {
         if decision.accepted {
+            event.sequence = session.next_action_sequence;
+            event.frame = authority_frame;
+            session.next_action_sequence = session.next_action_sequence.saturating_add(1);
             accepted_actions.push(event);
         } else {
             session.authority_rejections = session.authority_rejections.saturating_add(1);
@@ -1438,6 +1618,11 @@ fn step_emulation(
         control_mode: session.authority.mode,
         authority_rejections: session.authority_rejections,
         last_authority_reason: session.last_authority_reason.clone(),
+        driver_pending_turn_id: session
+            .pending_agent_turn
+            .as_ref()
+            .map(|request| request.turn_id),
+        driver_queued_actions: session.agent_inbox.len(),
     })
 }
 
@@ -1715,6 +1900,9 @@ pub fn run() {
             authority_status,
             set_control_mode,
             phi_bot_observation,
+            driver_status,
+            issue_agent_turn,
+            submit_agent_turn,
             set_game_profile,
             replay_status,
             start_replay_recording,

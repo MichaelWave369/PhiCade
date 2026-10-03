@@ -50,7 +50,14 @@ cargo run -p phicade-libretro --bin phibot_qualify -- \
   --rom "$WORK/dmg-acid2.gb" \
   --receipt "$ROOT/artifacts/phibot-qualification.json"
 
+printf '==> running Agent Driver Protocol qualification\n'
+cargo run -p phicade-libretro --bin driver_qualify -- \
+  --core "$CORE" \
+  --rom "$WORK/dmg-acid2.gb" \
+  --receipt "$ROOT/artifacts/agent-driver-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/phibot-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-driver-qualification.json"

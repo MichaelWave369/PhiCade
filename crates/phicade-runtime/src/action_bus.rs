@@ -47,6 +47,15 @@ pub enum ActionKind {
     },
 }
 
+pub fn live_source_order(source: &ActionSource) -> u8 {
+    match source {
+        ActionSource::Replay => 0,
+        ActionSource::Script { .. } => 1,
+        ActionSource::PhiBot { .. } => 2,
+        ActionSource::Human { .. } => 3,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActionEnvelope {
@@ -187,6 +196,16 @@ mod tests {
 
         let decoded: ActionEnvelope = serde_json::from_str(&json).expect("deserialize action");
         assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn live_merge_gives_human_last_word_over_phi_bot() {
+        let bot = ActionSource::PhiBot {
+            agent_id: "phi".into(),
+            seat: 1,
+        };
+        let human = ActionSource::Human { seat: 1 };
+        assert!(live_source_order(&bot) < live_source_order(&human));
     }
 
     #[test]
