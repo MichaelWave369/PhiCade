@@ -152,6 +152,10 @@ export interface AgentTurnRequest {
   maxActions: number;
   maxDelayFrames: number;
   validUntilFrame: number;
+  memory: string;
+  memorySha256: string;
+  maxMemoryBytes: number;
+  maxMemoryUpdateBytes: number;
 }
 
 export interface AgentTurnResponse {
@@ -161,6 +165,8 @@ export interface AgentTurnResponse {
   seat: number;
   observationFrame: number;
   observationSha256: string;
+  memorySha256: string;
+  memoryUpdate: string | null;
   actions: AgentTurnAction[];
 }
 
@@ -168,9 +174,17 @@ export interface DriverStatus {
   pendingTurnId: number | null;
   queuedActions: number;
   nextTurnId: number;
+  memoryContent: string;
+  memorySha256: string;
+  memoryBytes: number;
+  memoryRevision: number;
+  memoryUpdates: number;
+  memoryBytesWritten: number;
+  memoryRefusals: number;
 }
 
 export interface AutodrivePolicy {
+  policyVersion: number;
   maxTurns: number;
   maxTotalActions: number;
   maxConsecutiveEmptyTurns: number;
@@ -179,6 +193,8 @@ export interface AutodrivePolicy {
   postActionSettleFrames: number;
   emptyTurnBackoffFrames: number;
   maxObservationIntervalFrames: number;
+  maxMemoryBytes: number;
+  maxMemoryUpdateBytes: number;
 }
 
 export type AutodriveStopReason =
@@ -231,6 +247,14 @@ export interface AutodriveReceipt {
   lastObservationFrame: number | null;
   stopReason: AutodriveStopReason;
   finalFrameSha256: string;
+  initialMemorySha256: string;
+  finalMemorySha256: string;
+  finalMemoryContent: string;
+  finalMemoryBytes: number;
+  memoryRevision: number;
+  memoryUpdates: number;
+  memoryBytesWritten: number;
+  memoryRefusals: number;
   policy: AutodrivePolicy;
 }
 
@@ -577,6 +601,7 @@ export interface BenchmarkSuiteComparisonArtifact {
 }
 
 export const defaultAutodrivePolicy: AutodrivePolicy = {
+  policyVersion: 1,
   maxTurns: 32,
   maxTotalActions: 128,
   maxConsecutiveEmptyTurns: 4,
@@ -585,6 +610,8 @@ export const defaultAutodrivePolicy: AutodrivePolicy = {
   postActionSettleFrames: 2,
   emptyTurnBackoffFrames: 8,
   maxObservationIntervalFrames: 60,
+  maxMemoryBytes: 4096,
+  maxMemoryUpdateBytes: 1024,
 };
 
 export interface OllamaModel {
