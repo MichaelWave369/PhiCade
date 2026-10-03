@@ -159,7 +159,7 @@ fn run_oracle(
 }
 
 fn frozen_registry_hash_matches(expected: &str, observed: &str) -> bool {
-    expected.starts_with("PENDING_") || expected == observed
+    expected == observed
 }
 
 fn main() {
