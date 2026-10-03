@@ -2,7 +2,10 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_runtime::{
     benchmark_task_by_rom_sha256, ActionKind, AgentTurnAction, AgentTurnRequest,
     AgentTurnResponse, AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256,
-    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256, AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256,
+    AGENT_GYM_NESTED_SQUARE_CIRCLE_ROM_SHA256, AGENT_GYM_NESTED_SQUARE_CROSS_ROM_SHA256,
+    AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ROM_SHA256, AGENT_GYM_NESTED_TRIANGLE_CROSS_ROM_SHA256,
+    AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
     AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256, AGENT_GYM_POWER_CHAIN_LEFT_ROM_SHA256,
     AGENT_GYM_POWER_CHAIN_RIGHT_ROM_SHA256, AGENT_GYM_MIRROR_ROM_SHA256,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_RELAY_LEFT_ROM_SHA256,
@@ -772,6 +775,38 @@ mod tests {
         assert!(triangle_prompt.contains("irreversible fail state"));
         assert!(!triangle_prompt.contains("Branch Selector: Triangle"));
         assert!(!square_prompt.contains("Branch Selector: Square"));
+    }
+
+    #[test]
+    fn nested_branch_quartet_uses_identical_non_leaking_instruction() {
+        let mut tc = request();
+        tc.observation.game_sha256 = AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ROM_SHA256.into();
+        tc.observation.allowed_buttons =
+            vec!["A".into(), "UP".into(), "DOWN".into(), "LEFT".into(), "RIGHT".into()];
+        let mut tx = tc.clone();
+        tx.observation.game_sha256 = AGENT_GYM_NESTED_TRIANGLE_CROSS_ROM_SHA256.into();
+        let mut sc = tc.clone();
+        sc.observation.game_sha256 = AGENT_GYM_NESTED_SQUARE_CIRCLE_ROM_SHA256.into();
+        let mut sx = tc.clone();
+        sx.observation.game_sha256 = AGENT_GYM_NESTED_SQUARE_CROSS_ROM_SHA256.into();
+
+        let prompts = [
+            system_prompt(&tc),
+            system_prompt(&tx),
+            system_prompt(&sc),
+            system_prompt(&sx),
+        ];
+        assert!(prompts.windows(2).all(|pair| pair[0] == pair[1]));
+        let prompt = &prompts[0];
+        assert!(prompt.contains("solve two selector stages in order"));
+        assert!(prompt.contains("triangle family on the left"));
+        assert!(prompt.contains("square family on the right"));
+        assert!(prompt.contains("circle submodule on the left"));
+        assert!(prompt.contains("cross submodule on the right"));
+        assert!(prompt.contains("Only after a correct Stage 1 commitment"));
+        assert!(prompt.contains("wrong commitment at either stage is irreversible"));
+        assert!(!prompt.contains("Triangle → Circle"));
+        assert!(!prompt.contains("Square → Cross"));
     }
 
     #[test]
