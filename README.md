@@ -22,7 +22,7 @@ PhiCade can now host its first qualified libretro core in the native Tauri shell
 - minimal governed libretro host
 - SameBoy 1.0.3 provenance freeze
 - GB/GBC video rendered into the CRT canvas
-- libretro audio streamed into Web Audio
+- high-rate libretro audio resampled to 48 kHz and streamed into Web Audio
 - CI smoke qualification against MIT-licensed `dmg-acid2`
 - SHA-256 qualification receipt for core, fixture, and final frame
 
