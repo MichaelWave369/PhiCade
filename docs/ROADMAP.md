@@ -1,7 +1,6 @@
 # PhiCade Roadmap
 
 ## Rung 1 — Foundation
-
 - [x] Repository and MIT license
 - [x] React/Vite desktop UI prototype
 - [x] Rust runtime crate
@@ -11,7 +10,6 @@
 - [x] CI for TypeScript build and Rust tests
 
 ## Rung 2 — Native shell
-
 - [x] Wrap the UI in Tauri
 - [x] Add user-selected local directory access
 - [x] Persist settings without ROM content
@@ -20,59 +18,63 @@
 - [x] Add native-shell CI compile gate
 
 ## Rung 3 — First qualified core
-
-- [x] Select SameBoy 1.0.3 / GB+GBC with compatible redistribution terms
-- [x] Freeze source revision, version, license, and provenance
-- [x] Load the MIT-licensed dmg-acid2 smoke fixture in CI
-- [x] Present libretro video frames in the CRT canvas
-- [x] Produce libretro audio through Web Audio
-- [x] Translate standard human gamepad state into Action Bus events
-- [x] Produce an exportable SHA-256 smoke-test receipt
+- [x] SameBoy 1.0.3 / GB+GBC provenance freeze
+- [x] MIT-licensed dmg-acid2 smoke fixture
+- [x] Video/audio bridge
+- [x] Human gamepad through Action Bus
+- [x] SHA-256 qualification receipt
 
 ## Rung 4 — Session machinery
-
 - [x] Save RAM
 - [x] Save/load state
 - [x] Fast-forward
 - [x] Rewind buffer
 - [x] Screenshots
 - [x] Per-game profiles
-- [x] CI state round-trip qualification receipt
+- [x] CI state round-trip qualification
 
 ## Rung 5 — Replay Ledger
-
 - [x] Deterministic input recording
 - [x] Replay verification
 - [x] State/frame/input checkpoints
-- [x] Exportable content-addressed session receipt
+- [x] Content-addressed receipts
 - [x] Divergence detector
-- [x] CI positive + mutated-replay negative controls
+- [x] Positive + mutated-replay controls
 
 ## Rung 6 — Phi-Bot seat
-
 - [x] Frame observation API
 - [x] Scoped input authority
-- [x] Human handoff / takeover
-- [x] Same-seat human + agent co-op mode
-- [x] Two-seat versus topology with explicit single-port SameBoy refusal
+- [x] Human handoff/takeover
+- [x] Same-seat co-op
+- [x] Explicit one-port versus refusal
 - [x] No privileged side-channel input
-- [x] CI human/agent parity + authority qualification receipt
+- [x] Human/agent parity receipt
 
 ## Rung 7 — Agent Driver Protocol
+- [x] Transport-neutral turn schemas
+- [x] Observation hash + turn binding
+- [x] Action/delay budgets
+- [x] Turn expiry
+- [x] Native driver inbox
+- [x] Host-canonical sequencing
+- [x] Human-last same-frame precedence
+- [x] Reference driver
+- [x] Driver/direct parity receipt
 
-- [x] Transport-neutral request/response schemas
-- [x] Observation-bound turn IDs + hashes
-- [x] Bounded action count and delay budgets
-- [x] Turn expiry / stale-response rejection
-- [x] Native scheduled driver inbox
-- [x] Host-canonical live action sequencing
-- [x] Deterministic human-last co-op precedence
-- [x] Desktop reference driver
-- [x] CI driver/direct behavioral parity receipt
+## Rung 8 — Local Ollama provider
+- [x] Loopback-only Ollama REST adapter
+- [x] Local model discovery via /api/tags
+- [x] RGBA framebuffer → PNG vision payload
+- [x] JSON-schema-constrained button output
+- [x] AgentTurnResponse conversion
+- [x] THINK PAUSE frame consistency
+- [x] Explicit pending-turn cancellation on provider failure
+- [x] Persistent local model selection
+- [x] Loopback mock-server CI tests
 
 ## Later
 
-Provider adapters (Ollama/local HTTP, cloud APIs), metadata/cover art, additional
+Pinned model-specific qualification, provider capability discovery, autonomous
+multi-turn driving, cloud-provider adapters, metadata/cover art, additional
 systems, true multi-port versus play, netplay, spectator mode, achievements,
-tournaments, CommonLine session rooms, and a shared Phi Game Runtime with
-Night Circuit.
+tournaments, CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.

@@ -590,3 +590,60 @@ footer {
   }
 }
 
+/* Rung 8: local Ollama provider */
+.provider-strip {
+  display: grid;
+  grid-template-columns: auto auto minmax(160px, 1fr) auto minmax(180px, 1.4fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #4a4530;
+  background: #100d07;
+}
+
+.provider-strip > span {
+  color: var(--amber);
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.provider-strip button,
+.provider-strip select {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.provider-strip button {
+  cursor: pointer;
+}
+
+.provider-strip button:hover:not(:disabled),
+.provider-strip select:focus {
+  border-color: var(--amber);
+  outline: none;
+}
+
+.provider-strip > small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .provider-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .provider-strip > span,
+  .provider-strip > small,
+  .provider-strip select {
+    grid-column: 1 / -1;
+  }
+}
+

@@ -7,6 +7,8 @@ export interface AppSettings {
   autoScan: boolean;
   controllerDeadzone: number;
   sameboyCorePath: string | null;
+  ollamaBaseUrl: string;
+  ollamaModel: string | null;
 }
 
 export interface RomEntry {
@@ -153,6 +155,21 @@ export interface DriverStatus {
   nextTurnId: number;
 }
 
+export interface OllamaModel {
+  name: string;
+  model: string;
+  size: number;
+  digest: string;
+}
+
+export interface OllamaTurnResult {
+  provider: "ollama";
+  model: string;
+  response: AgentTurnResponse;
+  totalDurationNs: number | null;
+  evalCount: number | null;
+}
+
 export interface FramePacket {
   frame: number;
   width: number;
@@ -178,6 +195,8 @@ export const defaultSettings: AppSettings = {
   autoScan: false,
   controllerDeadzone: 0.18,
   sameboyCorePath: null,
+  ollamaBaseUrl: "http://127.0.0.1:11434",
+  ollamaModel: null,
 };
 
 export function isNativeShell(): boolean {
@@ -317,4 +336,27 @@ export async function submitAgentTurn(
   response: AgentTurnResponse,
 ): Promise<DriverStatus> {
   return invoke<DriverStatus>("submit_agent_turn", { response });
+}
+
+
+export async function cancelAgentTurn(): Promise<DriverStatus> {
+  return invoke<DriverStatus>("cancel_agent_turn");
+}
+
+export async function listOllamaModels(
+  baseUrl: string,
+): Promise<OllamaModel[]> {
+  return invoke<OllamaModel[]>("list_ollama_models", { baseUrl });
+}
+
+export async function completeOllamaTurn(
+  request: AgentTurnRequest,
+  baseUrl: string,
+  model: string,
+): Promise<OllamaTurnResult> {
+  return invoke<OllamaTurnResult>("complete_ollama_turn", {
+    request,
+    baseUrl,
+    model,
+  });
 }
