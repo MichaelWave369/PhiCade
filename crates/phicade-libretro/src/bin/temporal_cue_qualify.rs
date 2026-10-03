@@ -186,6 +186,13 @@ fn neutral_rearm_and_move(
         audio,
         "release carried direction to arm choice",
     )?;
+    no_input(
+        core,
+        1,
+        video,
+        audio,
+        "hold explicit neutral frame before recovered choice",
+    )?;
 
     let frame = core.frame_count();
     step(
@@ -362,7 +369,13 @@ fn run() -> Result<(), String> {
         && neutral_rearm_recovery_both)
     {
         return Err(format!(
-            "temporal pair controls failed: cue_diff={cue_frames_differ} decision_same={decision_frames_identical} geometry_same={decision_geometry_identical} carry_refused={carried_direction_refused_both} recovery={neutral_rearm_recovery_both}"
+            "temporal pair controls failed: cue_diff={cue_frames_differ} decision_same={decision_frames_identical} geometry_same={decision_geometry_identical} carry_refused={carried_direction_refused_both} recovery={neutral_rearm_recovery_both} left_carried={:?} left_recovered={:?} left_target={:?} right_carried={:?} right_recovered={:?} right_target={:?}",
+            left.carried_direction_player,
+            left.recovered_final_player,
+            left_task.target,
+            right.carried_direction_player,
+            right.recovered_final_player,
+            right_task.target
         ));
     }
 
