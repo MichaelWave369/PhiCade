@@ -352,6 +352,27 @@
 - [x] v7 READY only at 13/13
 - [x] Freeze canonical Branch Selector source + ROM SHA-256 after qualification
 
+## Rung 26 — Nested Branch Graph Benchmark
+- [x] Four source-first 2×2 factorial nested-branch tasks
+- [x] TRIANGLE/SQUARE Stage 1 candidates fixed across all variants
+- [x] CIRCLE/CROSS Stage 2 candidates fixed across all variants
+- [x] Stage 2 hidden before correct Stage 1 commitment
+- [x] Same Stage 1 variants pixel-identical before Stage 2 revelation
+- [x] Same Stage 2 variants converge across opposite Stage 1 histories
+- [x] Stage 2 CIRCLE/CROSS states remain visibly distinct
+- [x] Irreversible wrong-branch control at Stage 1
+- [x] Irreversible wrong-branch control at Stage 2
+- [x] Generator refusal after Stage 2 failure
+- [x] Four-way accepted Stage 2 convergence
+- [x] Four-way powered-generator convergence
+- [x] Four-way opened-gate convergence
+- [x] Same provider instruction across all four variants
+- [x] Benchmark Suite v8 with exact v7 reuse + four Nested Branch tasks
+- [x] v7 READY at 13/13 while v8 remains INCOMPLETE at 13/17
+- [x] v8 remains INCOMPLETE at 14/17, 15/17, and 16/17
+- [x] v8 READY only at 17/17
+- [ ] Freeze canonical Nested Branch source + ROM SHA-256 after qualification
+
 ## Later
 
 Additional benchmark capabilities/tasks, additional uncertainty methods, provider
