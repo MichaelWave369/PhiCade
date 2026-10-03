@@ -140,7 +140,7 @@ fn run() -> Result<(), String> {
         .len();
 
     let receipt = QualificationReceipt {
-        schema: "phicade.core-qualification.v1",
+        schema: "phicade.core-qualification.v2",
         result: "PASS",
         core_name: identity.library_name,
         core_version: identity.library_version,
