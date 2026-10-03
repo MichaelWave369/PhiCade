@@ -18,6 +18,10 @@ use std::{
 };
 use tauri::{AppHandle, Manager, State};
 
+mod providers;
+
+use providers::ollama::{self, OllamaModel, OllamaTurnResult};
+
 const MAX_LIBRARY_ENTRIES: usize = 4096;
 const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
 const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
@@ -92,6 +96,8 @@ struct AppSettings {
     auto_scan: bool,
     controller_deadzone: f32,
     sameboy_core_path: Option<String>,
+    ollama_base_url: String,
+    ollama_model: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -101,6 +107,8 @@ impl Default for AppSettings {
             auto_scan: false,
             controller_deadzone: 0.18,
             sameboy_core_path: None,
+            ollama_base_url: "http://127.0.0.1:11434".to_owned(),
+            ollama_model: None,
         }
     }
 }
@@ -1413,6 +1421,20 @@ fn issue_agent_turn(
 }
 
 #[tauri::command]
+async fn list_ollama_models(base_url: String) -> Result<Vec<OllamaModel>, String> {
+    ollama::list_models(&base_url).await
+}
+
+#[tauri::command]
+async fn complete_ollama_turn(
+    request: AgentTurnRequest,
+    base_url: String,
+    model: String,
+) -> Result<OllamaTurnResult, String> {
+    ollama::complete_turn(request, &base_url, &model).await
+}
+
+#[tauri::command]
 fn submit_agent_turn(
     state: State<'_, EmulatorState>,
     response: AgentTurnResponse,
@@ -1902,6 +1924,8 @@ pub fn run() {
             phi_bot_observation,
             driver_status,
             issue_agent_turn,
+            list_ollama_models,
+            complete_ollama_turn,
             submit_agent_turn,
             set_game_profile,
             replay_status,
