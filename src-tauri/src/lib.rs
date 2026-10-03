@@ -1890,6 +1890,157 @@ fn start_autodrive(
 }
 
 #[tauri::command]
+fn start_model_gameplay_benchmark(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<ModelBenchmarkStart, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.game_key != AGENT_GYM_ROM_SHA256 {
+        return Err(format!(
+            "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
+            AGENT_GYM_ROM_SHA256
+        ));
+    }
+    if session
+        .model_benchmark
+        .as_ref()
+        .is_some()
+        || session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+    {
+        return Err("a benchmark or autonomous run is already active".into());
+    }
+    if session.recording.is_some() {
+        return Err("model benchmark is disabled during replay recording".into());
+    }
+    if session.profile.fast_forward != 1 {
+        return Err("model benchmark requires 1x game speed".into());
+    }
+    if session.authority.mode != ControlMode::PhiBot {
+        return Err("model benchmark requires PHI-BOT handoff mode".into());
+    }
+
+    let model = model.trim().to_owned();
+    let model_digest = model_digest.trim().to_owned();
+    let qualification = load_ollama_qualification(&app, &model_digest)?
+        .ok_or_else(|| "model benchmark requires a qualification receipt for this digest".to_owned())?;
+    if !qualification_receipt_passes(&qualification.receipt, &model, &model_digest) {
+        return Err("model benchmark qualification does not match the selected model digest".into());
+    }
+    let qualification_sha256 = sha256_file(Path::new(&qualification.receipt_path))?;
+
+    session.pending_agent_turn = None;
+    session.agent_inbox.clear();
+    session.core.restore_input_mask(0);
+    session
+        .core
+        .reset()
+        .map_err(|error| format!("reset Phi-Agent Gym: {error:?}"))?;
+    session.last_frame = FrameBuffer::default();
+    session.rewind.clear();
+    session.next_rewind_frame = 0;
+
+    let mut warmup_audio = AudioBuffer::default();
+    for _ in 0..AGENT_GYM_WARMUP_FRAMES {
+        session
+            .core
+            .step_frame(&[], &mut session.last_frame, &mut warmup_audio)
+            .map_err(|error| format!("warm Phi-Agent Gym: {error:?}"))?;
+    }
+
+    let start_score = score_agent_gym_frame(&session.last_frame)?;
+    if start_score.player != AGENT_GYM_START
+        || start_score.final_distance != AGENT_GYM_INITIAL_DISTANCE
+    {
+        return Err(format!(
+            "Phi-Agent Gym start geometry drifted: player=({}, {}) distance={}",
+            start_score.player.x, start_score.player.y, start_score.final_distance
+        ));
+    }
+
+    let agent_id = session
+        .authority
+        .agent_grant
+        .as_ref()
+        .map(|grant| grant.agent_id.clone())
+        .ok_or_else(|| "model benchmark requires an active Phi-Bot grant".to_owned())?;
+
+    let mut grant = AgentGrant::game_boy(agent_id, 1);
+    grant.allowed_buttons = ["UP", "DOWN", "LEFT", "RIGHT"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    grant.expires_at_frame = Some(
+        session
+            .core
+            .frame_count()
+            .saturating_add(policy.max_emulated_frames)
+            .saturating_add(600),
+    );
+    session.authority.set_mode(ControlMode::PhiBot, Some(grant))?;
+
+    let core_sha256 = sha256_file(session.core.core_path())?;
+    let benchmark_run_id = session.next_model_benchmark_run_id;
+    let (autodrive, _) = start_autodrive_inner(
+        &app,
+        session,
+        provider.clone(),
+        model.clone(),
+        model_digest.clone(),
+        policy,
+    )?;
+
+    session.next_model_benchmark_run_id =
+        session.next_model_benchmark_run_id.saturating_add(1);
+    session.model_benchmark = Some(ModelBenchmarkRun {
+        run_id: benchmark_run_id,
+        autodrive_run_id: autodrive.run_id,
+        provider: provider.trim().to_ascii_lowercase(),
+        model,
+        model_digest,
+        model_qualification_sha256: qualification_sha256,
+        core_sha256,
+        started_frame: session.core.frame_count(),
+        start_player: start_score.player,
+    });
+
+    Ok(ModelBenchmarkStart {
+        benchmark_run_id,
+        autodrive,
+    })
+}
+
+#[tauri::command]
+fn last_model_gameplay_benchmark(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<ModelBenchmarkArtifact>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .last_model_benchmark
+        .as_ref()
+        .map(model_benchmark_artifact))
+}
+
+#[tauri::command]
 fn autodrive_status(state: State<'_, EmulatorState>) -> Result<Option<AutodriveStatus>, String> {
     let session = state
         .session
