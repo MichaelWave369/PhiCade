@@ -1421,6 +1421,21 @@ fn issue_agent_turn(
 }
 
 #[tauri::command]
+fn cancel_agent_turn(state: State<'_, EmulatorState>) -> Result<DriverStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    session.pending_agent_turn = None;
+    session.last_authority_reason = Some("operator cancelled pending agent turn".to_owned());
+    Ok(driver_status_for(session))
+}
+
+#[tauri::command]
 async fn list_ollama_models(base_url: String) -> Result<Vec<OllamaModel>, String> {
     ollama::list_models(&base_url).await
 }
@@ -1924,6 +1939,7 @@ pub fn run() {
             phi_bot_observation,
             driver_status,
             issue_agent_turn,
+            cancel_agent_turn,
             list_ollama_models,
             complete_ollama_turn,
             submit_agent_turn,
