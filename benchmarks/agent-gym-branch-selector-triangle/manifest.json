@@ -1,0 +1,50 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "branch-selector-triangle-v1",
+  "title": "Branch Selector: Triangle",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["A", "UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": { "startScreen": [72, 112] },
+  "selector": {
+    "screen": [72, 32],
+    "requiredModule": "triangle",
+    "wrongSelectionIrreversible": true
+  },
+  "modules": {
+    "triangle": { "screen": [24, 112] },
+    "square": { "screen": [120, 112] },
+    "pickupButton": "A",
+    "bothAlwaysRenderedInitially": true
+  },
+  "generator": {
+    "screen": [72, 96],
+    "interactionPlayerScreen": [72, 112],
+    "installButton": "A",
+    "requiresAcceptedModule": true
+  },
+  "gate": {
+    "screenY": [72, 79],
+    "playerStopScreenY": 80,
+    "switchScreen": [72, 80],
+    "unlockButton": "A",
+    "requiresPower": true
+  },
+  "target": { "screen": [72, 24] },
+  "score": {
+    "metric": "manhattan-distance-progress-to-target",
+    "initialDistancePixels": 88,
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["LEFT", "A", "RIGHT", "WAIT", "A", "WAIT", "UP", "A", "WAIT", "UP"],
+    "oracleFrames": [28, 1, 28, 2, 1, 2, 20, 1, 2, 32],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}

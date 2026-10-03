@@ -5,12 +5,13 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 24
+## Current status — Rung 25
 
-PhiCade now has a balanced ordered-causality benchmark. A visible fuse must be
-acquired, installed into a central generator, and used to power a gate before
-the visible target can be reached. Suite v6 preserves every Suite v5 task and
-adds opposite LEFT/RIGHT fuse placements under the same causal chain.
+PhiCade now has a balanced conditional-branch benchmark. Both branch modules
+are present in both variants, while a visible selector determines which module
+is valid. Choosing the wrong branch enters an irreversible fail state; choosing
+the matching branch converges into a shared generator → gate → target chain.
+Suite v7 preserves every Suite v6 task and adds TRIANGLE/SQUARE selector variants.
 
 Benchmark suites:
 
@@ -20,6 +21,7 @@ Benchmark suites:
 - **Suite v4** — the exact v3 tasks + **Relay Rooms: Left** + **Relay Rooms: Right**
 - **Suite v5** — the exact v4 tasks + **Key Gate: Left** + **Key Gate: Right**
 - **Suite v6** — the exact v5 tasks + **Power Chain: Left** + **Power Chain: Right**
+- **Suite v7** — the exact v6 tasks + **Branch Selector: Triangle** + **Branch Selector: Square**
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -30,6 +32,8 @@ Benchmark suites:
   locked barrier can be mutated and traversed
 - **Power Chain pair** — visible fuse → powered generator → opened gate must
   occur in order before the target becomes reachable
+- **Branch Selector pair** — both branch objects are present, a visible selector
+  chooses the valid branch, and a wrong commitment irreversibly dead-ends
 
 Current evidence stack includes:
 
@@ -62,6 +66,12 @@ Current evidence stack includes:
 - generator-before-fuse, gate-before-power, and fake-pickup negative controls
 - post-fuse, powered-generator, and opened-gate convergence controls
 - Benchmark Suite v6 with exact 11-task membership
+- balanced TRIANGLE/SQUARE Branch Selector conditional-decision probes
+- same two visible modules in both variants with selector-only task condition
+- irreversible wrong-branch failure state
+- failed-state and accepted-state framebuffer convergence controls
+- shared generator → gate → target continuation after correct branch
+- Benchmark Suite v7 with exact 13-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -87,6 +97,24 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Conditional branch-selector benchmark
+
+Suite v7 adds two source-first Game Boy tasks:
+
+- `branch-selector-triangle-v1`
+- `branch-selector-square-v1`
+
+Both render the triangle module on the left and the square module on the right.
+A central selector symbol determines which module is valid. Pressing A on the
+wrong module enters an irreversible fail state; pressing A on the matching
+module removes the variant-specific selector and rejoins the shared
+generator → gate → target chain.
+
+The joint qualifier proves wrong-branch dead-end behavior and exact
+cross-variant convergence after both failure and correct selection.
+
+See `docs/CONDITIONAL_BRANCH_SELECTOR_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V7.md`.
 
 ## Ordered power-chain benchmark
 
@@ -300,13 +328,15 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all eleven registered benchmark ROMs from source,
-jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, and Power Chain
-pairs, tests prior-suite preservation, Suite v6 9/11 → 10/11 → 11/11 coverage,
-digest splitting, and trial-tamper refusal.
+CI assembles and qualifies all thirteen registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, and
+Branch Selector pairs, tests prior-suite preservation, Suite v7
+11/13 → 12/13 → 13/13 coverage, digest splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/CONDITIONAL_BRANCH_SELECTOR_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V7.md`
 - `docs/ORDERED_POWER_CHAIN_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V6.md`
 - `docs/STATEFUL_KEY_GATE_BENCHMARK.md`
