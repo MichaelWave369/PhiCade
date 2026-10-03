@@ -1,34 +1,73 @@
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum ActionSource {
     Human { seat: u8 },
     Replay,
     Script { name: String },
-    PhiBot { agent_id: String },
+    PhiBot {
+        #[serde(rename = "agentId")]
+        agent_id: String,
+    },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SystemAction {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SystemCommand {
     Pause,
     Reset,
-    SaveState { slot: u8 },
-    LoadState { slot: u8 },
+    SaveState,
+    LoadState,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum ActionKind {
-    Button { button: String, pressed: bool },
-    Axis { axis: String, value: i16 },
-    System(SystemAction),
+    Button {
+        button: String,
+        pressed: bool,
+    },
+    Axis {
+        axis: String,
+        value: i16,
+    },
+    System {
+        command: SystemCommand,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        slot: Option<u8>,
+    },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActionEnvelope {
     pub sequence: u64,
     pub frame: u64,
     pub source: ActionSource,
     pub action: ActionKind,
+}
+
+impl ActionEnvelope {
+    pub fn validate(&self) -> Result<(), String> {
+        if let ActionSource::Human { seat } = &self.source {
+            if *seat == 0 {
+                return Err("human seat numbers start at 1".to_owned());
+            }
+        }
+
+        if let ActionKind::System {
+            slot: Some(slot), ..
+        } = &self.action
+        {
+            if *slot > 9 {
+                return Err("save-state slot must be in 0..=9".to_owned());
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default)]
@@ -107,5 +146,40 @@ mod tests {
         assert_eq!(frame_ten.len(), 1);
         assert_eq!(frame_ten[0].frame, 10);
         assert_eq!(bus.pending(), 1);
+    }
+
+    #[test]
+    fn action_envelope_json_matches_ipc_contract() {
+        let event = ActionEnvelope {
+            sequence: 12,
+            frame: 34,
+            source: ActionSource::PhiBot {
+                agent_id: "phi-7".to_owned(),
+            },
+            action: ActionKind::System {
+                command: SystemCommand::SaveState,
+                slot: Some(3),
+            },
+        };
+
+        let json = serde_json::to_string(&event).expect("serialize action");
+        assert!(json.contains("\"kind\":\"phi-bot\""));
+        assert!(json.contains("\"agentId\":\"phi-7\""));
+        assert!(json.contains("\"command\":\"save-state\""));
+
+        let decoded: ActionEnvelope = serde_json::from_str(&json).expect("deserialize action");
+        assert_eq!(decoded, event);
+    }
+
+    #[test]
+    fn rejects_human_seat_zero() {
+        let event = ActionEnvelope {
+            sequence: 0,
+            frame: 0,
+            source: ActionSource::Human { seat: 0 },
+            action: button("A"),
+        };
+
+        assert!(event.validate().is_err());
     }
 }

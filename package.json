@@ -1,13 +1,19 @@
 {
   "name": "phicade",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace @phicade/desktop",
     "build": "npm run build --workspace @phicade/desktop",
-    "typecheck": "npm run typecheck --workspace @phicade/desktop"
+    "typecheck": "npm run typecheck --workspace @phicade/desktop",
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
   }
 }
