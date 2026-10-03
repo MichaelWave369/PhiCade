@@ -1,7 +1,8 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_runtime::{
     benchmark_task_by_rom_sha256, ActionKind, AgentTurnAction, AgentTurnRequest,
-    AgentTurnResponse, AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
+    AgentTurnResponse, AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256, AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
     AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256, AGENT_GYM_POWER_CHAIN_LEFT_ROM_SHA256,
     AGENT_GYM_POWER_CHAIN_RIGHT_ROM_SHA256, AGENT_GYM_MIRROR_ROM_SHA256,
     AGENT_GYM_ROM_SHA256, AGENT_GYM_RELAY_LEFT_ROM_SHA256,
@@ -751,6 +752,26 @@ mod tests {
         assert!(left_prompt.contains("fuse may be on either side"));
         assert!(!left_prompt.contains("Power Chain: Left"));
         assert!(!right_prompt.contains("Power Chain: Right"));
+    }
+
+    #[test]
+    fn branch_selector_pair_uses_identical_non_leaking_instruction() {
+        let mut triangle = request();
+        triangle.observation.game_sha256 = AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256.into();
+        triangle.observation.allowed_buttons =
+            vec!["A".into(), "UP".into(), "DOWN".into(), "LEFT".into(), "RIGHT".into()];
+        let mut square = triangle.clone();
+        square.observation.game_sha256 = AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256.into();
+
+        let triangle_prompt = system_prompt(&triangle);
+        let square_prompt = system_prompt(&square);
+        assert_eq!(triangle_prompt, square_prompt);
+        assert!(triangle_prompt.contains("triangle module on the left"));
+        assert!(triangle_prompt.contains("square module on the right"));
+        assert!(triangle_prompt.contains("Match the central selector symbol"));
+        assert!(triangle_prompt.contains("irreversible fail state"));
+        assert!(!triangle_prompt.contains("Branch Selector: Triangle"));
+        assert!(!square_prompt.contains("Branch Selector: Square"));
     }
 
     #[test]
