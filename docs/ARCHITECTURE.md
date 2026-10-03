@@ -530,3 +530,51 @@ SHA-256. Arbitrary ROMs receive no benchmark-specific objective.
 CI assembles both suite ROMs from source and requires exact registry hash equality,
 zero-progress NO-INPUT controls, deterministic oracle success, and exact replay for
 each member.
+
+
+## Benchmark Suite Reports
+
+Rung 16 adds an explicit cross-task evidence layer above task-local campaigns.
+
+```text
+Task A COMPLETE campaign ----> campaign hash ----> trial hashes
+             \                                  /
+              +-------- suite cohort ----------+
+             /                                  \
+Task B COMPLETE campaign ----> campaign hash ----> trial hashes
+                         |
+                         v
+                shared suite statistics
+                         |
+                         v
+                  suite report receipt
+```
+
+Campaigns are grouped only when provider, model, exact digest, qualification
+receipt hash, SameBoy binary/identity, Autodrive policy, and trials-per-task all
+match.
+
+The canonical cohort identity is SHA-256 hashed. A model update, requalification,
+core change, policy change, or trial-count change therefore creates a different
+cohort instead of contaminating an existing aggregate.
+
+A cohort becomes READY only when every task registered in Benchmark Suite v1 has a
+verified COMPLETE campaign. Missing tasks remain visible as incomplete coverage.
+
+Suite report construction re-runs the campaign validator for every task. That
+validator walks the immutable Rung 12 trial receipt hashes, so cross-task
+aggregation does not weaken lower-level provenance.
+
+The shared runtime reports two intentionally different aggregate views:
+
+- macro mean score gives every benchmark task equal weight,
+- overall success rate gives every observed trial equal weight.
+
+It also reports minimum/maximum task means and population standard deviation across
+task means to preserve task-to-task spread.
+
+Comparison Lab remains unchanged and task-local. Cross-task aggregation occurs only
+through the suite-report schema, never by relaxing the Rung 14 compatibility gate.
+
+The desktop passes only a cohort ID. Native PhiCade rescans evidence, verifies
+coverage/provenance, computes the statistics, and writes the suite report.
