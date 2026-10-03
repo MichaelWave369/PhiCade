@@ -9,14 +9,16 @@ use phicade_runtime::{
     GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SuiteTaskAggregateInput, SystemCommand,
-    SystemId, benchmark_suite_v1_tasks, benchmark_task_by_id, benchmark_task_by_rom_sha256,
-    compare_benchmark_suites, compare_campaign_samples, score_benchmark_task_frame,
+    SystemId, benchmark_suite_by_id, benchmark_suites, benchmark_suites_for_task,
+    benchmark_task_by_id, benchmark_task_by_rom_sha256, compare_benchmark_suites,
+    compare_campaign_samples, score_benchmark_task_frame,
     summarize_benchmark_suite, summarize_benchmark_trials, SuiteTaskComparisonInput,
     AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID,
     AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256,
     AGENT_GYM_START, AGENT_GYM_TARGET, AUTODRIVE_RECEIPT_SCHEMA,
     AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA, BENCHMARK_SUITE_COMPARISON_SCHEMA,
-    BENCHMARK_SUITE_REPORT_SCHEMA, BENCHMARK_SUITE_V1_ID, CAMPAIGN_COMPARISON_SCHEMA,
+    BENCHMARK_SUITE_REPORT_SCHEMA, BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID,
+    CAMPAIGN_COMPARISON_SCHEMA,
     PHIBOT_OBSERVATION_SCHEMA,
     REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
@@ -69,8 +71,8 @@ struct SessionPaths {
     benchmark_campaign_root: PathBuf,
     benchmark_campaign_dir: PathBuf,
     campaign_comparison_dir: PathBuf,
-    suite_report_dir: PathBuf,
-    suite_comparison_dir: PathBuf,
+    suite_report_root: PathBuf,
+    suite_comparison_root: PathBuf,
     profile: PathBuf,
 }
 
@@ -310,6 +312,26 @@ struct CampaignComparisonArtifact {
 }
 
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteTaskEntry {
+    id: String,
+    title: String,
+    introduced_in_suite_id: String,
+    rom_sha256: String,
+    source_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteListEntry {
+    id: String,
+    title: String,
+    version: u16,
+    task_count: u16,
+    tasks: Vec<BenchmarkSuiteTaskEntry>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SuiteTaskCampaignRef {
@@ -427,6 +449,7 @@ struct SuiteCandidateTask {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkSuiteReportCandidate {
+    suite_id: String,
     cohort_id: String,
     provider: String,
     model: String,
@@ -486,8 +509,6 @@ struct EmulatorSession {
     last_benchmark_campaign: Option<BenchmarkCampaignExport>,
     next_benchmark_campaign_id: u64,
     next_campaign_comparison_id: u64,
-    next_suite_report_id: u64,
-    next_suite_comparison_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -571,6 +592,7 @@ struct RomEntry {
 #[serde(rename_all = "camelCase")]
 struct BenchmarkTaskInfo {
     suite_id: String,
+    suite_ids: Vec<String>,
     id: String,
     title: String,
     rom_sha256: String,
@@ -585,6 +607,10 @@ struct BenchmarkTaskInfo {
 fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
     BenchmarkTaskInfo {
         suite_id: task.suite_id.into(),
+        suite_ids: benchmark_suites_for_task(task.id)
+            .into_iter()
+            .map(|suite| suite.id.to_owned())
+            .collect(),
         id: task.id.into(),
         title: task.title.into(),
         rom_sha256: task.rom_sha256.into(),
@@ -968,8 +994,8 @@ fn session_paths(
     let model_benchmark_dir = model_benchmark_root.join(game_key);
     let benchmark_campaign_dir = benchmark_campaign_root.join(game_key);
     let campaign_comparison_dir = root.join("campaign-comparisons").join(game_key);
-    let suite_report_dir = root.join("suite-reports").join(BENCHMARK_SUITE_V1_ID);
-    let suite_comparison_dir = root.join("suite-comparisons").join(BENCHMARK_SUITE_V1_ID);
+    let suite_report_root = root.join("suite-reports");
+    let suite_comparison_root = root.join("suite-comparisons");
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -987,10 +1013,16 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
     fs::create_dir_all(&campaign_comparison_dir)
         .map_err(|error| format!("cannot create {}: {error}", campaign_comparison_dir.display()))?;
-    fs::create_dir_all(&suite_report_dir)
-        .map_err(|error| format!("cannot create {}: {error}", suite_report_dir.display()))?;
-    fs::create_dir_all(&suite_comparison_dir)
-        .map_err(|error| format!("cannot create {}: {error}", suite_comparison_dir.display()))?;
+    fs::create_dir_all(&suite_report_root)
+        .map_err(|error| format!("cannot create {}: {error}", suite_report_root.display()))?;
+    fs::create_dir_all(&suite_comparison_root)
+        .map_err(|error| format!("cannot create {}: {error}", suite_comparison_root.display()))?;
+    for suite in benchmark_suites() {
+        fs::create_dir_all(suite_report_root.join(suite.id))
+            .map_err(|error| format!("cannot create suite report namespace {}: {error}", suite.id))?;
+        fs::create_dir_all(suite_comparison_root.join(suite.id))
+            .map_err(|error| format!("cannot create suite comparison namespace {}: {error}", suite.id))?;
+    }
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -1003,8 +1035,8 @@ fn session_paths(
         benchmark_campaign_root,
         benchmark_campaign_dir,
         campaign_comparison_dir,
-        suite_report_dir,
-        suite_comparison_dir,
+        suite_report_root,
+        suite_comparison_root,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1719,10 +1751,6 @@ fn start_emulation(
         next_numbered_receipt_id(&paths.benchmark_campaign_dir, "campaign-", ".json")?;
     let next_campaign_comparison_id =
         next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
-    let next_suite_report_id =
-        next_numbered_receipt_id(&paths.suite_report_dir, "suite-report-", ".json")?;
-    let next_suite_comparison_id =
-        next_numbered_receipt_id(&paths.suite_comparison_dir, "comparison-", ".json")?;
 
     let mut emulator_session = EmulatorSession {
         core,
@@ -1753,8 +1781,6 @@ fn start_emulation(
         last_benchmark_campaign: None,
         next_benchmark_campaign_id,
         next_campaign_comparison_id,
-        next_suite_report_id,
-        next_suite_comparison_id,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
