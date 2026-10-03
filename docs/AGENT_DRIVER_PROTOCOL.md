@@ -118,8 +118,16 @@ Changing control mode clears:
 
 - any pending turn request
 - any queued driver actions
+- the current frontend input mask
 
-This makes HUMAN takeover immediate.
+This prevents a previously scheduled agent button release from being lost while
+leaving the button stuck down.
+
+When an agent grant expires, the native host performs the same neutralization,
+clears pending/queued driver work, and automatically returns gameplay authority to
+HUMAN.
+
+Expired pending turn requests are also discarded by the frame loop.
 
 ## Canonical action order
 
