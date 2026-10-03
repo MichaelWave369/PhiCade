@@ -30,7 +30,7 @@ jobs:
       - run: cargo test -p phicade-runtime -p phicade-libretro --all-targets
 
   native:
-    name: tauri / cargo check + native governance/Adaptive Cadence tests
+    name: tauri / cargo check + native governance/Versioned Suite tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
   sameboy:
-    name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Benchmark Suite v1 qualification
+    name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Benchmark Suites qualification
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
