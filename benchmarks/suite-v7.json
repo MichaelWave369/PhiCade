@@ -179,8 +179,8 @@
       "id": "branch-selector-triangle-v1",
       "title": "Branch Selector: Triangle",
       "source": "benchmarks/agent-gym-branch-selector-triangle/main.asm",
-      "sourceSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "romSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sourceSha256": "b58ad96706d25724f85d6802afc499353419aeb09bd0f421b02e764f08d6e071",
+      "romSha256": "80c1dbd415f14a16823a7903b7117564b352ee2fe7d151d9c41c9f51fef20505",
       "oracle": [
         "LEFT",
         "A",
@@ -199,8 +199,8 @@
       "id": "branch-selector-square-v1",
       "title": "Branch Selector: Square",
       "source": "benchmarks/agent-gym-branch-selector-square/main.asm",
-      "sourceSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "romSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sourceSha256": "0dc8ba01a974cc467349058cd92e0a50e2168a67bcbff3dea36f64ddfc376a35",
+      "romSha256": "300d827be392f9859fe85e0b0eb06a0af329b3148ba222295ee47dcd5290e10a",
       "oracle": [
         "RIGHT",
         "A",
