@@ -626,6 +626,10 @@ mod tests {
     }
 
     fn mock_server(body: &'static str) -> String {
+        mock_server_sequence(vec![body])
+    }
+
+    fn mock_server_sequence(bodies: Vec<&'static str>) -> String {
         use std::{
             io::{Read, Write},
             net::TcpListener,
@@ -635,15 +639,17 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock Ollama");
         let address = listener.local_addr().expect("mock address");
         thread::spawn(move || {
-            let (mut stream, _) = listener.accept().expect("accept mock request");
-            let mut buffer = [0u8; 65_536];
-            let _ = stream.read(&mut buffer);
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            stream.write_all(response.as_bytes()).expect("write mock response");
+            for body in bodies {
+                let (mut stream, _) = listener.accept().expect("accept mock request");
+                let mut buffer = [0u8; 131_072];
+                let _ = stream.read(&mut buffer);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                stream.write_all(response.as_bytes()).expect("write mock response");
+            }
         });
         format!("http://{}", address)
     }
@@ -656,6 +662,48 @@ mod tests {
         let models = tauri::async_runtime::block_on(list_models(&base)).expect("list models");
         assert_eq!(models.len(), 1);
         assert_eq!(models[0].name, "gemma4");
+    }
+
+    #[test]
+    fn inspects_exact_digest_and_vision_capability() {
+        let base = mock_server_sequence(vec![
+            r#"{"models":[{"name":"gemma4","model":"gemma4","size":9608350245,"digest":"abc123"}]}"#,
+            r#"{"capabilities":["completion","thinking","vision"],"details":{"family":"gemma4","parameter_size":"8.0B","quantization_level":"Q4_K_M"}}"#,
+        ]);
+        let details =
+            tauri::async_runtime::block_on(inspect_model(&base, "gemma4")).expect("inspect");
+        assert_eq!(details.digest, "abc123");
+        assert!(details.has_capability("vision"));
+        assert_eq!(details.parameter_size.as_deref(), Some("8.0B"));
+    }
+
+    #[test]
+    fn qualifies_model_only_when_red_vision_probe_passes() {
+        let base = mock_server_sequence(vec![
+            r#"{"models":[{"name":"gemma4","model":"gemma4","size":9608350245,"digest":"digest-red"}]}"#,
+            r#"{"capabilities":["completion","vision"],"details":{"family":"gemma4","parameter_size":"8.0B","quantization_level":"Q4_K_M"}}"#,
+            r#"{"model":"gemma4","message":{"content":"{\"dominantColor\":\"red\"}"},"done":true,"total_duration":5000000,"eval_count":3}"#,
+        ]);
+        let receipt =
+            tauri::async_runtime::block_on(qualify_model(&base, "gemma4")).expect("qualify");
+        assert_eq!(receipt.result, "PASS");
+        assert_eq!(receipt.digest, "digest-red");
+        assert!(receipt.vision_advertised);
+        assert!(receipt.structured_output_pass);
+        assert!(receipt.vision_probe_pass);
+    }
+
+    #[test]
+    fn refuses_model_without_advertised_vision_without_chat_probe() {
+        let base = mock_server_sequence(vec![
+            r#"{"models":[{"name":"text-only","model":"text-only","size":42,"digest":"digest-text"}]}"#,
+            r#"{"capabilities":["completion"],"details":{"family":"text","parameter_size":"1B","quantization_level":"Q4_0"}}"#,
+        ]);
+        let receipt =
+            tauri::async_runtime::block_on(qualify_model(&base, "text-only")).expect("qualify");
+        assert_eq!(receipt.result, "FAIL");
+        assert!(!receipt.vision_advertised);
+        assert!(!receipt.vision_probe_pass);
     }
 
     #[test]
