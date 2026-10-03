@@ -1,0 +1,44 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "key-gate-left-v1",
+  "title": "Key Gate: Left",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["A", "UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "startScreen": [72, 112]
+  },
+  "key": {
+    "screen": [24, 112],
+    "pickupButton": "A",
+    "pickupRequiresOverlap": true,
+    "worldSpriteDisappearsAfterPickup": true,
+    "sharedAcquiredBadgeAppears": true
+  },
+  "gate": {
+    "screenY": [72, 79],
+    "playerStopScreenY": 80,
+    "unlockScreen": [72, 80],
+    "unlockButton": "A",
+    "requiresKey": true
+  },
+  "target": {
+    "screen": [72, 24]
+  },
+  "score": {
+    "metric": "manhattan-distance-progress-to-target",
+    "initialDistancePixels": 88,
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["LEFT", "A", "RIGHT", "UP", "A", "UP"],
+    "oracleFrames": [24, 1, 24, 16, 1, 28],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}
