@@ -623,6 +623,16 @@ mod tests {
     }
 
     #[test]
+    fn agent_gym_prompt_states_visible_task_without_coordinates() {
+        let mut req = request();
+        req.observation.game_sha256 = AGENT_GYM_ROM_SHA256.into();
+        let prompt = system_prompt(&req);
+        assert!(prompt.contains("move the solid square block onto the visible X target"));
+        assert!(!prompt.contains("136"));
+        assert!(!prompt.contains("112"));
+    }
+
+    #[test]
     fn response_schema_uses_request_budgets() {
         let schema = response_schema(&request());
         assert_eq!(schema["properties"]["actions"]["maxItems"], 4);
