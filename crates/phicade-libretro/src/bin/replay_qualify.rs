@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::LibretroCore;
 use phicade_runtime::{
     ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
-    ReplayCheckpoint, ReplayLedger, SystemCommand, SystemId, REPLAY_SCHEMA,
+    ReplayCheckpoint, ReplayLedger, SystemId, REPLAY_SCHEMA,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -188,7 +188,6 @@ fn run() -> Result<(), String> {
     let initial_input_mask = core.input_mask_snapshot();
     let initial_checkpoint = checkpoint(&core, &video)?;
 
-    let reset_frame = start_frame + 75;
     let actions = vec![
         action(
             0,
@@ -220,14 +219,6 @@ fn run() -> Result<(), String> {
             ActionKind::Button {
                 button: "RIGHT".into(),
                 pressed: false,
-            },
-        ),
-        action(
-            4,
-            reset_frame,
-            ActionKind::System {
-                command: SystemCommand::Reset,
-                slot: None,
             },
         ),
     ];
@@ -289,20 +280,20 @@ fn run() -> Result<(), String> {
     }
 
     let mut mutated = ledger.clone();
-    let reset = mutated
+    let first_press = mutated
         .actions
         .iter_mut()
         .find(|event| {
             matches!(
                 &event.action,
-                ActionKind::System {
-                    command: SystemCommand::Reset,
-                    ..
-                }
+                ActionKind::Button {
+                    button,
+                    pressed: true
+                } if button == "A"
             )
         })
-        .ok_or_else(|| "qualification replay is missing reset action".to_owned())?;
-    reset.action = ActionKind::Button {
+        .ok_or_else(|| "qualification replay is missing A press".to_owned())?;
+    first_press.action = ActionKind::Button {
         button: "B".into(),
         pressed: true,
     };
