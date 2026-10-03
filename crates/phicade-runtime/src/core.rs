@@ -1,13 +1,13 @@
 use crate::{ActionEnvelope, GameImage};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct FrameBuffer {
     pub width: u32,
     pub height: u32,
     pub rgba8: Vec<u8>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioBuffer {
     pub sample_rate_hz: u32,
     pub interleaved_stereo_f32: Vec<f32>,
