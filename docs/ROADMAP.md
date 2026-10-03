@@ -267,6 +267,29 @@
 - [x] v3 READY only at 5/5
 - [x] Freeze canonical temporal source + ROM SHA-256 after behavioral qualification
 
+## Rung 22 — Multi-Room Relay Objective Benchmark
+- [x] Balanced LEFT/RIGHT three-room source-first Game Boy tasks
+- [x] Briefing cue disappears on mission acceptance
+- [x] Shared visible wall-detour corridor
+- [x] Direct-RIGHT shortcut physically blocked
+- [x] Corridor geometry cannot satisfy final terminal score
+- [x] Shared identical terminal scene across variants
+- [x] Same provider instruction across variants
+- [x] Full A + D-pad task-scoped authority
+- [x] Frozen multi-leg oracle: briefing → corridor → terminal
+- [x] Dedicated pair qualification harness
+- [x] Briefing-frame difference control
+- [x] Corridor-frame identity control
+- [x] Terminal-frame identity control
+- [x] Direct-route negative control
+- [x] Wrong-terminal negative control
+- [x] Correct-terminal positive control
+- [x] Benchmark Suite v4 with exact v3 reuse + both relay tasks
+- [x] v3 READY at 5/5 while v4 remains INCOMPLETE at 5/7
+- [x] v4 remains INCOMPLETE at 6/7
+- [x] v4 READY only at 7/7
+- [ ] Freeze canonical relay source + ROM SHA-256 after qualification
+
 ## Later
 
 Additional benchmark capabilities/tasks, additional uncertainty methods, provider
