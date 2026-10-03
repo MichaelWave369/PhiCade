@@ -13,7 +13,7 @@ use std::{
 };
 
 const WARMUP_FRAMES: u64 = 120;
-const WAIT_AFTER_CUE_FRAMES: u64 = 100;
+const WAIT_AFTER_CUE_FRAMES: u64 = 101;
 const CHOICE_MOVE_FRAMES: u64 = 24;
 const SETTLE_FRAMES: u64 = 6;
 
