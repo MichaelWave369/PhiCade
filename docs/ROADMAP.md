@@ -211,10 +211,30 @@
 - [x] Desktop cadence telemetry
 - [x] Existing THINK PAUSE semantics preserved
 
+## Rung 19 — Versioned Benchmark Suites
+- [x] Task identity separated from suite membership
+- [x] Suite v1 remains the exact original two-task population
+- [x] Suite v2 reuses the exact frozen v1 tasks
+- [x] New source-first Wall Detour obstacle-navigation task
+- [x] Visible wall forces non-greedy DOWN → RIGHT → UP route
+- [x] Arbitrary-length frozen oracle paths
+- [x] Canonical Wall Detour source + ROM SHA-256 freeze
+- [x] NO-INPUT/oracle/deterministic replay qualification
+- [x] Native benchmark-suite registry + discovery API
+- [x] Explicit suite-scoped cohort discovery
+- [x] Suite-scoped Report persistence + IDs
+- [x] Suite-scoped Comparison persistence + IDs
+- [x] Provenance replay resolves the report's exact suite task population
+- [x] Cross-suite Report comparison refused
+- [x] Desktop suite-version selector
+- [x] Suite v1 READY at 2/2 while Suite v2 remains INCOMPLETE at 2/3
+- [x] Suite v2 becomes READY only at 3/3
+- [x] Existing Suite v1 evidence namespace preserved unchanged
+
 ## Later
 
-Versioned benchmark suites, additional benchmark tasks, additional uncertainty
-methods, provider capability profiles beyond Ollama, cloud-provider adapters,
-metadata/cover art, additional systems, true multi-port versus play, netplay,
-spectator mode, achievements, tournaments, CommonLine rooms, and a shared Phi Game
-Runtime with Night Circuit.
+Additional benchmark capabilities/tasks, additional uncertainty methods, provider
+capability profiles beyond Ollama, cloud-provider adapters, metadata/cover art,
+additional systems, true multi-port versus play, netplay, spectator mode,
+achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
+Night Circuit.
