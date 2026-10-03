@@ -2,6 +2,7 @@ use crate::FrameBuffer;
 use serde::{Deserialize, Serialize};
 
 pub const BENCHMARK_SUITE_V1_ID: &str = "phicade-agent-gym-suite-v1";
+pub const BENCHMARK_SUITE_V2_ID: &str = "phicade-agent-gym-suite-v2";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -14,6 +15,12 @@ pub const AGENT_GYM_MIRROR_ROM_SHA256: &str =
     "278a8106343fe1688a1370c0575578417744c96ae52568ab1e97f446dc222bfb";
 pub const AGENT_GYM_MIRROR_SOURCE_SHA256: &str =
     "fc10866cf7166f74f1ae41f8957f3b6057d8bf710731e42a02cbdb9087feb658";
+
+pub const AGENT_GYM_WALL_ID: &str = "wall-detour-v1";
+pub const AGENT_GYM_WALL_ROM_SHA256: &str =
+    "0000000000000000000000000000000000000000000000000000000000000000";
+pub const AGENT_GYM_WALL_SOURCE_SHA256: &str =
+    "02fc444e7ffc6f9de819f7462685448268b41a641592332918f972e17fd0fc96";
 
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
@@ -28,6 +35,12 @@ pub const AGENT_GYM_MIRROR_START_X: i32 = 136;
 pub const AGENT_GYM_MIRROR_START_Y: i32 = 112;
 pub const AGENT_GYM_MIRROR_TARGET_X: i32 = 16;
 pub const AGENT_GYM_MIRROR_TARGET_Y: i32 = 24;
+
+pub const AGENT_GYM_WALL_START_X: i32 = 16;
+pub const AGENT_GYM_WALL_START_Y: i32 = 24;
+pub const AGENT_GYM_WALL_TARGET_X: i32 = 136;
+pub const AGENT_GYM_WALL_TARGET_Y: i32 = 24;
+pub const AGENT_GYM_WALL_INITIAL_DISTANCE: i32 = 120;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -44,6 +57,8 @@ pub struct OracleLeg {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BenchmarkTaskSpec {
+    /// Suite where this task was first introduced. Suite membership is owned by
+    /// BenchmarkSuiteSpec so one frozen task may belong to multiple suite versions.
     pub suite_id: &'static str,
     pub id: &'static str,
     pub title: &'static str,
@@ -55,7 +70,15 @@ pub struct BenchmarkTaskSpec {
     pub success_distance: i32,
     pub warmup_frames: u64,
     pub prompt: &'static str,
-    pub oracle: [OracleLeg; 2],
+    pub oracle: &'static [OracleLeg],
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BenchmarkSuiteSpec {
+    pub id: &'static str,
+    pub title: &'static str,
+    pub version: u16,
+    pub tasks: &'static [BenchmarkTaskSpec],
 }
 
 pub const AGENT_GYM_TARGET: PixelPoint = PixelPoint {
@@ -78,6 +101,53 @@ pub const AGENT_GYM_MIRROR_TARGET: PixelPoint = PixelPoint {
     y: AGENT_GYM_MIRROR_TARGET_Y,
 };
 
+pub const AGENT_GYM_WALL_START: PixelPoint = PixelPoint {
+    x: AGENT_GYM_WALL_START_X,
+    y: AGENT_GYM_WALL_START_Y,
+};
+
+pub const AGENT_GYM_WALL_TARGET: PixelPoint = PixelPoint {
+    x: AGENT_GYM_WALL_TARGET_X,
+    y: AGENT_GYM_WALL_TARGET_Y,
+};
+
+pub static AGENT_GYM_ORACLE: [OracleLeg; 2] = [
+    OracleLeg {
+        button: "RIGHT",
+        frames: 60,
+    },
+    OracleLeg {
+        button: "DOWN",
+        frames: 44,
+    },
+];
+
+pub static AGENT_GYM_MIRROR_ORACLE: [OracleLeg; 2] = [
+    OracleLeg {
+        button: "LEFT",
+        frames: 60,
+    },
+    OracleLeg {
+        button: "UP",
+        frames: 44,
+    },
+];
+
+pub static AGENT_GYM_WALL_ORACLE: [OracleLeg; 3] = [
+    OracleLeg {
+        button: "DOWN",
+        frames: 40,
+    },
+    OracleLeg {
+        button: "RIGHT",
+        frames: 60,
+    },
+    OracleLeg {
+        button: "UP",
+        frames: 40,
+    },
+];
+
 pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     suite_id: BENCHMARK_SUITE_V1_ID,
     id: AGENT_GYM_ID,
@@ -90,16 +160,7 @@ pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     success_distance: AGENT_GYM_SUCCESS_DISTANCE,
     warmup_frames: AGENT_GYM_WARMUP_FRAMES,
     prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad.",
-    oracle: [
-        OracleLeg {
-            button: "RIGHT",
-            frames: 60,
-        },
-        OracleLeg {
-            button: "DOWN",
-            frames: 44,
-        },
-    ],
+    oracle: &AGENT_GYM_ORACLE,
 };
 
 pub const AGENT_GYM_MIRROR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
@@ -114,33 +175,80 @@ pub const AGENT_GYM_MIRROR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     success_distance: AGENT_GYM_SUCCESS_DISTANCE,
     warmup_frames: AGENT_GYM_WARMUP_FRAMES,
     prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad.",
-    oracle: [
-        OracleLeg {
-            button: "LEFT",
-            frames: 60,
-        },
-        OracleLeg {
-            button: "UP",
-            frames: 44,
-        },
-    ],
+    oracle: &AGENT_GYM_MIRROR_ORACLE,
 };
+
+pub const AGENT_GYM_WALL_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V2_ID,
+    id: AGENT_GYM_WALL_ID,
+    title: "Wall Detour",
+    rom_sha256: AGENT_GYM_WALL_ROM_SHA256,
+    source_sha256: AGENT_GYM_WALL_SOURCE_SHA256,
+    start: AGENT_GYM_WALL_START,
+    target: AGENT_GYM_WALL_TARGET,
+    initial_distance: AGENT_GYM_WALL_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad. Navigate around visible obstacles.",
+    oracle: &AGENT_GYM_WALL_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 3] =
+    [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK, AGENT_GYM_WALL_TASK];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
     [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK];
+
+pub static BENCHMARK_SUITE_V2_TASKS: [BenchmarkTaskSpec; 3] =
+    [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK, AGENT_GYM_WALL_TASK];
+
+pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V1_ID,
+    title: "Phi-Agent Gym Suite v1",
+    version: 1,
+    tasks: &BENCHMARK_SUITE_V1_TASKS,
+};
+
+pub static BENCHMARK_SUITE_V2: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V2_ID,
+    title: "Phi-Agent Gym Suite v2",
+    version: 2,
+    tasks: &BENCHMARK_SUITE_V2_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 2] =
+    [&BENCHMARK_SUITE_V1, &BENCHMARK_SUITE_V2];
+
+pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
+    &BENCHMARK_SUITES
+}
+
+pub fn benchmark_suite_by_id(id: &str) -> Option<&'static BenchmarkSuiteSpec> {
+    BENCHMARK_SUITES.iter().copied().find(|suite| suite.id == id)
+}
 
 pub fn benchmark_suite_v1_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V1_TASKS
 }
 
-pub fn benchmark_task_by_id(id: &str) -> Option<&'static BenchmarkTaskSpec> {
-    BENCHMARK_SUITE_V1_TASKS
+pub fn benchmark_suite_v2_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V2_TASKS
+}
+
+pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
+    BENCHMARK_SUITES
         .iter()
-        .find(|task| task.id == id)
+        .copied()
+        .filter(|suite| suite.tasks.iter().any(|task| task.id == task_id))
+        .collect()
+}
+
+pub fn benchmark_task_by_id(id: &str) -> Option<&'static BenchmarkTaskSpec> {
+    BENCHMARK_TASKS.iter().find(|task| task.id == id)
 }
 
 pub fn benchmark_task_by_rom_sha256(rom_sha256: &str) -> Option<&'static BenchmarkTaskSpec> {
-    BENCHMARK_SUITE_V1_TASKS
+    BENCHMARK_TASKS
         .iter()
         .find(|task| task.rom_sha256 == rom_sha256)
 }
@@ -292,6 +400,28 @@ mod tests {
     }
 
     #[test]
+    fn suite_v2_preserves_v1_and_adds_wall_detour() {
+        assert_eq!(benchmark_suite_v2_tasks().len(), 3);
+        assert_eq!(benchmark_suite_v2_tasks()[0].id, AGENT_GYM_ID);
+        assert_eq!(benchmark_suite_v2_tasks()[1].id, AGENT_GYM_MIRROR_ID);
+        assert_eq!(benchmark_suite_v2_tasks()[2].id, AGENT_GYM_WALL_ID);
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V1_ID).unwrap().version, 1);
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V2_ID).unwrap().version, 2);
+    }
+
+    #[test]
+    fn suite_membership_is_separate_from_task_origin() {
+        let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
+        assert_eq!(memberships.len(), 2);
+        assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
+        assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
+
+        let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
+        assert_eq!(wall_memberships.len(), 1);
+        assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
+    }
+
+    #[test]
     fn registry_resolves_original_task_by_id_and_hash() {
         assert_eq!(
             benchmark_task_by_id(AGENT_GYM_ID).map(|task| task.id),
@@ -301,6 +431,17 @@ mod tests {
             benchmark_task_by_rom_sha256(AGENT_GYM_ROM_SHA256).map(|task| task.id),
             Some(AGENT_GYM_ID)
         );
+    }
+
+    #[test]
+    fn registry_resolves_wall_task_by_id() {
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_WALL_ID).map(|task| task.id),
+            Some(AGENT_GYM_WALL_ID)
+        );
+        assert_eq!(AGENT_GYM_WALL_SOURCE_SHA256.len(), 64);
+        assert_eq!(AGENT_GYM_WALL_ROM_SHA256.len(), 64);
+        assert_eq!(AGENT_GYM_WALL_TASK.oracle.len(), 3);
     }
 
     #[test]
@@ -347,8 +488,8 @@ mod tests {
     }
 
     #[test]
-    fn scores_both_targets_at_full_credit() {
-        for task in benchmark_suite_v1_tasks() {
+    fn scores_registered_targets_at_full_credit() {
+        for task in BENCHMARK_TASKS.iter() {
             let score = score_benchmark_task_frame(&synthetic_frame(task.target), task)
                 .expect("score target");
             assert_eq!(score.final_distance, 0);
@@ -359,8 +500,8 @@ mod tests {
     }
 
     #[test]
-    fn scores_both_starts_at_zero_progress() {
-        for task in benchmark_suite_v1_tasks() {
+    fn scores_registered_starts_at_zero_progress() {
+        for task in BENCHMARK_TASKS.iter() {
             let score = score_benchmark_task_frame(&synthetic_frame(task.start), task)
                 .expect("score start");
             assert_eq!(score.final_distance, task.initial_distance);
