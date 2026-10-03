@@ -1,7 +1,8 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_runtime::{
-    ActionKind, AgentTurnAction, AgentTurnRequest, AgentTurnResponse,
-    AGENT_GYM_ROM_SHA256, AGENT_TURN_RESPONSE_SCHEMA,
+    benchmark_task_by_rom_sha256, ActionKind, AgentTurnAction, AgentTurnRequest,
+    AgentTurnResponse, AGENT_GYM_MIRROR_ROM_SHA256, AGENT_GYM_ROM_SHA256,
+    AGENT_TURN_RESPONSE_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -242,11 +243,9 @@ fn response_schema(request: &AgentTurnRequest) -> Value {
 }
 
 fn system_prompt(request: &AgentTurnRequest) -> String {
-    let task = if request.observation.game_sha256 == AGENT_GYM_ROM_SHA256 {
-        " Benchmark task: move the solid square block onto the visible X target using the D-pad."
-    } else {
-        ""
-    };
+    let task = benchmark_task_by_rom_sha256(&request.observation.game_sha256)
+        .map(|task| format!(" {}", task.prompt))
+        .unwrap_or_default();
 
     format!(
         concat!(
@@ -628,6 +627,18 @@ mod tests {
         req.observation.game_sha256 = AGENT_GYM_ROM_SHA256.into();
         let prompt = system_prompt(&req);
         assert!(prompt.contains("move the solid square block onto the visible X target"));
+        assert!(!prompt.contains("136"));
+        assert!(!prompt.contains("112"));
+    }
+
+    #[test]
+    fn mirror_gym_prompt_uses_registry_without_coordinates() {
+        let mut req = request();
+        req.observation.game_sha256 = AGENT_GYM_MIRROR_ROM_SHA256.into();
+        let prompt = system_prompt(&req);
+        assert!(prompt.contains("move the solid square block onto the visible X target"));
+        assert!(!prompt.contains("16"));
+        assert!(!prompt.contains("24"));
         assert!(!prompt.contains("136"));
         assert!(!prompt.contains("112"));
     }
