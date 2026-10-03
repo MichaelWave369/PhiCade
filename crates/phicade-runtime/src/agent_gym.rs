@@ -304,6 +304,20 @@ mod tests {
     }
 
     #[test]
+    fn registry_resolves_mirror_task_by_exact_hash() {
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_MIRROR_ID).map(|task| task.id),
+            Some(AGENT_GYM_MIRROR_ID)
+        );
+        assert_eq!(
+            benchmark_task_by_rom_sha256(AGENT_GYM_MIRROR_ROM_SHA256).map(|task| task.id),
+            Some(AGENT_GYM_MIRROR_ID)
+        );
+        assert_eq!(AGENT_GYM_MIRROR_ROM_SHA256.len(), 64);
+        assert_eq!(AGENT_GYM_MIRROR_SOURCE_SHA256.len(), 64);
+    }
+
+    #[test]
     fn both_task_geometries_have_same_frozen_distance() {
         assert_eq!(
             benchmark_task_distance(&AGENT_GYM_TASK, AGENT_GYM_TASK.start),
