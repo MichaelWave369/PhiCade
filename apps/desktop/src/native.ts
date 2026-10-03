@@ -155,6 +155,70 @@ export interface DriverStatus {
   nextTurnId: number;
 }
 
+export interface AutodrivePolicy {
+  maxTurns: number;
+  maxTotalActions: number;
+  maxConsecutiveEmptyTurns: number;
+  maxEmulatedFrames: number;
+}
+
+export type AutodriveStopReason =
+  | "operator-stop"
+  | "human-takeover"
+  | "turn-budget"
+  | "action-budget"
+  | "frame-budget"
+  | "empty-turn-limit"
+  | "provider-failure"
+  | "grant-expired"
+  | "core-shutdown";
+
+export interface AutodriveStatus {
+  schema: string;
+  runId: number;
+  active: boolean;
+  provider: string;
+  model: string;
+  startedFrame: number;
+  currentFrame: number;
+  turnsIssued: number;
+  turnsCompleted: number;
+  totalActions: number;
+  consecutiveEmptyTurns: number;
+  policy: AutodrivePolicy;
+  stopReason: AutodriveStopReason | null;
+}
+
+export interface AutodriveReceipt {
+  schema: string;
+  runId: number;
+  provider: string;
+  model: string;
+  gameSha256: string;
+  coreName: string;
+  coreVersion: string;
+  startedFrame: number;
+  endedFrame: number;
+  turnsIssued: number;
+  turnsCompleted: number;
+  totalActions: number;
+  stopReason: AutodriveStopReason;
+  finalFrameSha256: string;
+  policy: AutodrivePolicy;
+}
+
+export interface AutodriveArtifact {
+  receiptPath: string;
+  receipt: AutodriveReceipt;
+}
+
+export const defaultAutodrivePolicy: AutodrivePolicy = {
+  maxTurns: 32,
+  maxTotalActions: 128,
+  maxConsecutiveEmptyTurns: 4,
+  maxEmulatedFrames: 3600,
+};
+
 export interface OllamaModel {
   name: string;
   model: string;
@@ -188,6 +252,7 @@ export interface FramePacket {
   lastAuthorityReason: string | null;
   driverPendingTurnId: number | null;
   driverQueuedActions: number;
+  autodrive: AutodriveStatus | null;
 }
 
 export const defaultSettings: AppSettings = {
@@ -359,4 +424,29 @@ export async function completeOllamaTurn(
     baseUrl,
     model,
   });
+}
+
+
+export async function startAutodrive(
+  provider: string,
+  model: string,
+  policy: AutodrivePolicy = defaultAutodrivePolicy,
+): Promise<AutodriveStatus> {
+  return invoke<AutodriveStatus>("start_autodrive", { provider, model, policy });
+}
+
+export async function getAutodriveStatus(): Promise<AutodriveStatus | null> {
+  return invoke<AutodriveStatus | null>("autodrive_status");
+}
+
+export async function stopAutodrive(): Promise<AutodriveArtifact> {
+  return invoke<AutodriveArtifact>("stop_autodrive");
+}
+
+export async function failAutodriveProvider(): Promise<AutodriveArtifact> {
+  return invoke<AutodriveArtifact>("fail_autodrive_provider");
+}
+
+export async function getLastAutodriveReceipt(): Promise<AutodriveArtifact | null> {
+  return invoke<AutodriveArtifact | null>("last_autodrive_receipt");
 }
