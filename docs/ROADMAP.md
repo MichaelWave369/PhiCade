@@ -329,7 +329,7 @@
 - [x] v5 READY at 9/9 while v6 remains INCOMPLETE at 9/11
 - [x] v6 remains INCOMPLETE at 10/11
 - [x] v6 READY only at 11/11
-- [ ] Freeze canonical Power Chain source + ROM SHA-256 after qualification
+- [x] Freeze canonical Power Chain source + ROM SHA-256 after qualification
 
 ## Later
 
