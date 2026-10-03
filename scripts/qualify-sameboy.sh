@@ -44,13 +44,24 @@ fi
 printf '==> downloading MIT-licensed dmg-acid2 v1.0 fixture\n'
 curl --fail --location --retry 3 "$FIXTURE_URL" --output "$WORK/dmg-acid2.gb"
 
-printf '==> assembling source-first Phi-Agent Gym benchmark ROM\n'
+printf '==> assembling source-first Phi-Agent Gym task A\n'
 GYM_SRC="$ROOT/benchmarks/agent-gym/main.asm"
 GYM_OBJ="$WORK/phi-agent-gym.o"
 GYM_ROM="$WORK/phi-agent-gym.gb"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$GYM_OBJ" "$GYM_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$GYM_ROM" "$GYM_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIAGENTGYM" "$GYM_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task B / Mirror Dash\n'
+MIRROR_SRC="$ROOT/benchmarks/agent-gym-mirror/main.asm"
+MIRROR_OBJ="$WORK/phi-agent-gym-mirror.o"
+MIRROR_ROM="$WORK/phi-agent-gym-mirror.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$MIRROR_OBJ" "$MIRROR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$MIRROR_ROM" "$MIRROR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIMIRRORGYM" "$MIRROR_ROM"
+
+printf '==> benchmark suite hashes\n'
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -84,12 +95,21 @@ cargo run -p phicade-libretro --bin autodrive_qualify -- \
   --rom "$WORK/dmg-acid2.gb" \
   --receipt "$ROOT/artifacts/autodrive-qualification.json"
 
-printf '==> running Phi-Agent Gym pixel-grounded qualification\n'
+printf '==> running Phi-Agent Gym task A qualification\n'
 cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --core "$CORE" \
   --rom "$GYM_ROM" \
   --source "$GYM_SRC" \
+  --task "move-block-to-x-v1" \
   --receipt "$ROOT/artifacts/agent-gym-qualification.json"
+
+printf '==> running Phi-Agent Gym task B / Mirror Dash qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$MIRROR_ROM" \
+  --source "$MIRROR_SRC" \
+  --task "move-block-to-x-mirror-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-mirror-qualification.json"
 
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
@@ -98,3 +118,4 @@ printf '    %s\n' "$ROOT/artifacts/phibot-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-driver-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/autodrive-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-mirror-qualification.json"
