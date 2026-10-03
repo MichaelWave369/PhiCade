@@ -5,6 +5,7 @@
 
 pub mod action_bus;
 pub mod authority;
+pub mod autodrive;
 pub mod core;
 pub mod driver;
 pub mod library;
@@ -15,6 +16,10 @@ pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
 };
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
+pub use autodrive::{
+    AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,
+    AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
+};
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use driver::{
     compile_agent_turn, AgentTurnAction, AgentTurnRequest, AgentTurnResponse,
