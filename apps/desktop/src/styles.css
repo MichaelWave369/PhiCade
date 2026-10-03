@@ -358,3 +358,70 @@ footer {
   .status-cluster { text-align: left; }
   .milestone-grid { grid-template-columns: 1fr; }
 }
+
+/* Rung 3: live cartridge surface */
+.game-row {
+  width: 100%;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dotted #1e2c23;
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-row:hover,
+.game-row.selected {
+  background: #0c1710;
+  outline: 1px solid #34503c;
+  outline-offset: -1px;
+}
+
+.game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  opacity: 0;
+  background: #000;
+}
+
+.game-canvas.visible { opacity: 1; }
+
+.session-strip {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 6px;
+  align-items: center;
+  padding-top: 12px;
+}
+
+.session-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.session-strip button:hover:not(:disabled) {
+  border-color: #4e765a;
+  background: #0c1710;
+}
+
+.session-strip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .session-strip { grid-template-columns: 1fr 1fr; }
+  .session-strip span { grid-column: 1 / -1; text-align: left; }
+}
