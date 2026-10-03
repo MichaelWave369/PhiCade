@@ -12,10 +12,13 @@ import {
   defaultSettings,
   isNativeShell,
   captureScreenshot,
+  cancelAgentTurn,
+  completeOllamaTurn,
   flushGameSave,
   getAuthorityStatus,
   getDriverStatus,
   issueAgentTurn,
+  listOllamaModels,
   loadSettings,
   setControlMode,
   submitAgentTurn,
@@ -37,6 +40,7 @@ import {
   type ControlMode,
   type FramePacket,
   type GameProfile,
+  type OllamaModel,
   type ReplayArtifact,
   type RomEntry,
   type SessionInfo,
@@ -46,10 +50,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["TURN REQUEST", "BOUND", "Each driver request carries a specific framebuffer hash, frame, seat, budget, and expiry."],
-  ["TURN RESPONSE", "VALIDATED", "Drivers return bounded delayed actions; stale, mismatched, or oversized responses are rejected."],
-  ["HOST INBOX", "SCHEDULED", "Accepted driver intents become Phi-Bot ActionEnvelopes and wait for their emulated frame."],
-  ["CANONICAL ORDER", "HOST OWNED", "The native runtime re-sequences mixed human and agent actions, with human input last on same-frame co-op conflicts."],
+  ["OLLAMA", "LOCAL ONLY", "The first provider adapter is restricted to loopback HTTP and never receives core/session handles."],
+  ["VISION", "FRAMEBOUND", "Raw RGBA becomes PNG and is sent with the exact AgentTurnRequest observation hash."],
+  ["STRUCTURED OUTPUT", "SCHEMA", "Ollama returns only bounded button intents that are converted into AgentTurnResponse."],
+  ["THINK PAUSE", "EXACT FRAME", "The emulator pauses while the local vision model thinks so the observed frame cannot age underneath it."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -69,6 +73,7 @@ export function App() {
   const gamepadRef = useRef<GameBoyButtonState>(emptyGameBoyButtons());
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextAudioTimeRef = useRef(0);
+  const providerBusyRef = useRef(false);
 
   const [activeSystem, setActiveSystem] = useState<(typeof systems)[number]>("ALL");
   const [lastInput, setLastInput] = useState("NO INPUT");
@@ -91,6 +96,11 @@ export function App() {
   const [lastObservation, setLastObservation] = useState<string | null>(null);
   const [driverPendingTurnId, setDriverPendingTurnId] = useState<number | null>(null);
   const [driverQueuedActions, setDriverQueuedActions] = useState(0);
+  const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
+  const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [ollamaScanning, setOllamaScanning] = useState(false);
+  const [providerBusy, setProviderBusy] = useState(false);
+  const [lastProviderDurationMs, setLastProviderDurationMs] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -176,7 +186,7 @@ export function App() {
 
     const tick = async () => {
       animation = window.requestAnimationFrame(tick);
-      if (cancelled || inFlight || !runningRef.current) return;
+      if (cancelled || inFlight || !runningRef.current || providerBusyRef.current) return;
       inFlight = true;
       try {
         const controllerIndex = controllers[0]?.index ?? 0;
@@ -345,6 +355,83 @@ export function App() {
     }
   };
 
+  const refreshOllamaModels = async () => {
+    if (!native) {
+      setNotice("OLLAMA DISCOVERY REQUIRES THE TAURI DESKTOP SHELL");
+      return;
+    }
+    setOllamaScanning(true);
+    try {
+      const models = await listOllamaModels(settings.ollamaBaseUrl);
+      setOllamaModels(models);
+      setOllamaOnline(true);
+      setNotice(`OLLAMA ONLINE // ${models.length} LOCAL MODELS FOUND`);
+    } catch (error) {
+      setOllamaModels([]);
+      setOllamaOnline(false);
+      setNotice(`OLLAMA OFFLINE // ${String(error)}`);
+    } finally {
+      setOllamaScanning(false);
+    }
+  };
+
+  const chooseOllamaModel = async (model: string) => {
+    const nextSettings = { ...settings, ollamaModel: model || null };
+    setSettings(nextSettings);
+    try {
+      await saveSettings(nextSettings);
+      setNotice(model ? `OLLAMA MODEL // ${model}` : "OLLAMA MODEL CLEARED");
+    } catch (error) {
+      setNotice(`SETTINGS ERROR // ${String(error)}`);
+    }
+  };
+
+  const runOllamaDriverTurn = async () => {
+    if (!settings.ollamaModel) {
+      setNotice("SELECT A LOCAL OLLAMA VISION MODEL FIRST");
+      return;
+    }
+
+    providerBusyRef.current = true;
+    setProviderBusy(true);
+    setNotice(`THINK PAUSE // ${settings.ollamaModel} // FRAME ${frameRef.current}`);
+
+    try {
+      const request = await issueAgentTurn(PHIBOT_AGENT_ID, 1);
+      setDriverPendingTurnId(request.turnId);
+      const result = await completeOllamaTurn(
+        request,
+        settings.ollamaBaseUrl,
+        settings.ollamaModel,
+      );
+      const status = await submitAgentTurn(result.response);
+      setDriverPendingTurnId(status.pendingTurnId);
+      setDriverQueuedActions(status.queuedActions);
+      const durationMs = result.totalDurationNs === null
+        ? null
+        : result.totalDurationNs / 1_000_000;
+      setLastProviderDurationMs(durationMs);
+      setLastObservation(
+        `OLLAMA T${request.turnId} // F${request.observation.frame} // ${result.response.actions.length} ACTIONS`,
+      );
+      setNotice(
+        `OLLAMA TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS`,
+      );
+    } catch (error) {
+      try {
+        const status = await cancelAgentTurn();
+        setDriverPendingTurnId(status.pendingTurnId);
+        setDriverQueuedActions(status.queuedActions);
+      } catch {
+        setDriverPendingTurnId(null);
+      }
+      setNotice(`OLLAMA TURN ERROR // ${String(error)}`);
+    } finally {
+      providerBusyRef.current = false;
+      setProviderBusy(false);
+    }
+  };
+
   const changeControlMode = async (mode: ControlMode) => {
     try {
       const next = await setControlMode(
@@ -482,6 +569,7 @@ export function App() {
       setLastObservation(null);
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
+      setLastProviderDurationMs(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -517,6 +605,9 @@ export function App() {
       setLastObservation(null);
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
+      setLastProviderDurationMs(null);
+      providerBusyRef.current = false;
+      setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
@@ -538,6 +629,7 @@ export function App() {
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
+          <span><i className={`lamp ${ollamaOnline ? "lamp-green" : "lamp-amber"}`} /> OLLAMA {providerBusy ? "THINKING" : ollamaOnline ? "LOCAL" : "UNPROBED"}</span>
         </div>
       </header>
 
@@ -597,7 +689,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 7 // AGENT DRIVER PROTOCOL ONLINE</small>
+                  <small>RUNG 8 // LOCAL OLLAMA PROVIDER ONLINE</small>
                 </div>
               )}
             </div>
@@ -617,6 +709,35 @@ export function App() {
             <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording}>VERSUS</button>
             <button onClick={runReferenceDriverTurn} disabled={!running || replayRecording || !authority || !["phi-bot", "coop"].includes(authority.mode) || driverPendingTurnId !== null}>DRIVER TURN</button>
             <small>{lastObservation ?? (authority?.agentId ? `${authority.agentId} // P${authority.agentSeat} // GRANT TO F${authority.expiresAtFrame}` : "NO AGENT GRANT")}</small>
+          </div>
+
+          <div className="provider-strip">
+            <span>OLLAMA // LOCAL</span>
+            <button onClick={refreshOllamaModels} disabled={!native || ollamaScanning || providerBusy}>
+              {ollamaScanning ? "SCANNING..." : "SCAN MODELS"}
+            </button>
+            <select
+              value={settings.ollamaModel ?? ""}
+              onChange={(event) => void chooseOllamaModel(event.target.value)}
+              disabled={ollamaModels.length === 0 || providerBusy}
+              aria-label="Ollama model"
+            >
+              <option value="">SELECT VISION MODEL</option>
+              {ollamaModels.map((model) => (
+                <option key={model.digest || model.name} value={model.name}>{model.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={runOllamaDriverTurn}
+              disabled={!running || replayRecording || providerBusy || authority?.mode !== "phi-bot" || !settings.ollamaModel || driverPendingTurnId !== null}
+            >
+              {providerBusy ? "THINKING..." : "OLLAMA TURN"}
+            </button>
+            <small>
+              {settings.ollamaModel
+                ? `${settings.ollamaModel} // ${settings.ollamaBaseUrl}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
+                : `NO MODEL // ${settings.ollamaBaseUrl}`}
+            </small>
           </div>
 
           <div className="replay-strip">
@@ -679,7 +800,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 7</div>
+          <div className="panel-title">RUNTIME // RUNG 8</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -700,6 +821,8 @@ export function App() {
             <div><dt>REJECTED</dt><dd>{(authority?.rejectedActions ?? 0).toString().padStart(6, "0")}</dd></div>
             <div><dt>DRIVER TURN</dt><dd>{driverPendingTurnId === null ? "NONE" : driverPendingTurnId}</dd></div>
             <div><dt>DRIVER QUEUE</dt><dd>{driverQueuedActions.toString().padStart(6, "0")}</dd></div>
+            <div><dt>OLLAMA</dt><dd>{providerBusy ? "THINK PAUSE" : ollamaOnline ? "ONLINE" : "UNPROBED"}</dd></div>
+            <div><dt>MODEL</dt><dd>{settings.ollamaModel ?? "NONE"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -741,7 +864,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // PROVIDER ≠ RUNTIME // OBSERVATION-BOUND TURNS // HOST-CANONICAL ACTION ORDER</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // LOCAL MODEL ≠ RUNTIME AUTHORITY // FRAMEBOUND VISION // STRUCTURED ACTIONS ONLY</footer>
     </main>
   );
 }
