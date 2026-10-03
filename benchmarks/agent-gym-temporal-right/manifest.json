@@ -1,0 +1,42 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "temporal-cue-right-v1",
+  "title": "Temporal Cue: Right",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["A", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "shape": "solid-8x8",
+    "startScreenX": 72,
+    "startScreenY": 96
+  },
+  "cue": {
+    "meaning": "RIGHT",
+    "dismissButton": "A",
+    "lockoutFrames": 90,
+    "decisionScreenRepeatsCue": false,
+    "neutralArmRequired": true
+  },
+  "decision": {
+    "leftDoorScreenX": 24,
+    "rightDoorScreenX": 120,
+    "doorScreenY": 96,
+    "correctDoor": "RIGHT",
+    "bothDoorsVisuallyIdentical": true
+  },
+  "score": {
+    "metric": "manhattan-distance-progress-to-correct-endpoint",
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["A", "WAIT", "RIGHT"],
+    "oracleFrames": [1, 100, 24],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}
