@@ -3301,6 +3301,13 @@ fn stop_emulation(state: State<'_, EmulatorState>) -> Result<(), String> {
         {
             let _ = finish_autodrive(active, AutodriveStopReason::CoreShutdown)?;
         }
+        if active
+            .benchmark_campaign
+            .as_ref()
+            .is_some_and(|campaign| campaign.active)
+        {
+            let _ = finish_benchmark_campaign(active, "PARTIAL")?;
+        }
         flush_save_ram(active)?;
     }
     *session = None;
