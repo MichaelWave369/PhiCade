@@ -422,3 +422,52 @@ Success rate uses all observed trials.
 A campaign is COMPLETE only when all configured trials have been sealed. Operator
 termination or core shutdown writes a PARTIAL summary so completed evidence is not
 discarded.
+
+
+## Comparison Lab
+
+Rung 14 compares two completed campaign receipts only after native PhiCade proves
+their evidence is still intact and their environments are compatible.
+
+```text
+campaign A summary ----> re-hash every trial receipt
+        |                         |
+        |                         v
+        |                  provenance PASS
+        |
+        +---- compatibility gate ----+
+                                     |
+campaign B summary ----> re-hash every trial receipt
+                                     |
+                                     v
+                         shared comparison statistics
+                                     |
+                                     v
+                         comparison receipt
+```
+
+Compatibility is intentionally stricter than simple schema equality. Both campaigns
+must be COMPLETE, fully scoreable, have the same configured trial count, and match
+on benchmark ID, provider, Gym hashes, SameBoy binary/identity, and Autodrive
+policy.
+
+Model identity is allowed to differ because it is the subject of comparison.
+
+The shared runtime reports signed A-minus-B statistics:
+
+- mean-score difference,
+- Welch unequal-variance standard error,
+- Welch-Satterthwaite degrees of freedom,
+- conservative two-sided 95% Student-t interval,
+- Hedges' g small-sample standardized effect size,
+- success-rate difference.
+
+The comparison receipt hashes both source campaign receipts and retains their
+model/digest/qualification identities.
+
+Rung 14 also seeds evidence IDs from existing receipt filenames when a session
+starts. New sessions therefore append rather than overwrite Autodrive, benchmark,
+campaign, and comparison evidence.
+
+The UI chooses campaign IDs only. Native PhiCade reloads and verifies the evidence;
+React never owns compatibility or statistical authority.
