@@ -1613,23 +1613,14 @@ fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String
     Ok(())
 }
 
-#[tauri::command]
-fn start_autodrive(
-    app: AppHandle,
-    state: State<'_, EmulatorState>,
+fn start_autodrive_inner(
+    app: &AppHandle,
+    session: &mut EmulatorSession,
     provider: String,
     model: String,
     model_digest: String,
     policy: AutodrivePolicy,
-) -> Result<AutodriveStatus, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_mut()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
+) -> Result<(AutodriveStatus, OllamaQualificationArtifact), String> {
     if session.recording.is_some() {
         return Err("autonomous driving is disabled during replay recording".into());
     }
@@ -1652,7 +1643,7 @@ fn start_autodrive(
 
     let provider = provider.trim().to_ascii_lowercase();
     if provider != "ollama" {
-        return Err("Rung 9 autonomous mode currently supports the ollama provider".into());
+        return Err("autonomous mode currently supports the ollama provider".into());
     }
     let model = model.trim().to_owned();
     if model.is_empty() {
@@ -1662,7 +1653,7 @@ fn start_autodrive(
     if model_digest.is_empty() {
         return Err("autonomous driving requires a qualified model digest".into());
     }
-    let artifact = load_ollama_qualification(&app, &model_digest)?
+    let artifact = load_ollama_qualification(app, &model_digest)?
         .ok_or_else(|| "AUTO DRIVE requires a qualification receipt for this model digest".to_owned())?;
     if !qualification_receipt_passes(&artifact.receipt, &model, &model_digest) {
         return Err("AUTO DRIVE qualification receipt does not match the selected model digest".into());
@@ -1689,7 +1680,28 @@ fn start_autodrive(
 
     session.next_autodrive_run_id = session.next_autodrive_run_id.saturating_add(1);
     session.autodrive = Some(status.clone());
-    Ok(status)
+    Ok((status, artifact))
+}
+
+#[tauri::command]
+fn start_autodrive(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<AutodriveStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    start_autodrive_inner(&app, session, provider, model, model_digest, policy)
+        .map(|(status, _)| status)
 }
 
 #[tauri::command]
