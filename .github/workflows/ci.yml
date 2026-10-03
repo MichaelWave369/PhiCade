@@ -51,7 +51,7 @@ jobs:
       - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
 
   sameboy:
-    name: core / SameBoy + Replay + Phi-Bot qualification
+    name: core / SameBoy + Replay + Phi-Bot + Driver qualification
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
