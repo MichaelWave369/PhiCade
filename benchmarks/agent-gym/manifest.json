@@ -1,0 +1,31 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "move-block-to-x-v1",
+  "title": "Move the Block to the X",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "shape": "solid-8x8",
+    "startScreenX": 16,
+    "startScreenY": 24
+  },
+  "target": {
+    "shape": "x-8x8",
+    "screenX": 136,
+    "screenY": 112
+  },
+  "score": {
+    "metric": "manhattan-distance-progress",
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}
