@@ -167,8 +167,8 @@ A receipt records:
 - start/end emulated frame
 - turns issued/completed
 - total accepted driver actions
-- total cadence wait frames
-- maximum cadence wait frames
+- total scheduled cadence wait frames
+- maximum scheduled cadence wait frames
 - last observation frame
 - stop reason
 - final framebuffer SHA-256
