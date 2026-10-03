@@ -24,6 +24,11 @@ struct QualificationReceipt {
     height: u32,
     sample_rate_hz: u32,
     final_frame_sha256: String,
+    serialized_state_bytes: usize,
+    state_round_trip_frames: u64,
+    state_round_trip_sha256: String,
+    state_round_trip_pass: bool,
+    save_ram_bytes: usize,
 }
 
 fn hash_file(path: &Path) -> Result<String, String> {
@@ -104,6 +109,36 @@ fn run() -> Result<(), String> {
         return Err("core produced no audio callback samples".into());
     }
 
+    let final_frame_sha256 = hash_bytes(&frame.rgba8);
+    let snapshot_frame = core.frame_count();
+    let snapshot = core.serialize_state()
+        .map_err(|error| format!("serialize state: {error:?}"))?;
+    let round_trip_frames = 30u64;
+
+    for _ in 0..round_trip_frames {
+        core.step_frame(&[], &mut frame, &mut audio)
+            .map_err(|error| format!("run post-snapshot frame: {error:?}"))?;
+    }
+    let first_round_trip_hash = hash_bytes(&frame.rgba8);
+
+    core.restore_state(&snapshot, snapshot_frame)
+        .map_err(|error| format!("restore state: {error:?}"))?;
+
+    for _ in 0..round_trip_frames {
+        core.step_frame(&[], &mut frame, &mut audio)
+            .map_err(|error| format!("replay post-restore frame: {error:?}"))?;
+    }
+    let second_round_trip_hash = hash_bytes(&frame.rgba8);
+    let state_round_trip_pass = first_round_trip_hash == second_round_trip_hash;
+    if !state_round_trip_pass {
+        return Err(format!(
+            "state round-trip diverged: first={first_round_trip_hash} second={second_round_trip_hash}"
+        ));
+    }
+    let save_ram_bytes = core.read_save_ram()
+        .map_err(|error| format!("read save RAM: {error:?}"))?
+        .len();
+
     let receipt = QualificationReceipt {
         schema: "phicade.core-qualification.v1",
         result: "PASS",
@@ -121,7 +156,12 @@ fn run() -> Result<(), String> {
         width: frame.width,
         height: frame.height,
         sample_rate_hz: audio.sample_rate_hz,
-        final_frame_sha256: hash_bytes(&frame.rgba8),
+        final_frame_sha256,
+        serialized_state_bytes: snapshot.len(),
+        state_round_trip_frames: round_trip_frames,
+        state_round_trip_sha256: second_round_trip_hash,
+        state_round_trip_pass,
+        save_ram_bytes,
     };
 
     let json = serde_json::to_string_pretty(&receipt).map_err(|error| error.to_string())?;
