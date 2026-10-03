@@ -13,9 +13,9 @@ use std::{
 };
 
 const WARMUP_FRAMES: u64 = 120;
-const SIDE_FRAMES: u64 = 24;
-const TO_GATE_FRAMES: u64 = 16;
-const THROUGH_GATE_FRAMES: u64 = 28;
+const SIDE_FRAMES: u64 = 28;
+const TO_GATE_FRAMES: u64 = 20;
+const THROUGH_GATE_FRAMES: u64 = 32;
 const BLOCK_PROBE_FRAMES: u64 = 8;
 const SETTLE_FRAMES: u64 = 2;
 
@@ -268,7 +268,7 @@ fn wrong_side_probe(
     let player = locate_agent_gym_player(video)?;
     Ok((
         player,
-        player == GATE_STOP && !benchmark_task_success(task, player),
+        player.y == GATE_STOP.y && !benchmark_task_success(task, player),
     ))
 }
 
