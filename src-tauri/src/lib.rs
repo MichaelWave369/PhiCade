@@ -4142,6 +4142,8 @@ pub fn run() {
             benchmark_campaign_status,
             last_benchmark_campaign_receipt,
             list_benchmark_campaign_receipts,
+            list_benchmark_suite_report_candidates,
+            build_benchmark_suite_report,
             compare_benchmark_campaigns,
             cancel_benchmark_campaign,
             autodrive_status,
