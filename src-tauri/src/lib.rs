@@ -4,15 +4,13 @@ use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
-    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
-    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    compare_campaign_samples, summarize_benchmark_trials,
-    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
-    AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
-    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    BENCHMARK_CAMPAIGN_SCHEMA, CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
-    REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA, score_agent_gym_frame,
+    BenchmarkTaskSpec, BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    benchmark_task_by_id, benchmark_task_by_rom_sha256, compare_campaign_samples,
+    score_benchmark_task_frame, summarize_benchmark_trials, AGENT_TURN_REQUEST_SCHEMA,
+    AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA,
+    CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -88,6 +86,9 @@ struct AutodriveExport {
 struct ModelBenchmarkRun {
     run_id: u64,
     autodrive_run_id: u64,
+    benchmark_id: String,
+    benchmark_source_sha256: String,
+    benchmark_rom_sha256: String,
     provider: String,
     model: String,
     model_digest: String,
@@ -95,6 +96,8 @@ struct ModelBenchmarkRun {
     core_sha256: String,
     started_frame: u64,
     start_player: PixelPoint,
+    target: PixelPoint,
+    initial_distance: i32,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -171,6 +174,9 @@ struct BenchmarkCampaignRun {
     campaign_id: u64,
     active: bool,
     total_trials: u16,
+    benchmark_id: String,
+    benchmark_source_sha256: String,
+    benchmark_rom_sha256: String,
     provider: String,
     model: String,
     model_digest: String,
@@ -401,12 +407,43 @@ struct RomEntry {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+struct BenchmarkTaskInfo {
+    suite_id: String,
+    id: String,
+    title: String,
+    rom_sha256: String,
+    source_sha256: String,
+    start: PixelPoint,
+    target: PixelPoint,
+    initial_distance: i32,
+    success_distance: i32,
+    warmup_frames: u64,
+}
+
+fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
+    BenchmarkTaskInfo {
+        suite_id: task.suite_id.into(),
+        id: task.id.into(),
+        title: task.title.into(),
+        rom_sha256: task.rom_sha256.into(),
+        source_sha256: task.source_sha256.into(),
+        start: task.start,
+        target: task.target,
+        initial_distance: task.initial_distance,
+        success_distance: task.success_distance,
+        warmup_frames: task.warmup_frames,
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SessionInfo {
     game_path: String,
     game_key: String,
     core_path: String,
     core: CoreIdentity,
     profile: GameProfile,
+    benchmark_task: Option<BenchmarkTaskInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
