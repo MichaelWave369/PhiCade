@@ -231,9 +231,25 @@
 - [x] Suite v2 becomes READY only at 3/3
 - [x] Existing Suite v1 evidence namespace preserved unchanged
 
+## Rung 20 — Governed Agent Working Memory
+- [x] Agent Driver Protocol v2
+- [x] Explicit UTF-8 memory capsule on every agent turn
+- [x] Turn response binds framebuffer hash + pending memory hash
+- [x] Native-only memory acceptance
+- [x] Replacement-style memory updates with hard byte budgets
+- [x] 4096-byte default capsule / 1024-byte per-turn update budget
+- [x] Autodrive policyVersion 1 freezes memory limits
+- [x] Legacy pre-cadence policy JSON preserves legacy cadence semantics
+- [x] Every autonomous run begins from empty memory
+- [x] Memory revision/update/bytes-written/refusal counters
+- [x] Autodrive receipt v3 seals initial/final memory hashes and final content
+- [x] Ollama structured output includes optional memoryUpdate
+- [x] Reference driver upgraded to Protocol v2
+- [x] Desktop live memory telemetry
+
 ## Later
 
-Additional benchmark capabilities/tasks, additional uncertainty methods, provider
+Temporal-cue benchmark tasks, additional benchmark capabilities/tasks, additional uncertainty methods, provider
 capability profiles beyond Ollama, cloud-provider adapters, metadata/cover art,
 additional systems, true multi-port versus play, netplay, spectator mode,
 achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
