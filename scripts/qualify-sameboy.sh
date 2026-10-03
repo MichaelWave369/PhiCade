@@ -84,8 +84,24 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$TEMP_RIGHT_OBJ" "$TEMP_RIGHT_SR
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$TEMP_RIGHT_ROM" "$TEMP_RIGHT_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHITEMPRIGHT" "$TEMP_RIGHT_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task F / Relay Rooms LEFT\n'
+RELAY_LEFT_SRC="$ROOT/benchmarks/agent-gym-relay-left/main.asm"
+RELAY_LEFT_OBJ="$WORK/phi-agent-gym-relay-left.o"
+RELAY_LEFT_ROM="$WORK/phi-agent-gym-relay-left.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$RELAY_LEFT_OBJ" "$RELAY_LEFT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$RELAY_LEFT_ROM" "$RELAY_LEFT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIRELAYLEFT" "$RELAY_LEFT_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task G / Relay Rooms RIGHT\n'
+RELAY_RIGHT_SRC="$ROOT/benchmarks/agent-gym-relay-right/main.asm"
+RELAY_RIGHT_OBJ="$WORK/phi-agent-gym-relay-right.o"
+RELAY_RIGHT_ROM="$WORK/phi-agent-gym-relay-right.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$RELAY_RIGHT_OBJ" "$RELAY_RIGHT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$RELAY_RIGHT_ROM" "$RELAY_RIGHT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIRELAYRIGHT" "$RELAY_RIGHT_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -166,6 +182,29 @@ cargo run -p phicade-libretro --bin temporal_cue_qualify -- \
   --right-rom "$TEMP_RIGHT_ROM" \
   --receipt "$ROOT/artifacts/temporal-cue-pair-qualification.json"
 
+printf '==> running Phi-Agent Gym task F / Relay Rooms LEFT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$RELAY_LEFT_ROM" \
+  --source "$RELAY_LEFT_SRC" \
+  --task "relay-rooms-left-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-relay-left-qualification.json"
+
+printf '==> running Phi-Agent Gym task G / Relay Rooms RIGHT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$RELAY_RIGHT_ROM" \
+  --source "$RELAY_RIGHT_SRC" \
+  --task "relay-rooms-right-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-relay-right-qualification.json"
+
+printf '==> running Relay Rooms pair multi-room qualification\n'
+cargo run -p phicade-libretro --bin relay_rooms_qualify -- \
+  --core "$CORE" \
+  --left-rom "$RELAY_LEFT_ROM" \
+  --right-rom "$RELAY_RIGHT_ROM" \
+  --receipt "$ROOT/artifacts/relay-rooms-pair-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -178,3 +217,6 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-wall-detour-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-temporal-left-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-temporal-right-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/temporal-cue-pair-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-relay-left-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-relay-right-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/relay-rooms-pair-qualification.json"
