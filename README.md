@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 16
+## Current status — Rung 17
 
-PhiCade can now aggregate one exact model cohort across every registered task in
-Benchmark Suite v1 without weakening task-local Comparison Lab semantics.
+PhiCade can now compare two complete Benchmark Suite reports across the same frozen
+task set while re-verifying the full campaign/trial evidence chain.
 
 Benchmark Suite v1 currently contains:
 
@@ -30,6 +30,9 @@ Current evidence stack includes:
 - two-task source-first benchmark registry
 - cross-task cohort discovery
 - provenance-checked Benchmark Suite reports
+- provenance-checked Suite Comparison Lab
+- task-paired per-task Welch/Hedges comparisons
+- descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
 
 ## Run
@@ -92,6 +95,25 @@ The report contains:
 
 Incomplete cohorts remain visible but cannot be built.
 
+## Compare Suite Reports
+
+Once at least two complete Suite Reports exist:
+
+1. open **SUITE COMPARE**,
+2. select report A and report B,
+3. press **COMPARE SUITES**.
+
+PhiCade re-opens both suite reports, re-hashes every referenced campaign, re-validates
+every underlying gameplay trial receipt, and recomputes the suite aggregates before
+comparison.
+
+Each frozen task is compared A−B with the existing campaign Welch 95% CI, Hedges' g,
+and success-rate delta machinery. The suite layer then reports the macro mean-score
+delta, overall success-rate delta, task-delta min/max, and task-delta population
+standard deviation.
+
+There is deliberately no winner field.
+
 ## Evidence semantics
 
 **Comparison Lab stays like-for-like.**
@@ -116,6 +138,7 @@ See:
 
 - `docs/BENCHMARK_SUITE_V1.md`
 - `docs/BENCHMARK_SUITE_REPORTS.md`
+- `docs/BENCHMARK_SUITE_COMPARISON.md`
 - `docs/BENCHMARK_CAMPAIGNS.md`
 - `docs/COMPARISON_LAB.md`
 - `docs/ARCHITECTURE.md`

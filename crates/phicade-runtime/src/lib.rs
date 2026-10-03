@@ -10,6 +10,7 @@ pub mod autodrive;
 pub mod benchmark_campaign;
 pub mod campaign_comparison;
 pub mod suite_report;
+pub mod suite_comparison;
 pub mod core;
 pub mod driver;
 pub mod library;
@@ -47,6 +48,10 @@ pub use campaign_comparison::{
 pub use suite_report::{
     summarize_benchmark_suite, BenchmarkSuiteAggregateStats, SuiteTaskAggregateInput,
     BENCHMARK_SUITE_REPORT_SCHEMA,
+};
+pub use suite_comparison::{
+    compare_benchmark_suites, BenchmarkSuiteComparisonStats, SuiteTaskComparisonDelta,
+    SuiteTaskComparisonInput, BENCHMARK_SUITE_COMPARISON_SCHEMA,
 };
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use driver::{

@@ -4,17 +4,20 @@ use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
-    BenchmarkSuiteAggregateStats, BenchmarkTaskSpec, BenchmarkTrialOutcome,
-    CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer, GameImage,
+    BenchmarkSuiteAggregateStats, BenchmarkSuiteComparisonStats, BenchmarkTaskSpec,
+    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
+    GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SuiteTaskAggregateInput, SystemCommand,
     SystemId, benchmark_suite_v1_tasks, benchmark_task_by_id, benchmark_task_by_rom_sha256,
-    compare_campaign_samples, score_benchmark_task_frame, summarize_benchmark_suite,
-    summarize_benchmark_trials, AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID,
+    compare_benchmark_suites, compare_campaign_samples, score_benchmark_task_frame,
+    summarize_benchmark_suite, summarize_benchmark_trials, SuiteTaskComparisonInput,
+    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID,
     AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256,
     AGENT_GYM_START, AGENT_GYM_TARGET, AUTODRIVE_RECEIPT_SCHEMA,
-    AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA, BENCHMARK_SUITE_REPORT_SCHEMA,
-    BENCHMARK_SUITE_V1_ID, CAMPAIGN_COMPARISON_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
+    AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA, BENCHMARK_SUITE_COMPARISON_SCHEMA,
+    BENCHMARK_SUITE_REPORT_SCHEMA, BENCHMARK_SUITE_V1_ID, CAMPAIGN_COMPARISON_SCHEMA,
+    PHIBOT_OBSERVATION_SCHEMA,
     REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
@@ -67,6 +70,7 @@ struct SessionPaths {
     benchmark_campaign_dir: PathBuf,
     campaign_comparison_dir: PathBuf,
     suite_report_dir: PathBuf,
+    suite_comparison_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -306,7 +310,7 @@ struct CampaignComparisonArtifact {
 }
 
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SuiteTaskCampaignRef {
     task_id: String,
@@ -318,7 +322,7 @@ struct SuiteTaskCampaignRef {
     stats: BenchmarkCampaignStats,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BenchmarkSuiteReportReceipt {
     schema: String,
@@ -344,6 +348,70 @@ struct BenchmarkSuiteReportReceipt {
 struct BenchmarkSuiteReportArtifact {
     receipt_path: String,
     receipt: BenchmarkSuiteReportReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteReportListEntry {
+    report_id: u64,
+    suite_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    core_sha256: String,
+    trials_per_task: u16,
+    task_count: u16,
+    macro_mean_score_1000: f64,
+    overall_success_rate: f64,
+    receipt_sha256: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SuiteComparisonReportRef {
+    report_id: u64,
+    receipt_sha256: String,
+    cohort_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    stats: BenchmarkSuiteAggregateStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SuiteTaskComparisonRef {
+    task_id: String,
+    task_title: String,
+    campaign_a_id: u64,
+    campaign_b_id: u64,
+    stats: CampaignComparisonStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteComparisonReceipt {
+    schema: String,
+    record_status: String,
+    comparison_id: u64,
+    suite_id: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    trials_per_task: u16,
+    report_a: SuiteComparisonReportRef,
+    report_b: SuiteComparisonReportRef,
+    stats: BenchmarkSuiteComparisonStats,
+    tasks: Vec<SuiteTaskComparisonRef>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteComparisonArtifact {
+    receipt_path: String,
+    receipt: BenchmarkSuiteComparisonReceipt,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -419,6 +487,7 @@ struct EmulatorSession {
     next_benchmark_campaign_id: u64,
     next_campaign_comparison_id: u64,
     next_suite_report_id: u64,
+    next_suite_comparison_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -900,6 +969,7 @@ fn session_paths(
     let benchmark_campaign_dir = benchmark_campaign_root.join(game_key);
     let campaign_comparison_dir = root.join("campaign-comparisons").join(game_key);
     let suite_report_dir = root.join("suite-reports").join(BENCHMARK_SUITE_V1_ID);
+    let suite_comparison_dir = root.join("suite-comparisons").join(BENCHMARK_SUITE_V1_ID);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -919,6 +989,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", campaign_comparison_dir.display()))?;
     fs::create_dir_all(&suite_report_dir)
         .map_err(|error| format!("cannot create {}: {error}", suite_report_dir.display()))?;
+    fs::create_dir_all(&suite_comparison_dir)
+        .map_err(|error| format!("cannot create {}: {error}", suite_comparison_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -932,6 +1004,7 @@ fn session_paths(
         benchmark_campaign_dir,
         campaign_comparison_dir,
         suite_report_dir,
+        suite_comparison_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1648,6 +1721,8 @@ fn start_emulation(
         next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
     let next_suite_report_id =
         next_numbered_receipt_id(&paths.suite_report_dir, "suite-report-", ".json")?;
+    let next_suite_comparison_id =
+        next_numbered_receipt_id(&paths.suite_comparison_dir, "comparison-", ".json")?;
 
     let mut emulator_session = EmulatorSession {
         core,
@@ -1679,6 +1754,7 @@ fn start_emulation(
         next_benchmark_campaign_id,
         next_campaign_comparison_id,
         next_suite_report_id,
+        next_suite_comparison_id,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -3189,6 +3265,346 @@ fn build_benchmark_suite_report(
     build_suite_report_from_cohort(session, cohort_id.trim())
 }
 
+
+fn load_benchmark_suite_report_receipt(
+    session: &EmulatorSession,
+    report_id: u64,
+) -> Result<(PathBuf, BenchmarkSuiteReportReceipt), String> {
+    let path = session
+        .paths
+        .suite_report_dir
+        .join(format!("suite-report-{report_id:06}.json"));
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read suite report {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<BenchmarkSuiteReportReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse suite report {}: {error}", path.display()))?;
+    if receipt.report_id != report_id {
+        return Err(format!(
+            "suite report path ID {} does not match receipt ID {}",
+            report_id, receipt.report_id
+        ));
+    }
+    Ok((path, receipt))
+}
+
+fn validate_suite_report_provenance(
+    session: &EmulatorSession,
+    receipt: &BenchmarkSuiteReportReceipt,
+) -> Result<std::collections::BTreeMap<String, BenchmarkCampaignReceipt>, String> {
+    if receipt.schema != BENCHMARK_SUITE_REPORT_SCHEMA {
+        return Err(format!("unsupported suite report schema {}", receipt.schema));
+    }
+    if receipt.record_status != "COMPLETE" {
+        return Err(format!(
+            "suite report {} is {}, not COMPLETE",
+            receipt.report_id, receipt.record_status
+        ));
+    }
+    if receipt.suite_id != BENCHMARK_SUITE_V1_ID {
+        return Err(format!("suite report {} targets an unknown suite", receipt.report_id));
+    }
+    if receipt.tasks.len() != benchmark_suite_v1_tasks().len() {
+        return Err(format!(
+            "suite report {} covers {}/{} registered tasks",
+            receipt.report_id,
+            receipt.tasks.len(),
+            benchmark_suite_v1_tasks().len()
+        ));
+    }
+    if usize::from(receipt.stats.task_count) != receipt.tasks.len() {
+        return Err(format!("suite report {} task count is inconsistent", receipt.report_id));
+    }
+
+    let mut campaigns = std::collections::BTreeMap::new();
+    let mut aggregate_inputs = Vec::new();
+
+    for task in benchmark_suite_v1_tasks() {
+        let task_ref = receipt
+            .tasks
+            .iter()
+            .find(|candidate| candidate.task_id == task.id)
+            .ok_or_else(|| {
+                format!(
+                    "suite report {} is missing task {}",
+                    receipt.report_id, task.id
+                )
+            })?;
+
+        if task_ref.source_sha256 != task.source_sha256 || task_ref.rom_sha256 != task.rom_sha256 {
+            return Err(format!(
+                "suite report {} task {} registry hashes differ",
+                receipt.report_id, task.id
+            ));
+        }
+
+        let campaign_path = session
+            .paths
+            .benchmark_campaign_root
+            .join(task.rom_sha256)
+            .join(format!("campaign-{:06}.json", task_ref.campaign_id));
+        if !campaign_path.exists() {
+            return Err(format!(
+                "suite report {} campaign {} is missing",
+                receipt.report_id, task_ref.campaign_id
+            ));
+        }
+        let campaign_hash = sha256_file(&campaign_path)?;
+        if campaign_hash != task_ref.campaign_receipt_sha256 {
+            return Err(format!(
+                "suite report {} campaign {} hash mismatch",
+                receipt.report_id, task_ref.campaign_id
+            ));
+        }
+        let campaign_bytes = fs::read(&campaign_path)
+            .map_err(|error| format!("cannot read {}: {error}", campaign_path.display()))?;
+        let campaign = serde_json::from_slice::<BenchmarkCampaignReceipt>(&campaign_bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", campaign_path.display()))?;
+
+        let model_benchmark_dir = session.paths.model_benchmark_root.join(task.rom_sha256);
+        validate_campaign_for_comparison(&model_benchmark_dir, &campaign)?;
+
+        if campaign.benchmark_id != task.id
+            || campaign.gym_source_sha256 != task.source_sha256
+            || campaign.gym_rom_sha256 != task.rom_sha256
+        {
+            return Err(format!(
+                "suite report {} campaign {} task identity differs",
+                receipt.report_id, campaign.campaign_id
+            ));
+        }
+        if campaign.provider != receipt.provider
+            || campaign.model != receipt.model
+            || campaign.model_digest != receipt.model_digest
+            || campaign.model_qualification_sha256 != receipt.model_qualification_sha256
+            || campaign.core_sha256 != receipt.core_sha256
+            || campaign.core_name != receipt.core_name
+            || campaign.core_version != receipt.core_version
+            || campaign.policy != receipt.policy
+            || campaign.total_trials != receipt.trials_per_task
+        {
+            return Err(format!(
+                "suite report {} campaign {} cohort identity differs",
+                receipt.report_id, campaign.campaign_id
+            ));
+        }
+        if campaign.stats != task_ref.stats {
+            return Err(format!(
+                "suite report {} campaign {} statistics differ",
+                receipt.report_id, campaign.campaign_id
+            ));
+        }
+
+        let mean_score_1000 = campaign
+            .stats
+            .mean_score_1000
+            .ok_or_else(|| format!("campaign {} has no mean score", campaign.campaign_id))?;
+        aggregate_inputs.push(SuiteTaskAggregateInput {
+            task_id: task.id.into(),
+            mean_score_1000,
+            observed_trials: campaign.stats.observed_trials,
+            successful_trials: campaign.stats.successful_trials,
+        });
+        campaigns.insert(task.id.to_owned(), campaign);
+    }
+
+    let recomputed = summarize_benchmark_suite(&aggregate_inputs)?;
+    if recomputed != receipt.stats {
+        return Err(format!(
+            "suite report {} aggregate statistics do not replay exactly",
+            receipt.report_id
+        ));
+    }
+
+    Ok(campaigns)
+}
+
+fn validate_suite_report_compatibility(
+    a: &BenchmarkSuiteReportReceipt,
+    b: &BenchmarkSuiteReportReceipt,
+) -> Result<(), String> {
+    if a.report_id == b.report_id {
+        return Err("suite comparison requires two distinct report IDs".into());
+    }
+    if a.suite_id != b.suite_id {
+        return Err("suite report IDs differ".into());
+    }
+    if a.core_sha256 != b.core_sha256 || a.core_name != b.core_name || a.core_version != b.core_version {
+        return Err("suite report emulator core provenance differs".into());
+    }
+    if a.policy != b.policy {
+        return Err("suite report Autodrive policies differ".into());
+    }
+    if a.trials_per_task != b.trials_per_task {
+        return Err("suite report configured trial counts differ".into());
+    }
+    Ok(())
+}
+
+fn suite_comparison_report_ref(
+    path: &Path,
+    receipt: &BenchmarkSuiteReportReceipt,
+) -> Result<SuiteComparisonReportRef, String> {
+    Ok(SuiteComparisonReportRef {
+        report_id: receipt.report_id,
+        receipt_sha256: sha256_file(path)?,
+        cohort_id: receipt.cohort_id.clone(),
+        provider: receipt.provider.clone(),
+        model: receipt.model.clone(),
+        model_digest: receipt.model_digest.clone(),
+        model_qualification_sha256: receipt.model_qualification_sha256.clone(),
+        stats: receipt.stats.clone(),
+    })
+}
+
+#[tauri::command]
+fn list_benchmark_suite_reports(
+    state: State<'_, EmulatorState>,
+) -> Result<Vec<BenchmarkSuiteReportListEntry>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&session.paths.suite_report_dir)
+        .map_err(|error| format!("cannot list suite reports: {error}"))?
+    {
+        let entry = entry.map_err(|error| format!("cannot read suite report entry: {error}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let receipt = serde_json::from_slice::<BenchmarkSuiteReportReceipt>(&bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+        if receipt.schema != BENCHMARK_SUITE_REPORT_SCHEMA || receipt.record_status != "COMPLETE" {
+            continue;
+        }
+        entries.push(BenchmarkSuiteReportListEntry {
+            report_id: receipt.report_id,
+            suite_id: receipt.suite_id.clone(),
+            provider: receipt.provider.clone(),
+            model: receipt.model.clone(),
+            model_digest: receipt.model_digest.clone(),
+            core_sha256: receipt.core_sha256.clone(),
+            trials_per_task: receipt.trials_per_task,
+            task_count: receipt.stats.task_count,
+            macro_mean_score_1000: receipt.stats.macro_mean_score_1000,
+            overall_success_rate: receipt.stats.overall_success_rate,
+            receipt_sha256: sha256_file(&path)?,
+        });
+    }
+    entries.sort_by_key(|entry| entry.report_id);
+    Ok(entries)
+}
+
+#[tauri::command]
+fn compare_benchmark_suite_reports(
+    state: State<'_, EmulatorState>,
+    report_a_id: u64,
+    report_b_id: u64,
+) -> Result<BenchmarkSuiteComparisonArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let (path_a, report_a) = load_benchmark_suite_report_receipt(session, report_a_id)?;
+    let (path_b, report_b) = load_benchmark_suite_report_receipt(session, report_b_id)?;
+    let campaigns_a = validate_suite_report_provenance(session, &report_a)?;
+    let campaigns_b = validate_suite_report_provenance(session, &report_b)?;
+    validate_suite_report_compatibility(&report_a, &report_b)?;
+
+    let mut aggregate_inputs = Vec::new();
+    let mut task_refs = Vec::new();
+
+    for task in benchmark_suite_v1_tasks() {
+        let campaign_a = campaigns_a
+            .get(task.id)
+            .ok_or_else(|| format!("suite report A is missing task {}", task.id))?;
+        let campaign_b = campaigns_b
+            .get(task.id)
+            .ok_or_else(|| format!("suite report B is missing task {}", task.id))?;
+
+        let scores_a: Vec<u16> = campaign_a
+            .trials
+            .iter()
+            .filter_map(|trial| trial.score_1000)
+            .collect();
+        let scores_b: Vec<u16> = campaign_b
+            .trials
+            .iter()
+            .filter_map(|trial| trial.score_1000)
+            .collect();
+        let task_stats = compare_campaign_samples(
+            &scores_a,
+            campaign_a.stats.successful_trials,
+            campaign_a.stats.observed_trials,
+            &scores_b,
+            campaign_b.stats.successful_trials,
+            campaign_b.stats.observed_trials,
+        )?;
+
+        aggregate_inputs.push(SuiteTaskComparisonInput {
+            task_id: task.id.into(),
+            mean_score_a_1000: task_stats.sample_a.mean_score_1000,
+            mean_score_b_1000: task_stats.sample_b.mean_score_1000,
+            success_rate_a: task_stats.sample_a.success_rate,
+            success_rate_b: task_stats.sample_b.success_rate,
+        });
+        task_refs.push(SuiteTaskComparisonRef {
+            task_id: task.id.into(),
+            task_title: task.title.into(),
+            campaign_a_id: campaign_a.campaign_id,
+            campaign_b_id: campaign_b.campaign_id,
+            stats: task_stats,
+        });
+    }
+
+    let stats = compare_benchmark_suites(
+        &aggregate_inputs,
+        report_a.stats.overall_success_rate,
+        report_b.stats.overall_success_rate,
+    )?;
+    let comparison_id = session.next_suite_comparison_id;
+    let receipt = BenchmarkSuiteComparisonReceipt {
+        schema: BENCHMARK_SUITE_COMPARISON_SCHEMA.into(),
+        record_status: "COMPLETE".into(),
+        comparison_id,
+        suite_id: report_a.suite_id.clone(),
+        core_sha256: report_a.core_sha256.clone(),
+        core_name: report_a.core_name.clone(),
+        core_version: report_a.core_version.clone(),
+        policy: report_a.policy.clone(),
+        trials_per_task: report_a.trials_per_task,
+        report_a: suite_comparison_report_ref(&path_a, &report_a)?,
+        report_b: suite_comparison_report_ref(&path_b, &report_b)?,
+        stats,
+        tasks: task_refs,
+    };
+
+    let receipt_path = session
+        .paths
+        .suite_comparison_dir
+        .join(format!("comparison-{comparison_id:06}.json"));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize suite comparison receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+    session.next_suite_comparison_id = session.next_suite_comparison_id.saturating_add(1);
+
+    Ok(BenchmarkSuiteComparisonArtifact {
+        receipt_path: receipt_path.to_string_lossy().to_string(),
+        receipt,
+    })
+}
+
 #[tauri::command]
 fn list_benchmark_campaign_receipts(
     state: State<'_, EmulatorState>,
@@ -4144,6 +4560,8 @@ pub fn run() {
             list_benchmark_campaign_receipts,
             list_benchmark_suite_report_candidates,
             build_benchmark_suite_report,
+            list_benchmark_suite_reports,
+            compare_benchmark_suite_reports,
             compare_benchmark_campaigns,
             cancel_benchmark_campaign,
             autodrive_status,

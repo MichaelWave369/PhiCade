@@ -17,6 +17,7 @@ import {
   cancelBenchmarkCampaign,
   completeOllamaTurn,
   compareBenchmarkCampaigns,
+  compareBenchmarkSuiteReports,
   continueBenchmarkCampaign,
   buildBenchmarkSuiteReport,
   failAutodriveProvider,
@@ -32,6 +33,7 @@ import {
   issueAgentTurn,
   listBenchmarkCampaignReceipts,
   listBenchmarkSuiteReportCandidates,
+  listBenchmarkSuiteReports,
   listOllamaModels,
   qualifyOllamaModel,
   loadSettings,
@@ -62,8 +64,10 @@ import {
   type BenchmarkCampaignStatus,
   type CampaignComparisonArtifact,
   type CampaignListEntry,
+  type BenchmarkSuiteComparisonArtifact,
   type BenchmarkSuiteReportArtifact,
   type BenchmarkSuiteReportCandidate,
+  type BenchmarkSuiteReportListEntry,
   type ControlMode,
   type FramePacket,
   type GameProfile,
@@ -79,10 +83,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["COHORT", "CROSS-TASK", "Suite cohorts group COMPLETE campaigns by exact model, qualification, core, policy, and trial-count pins."],
-  ["COVERAGE", "ALL TASKS", "A suite report is READY only when every registered Suite v1 task has one verified campaign."],
-  ["AGGREGATE", "MACRO", "Task means receive equal weight while overall success rate uses every observed trial."],
-  ["PROVENANCE", "WALKED", "Every suite build re-verifies campaign receipts and their underlying trial hashes before aggregation."],
+  ["PAIRING", "TASK-MATCHED", "Suite Comparison pairs the same frozen task across report A and report B instead of comparing unrelated aggregates."],
+  ["PROVENANCE", "REPLAYED", "Both suite reports, every campaign, and every underlying trial hash are re-verified before comparison."],
+  ["UNCERTAINTY", "PER TASK", "Each task reuses the campaign Welch CI95, Hedges g, and success-rate delta machinery."],
+  ["VERDICT", "NONE", "Suite-level deltas stay descriptive. PhiCade records evidence without minting a winner badge."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -148,6 +152,11 @@ export function App() {
   const [selectedSuiteCohortId, setSelectedSuiteCohortId] = useState<string | null>(null);
   const [lastSuiteReport, setLastSuiteReport] = useState<BenchmarkSuiteReportArtifact | null>(null);
   const [suiteReportBusy, setSuiteReportBusy] = useState(false);
+  const [suiteReportLedger, setSuiteReportLedger] = useState<BenchmarkSuiteReportListEntry[]>([]);
+  const [suiteComparisonAId, setSuiteComparisonAId] = useState<number | null>(null);
+  const [suiteComparisonBId, setSuiteComparisonBId] = useState<number | null>(null);
+  const [lastSuiteComparison, setLastSuiteComparison] = useState<BenchmarkSuiteComparisonArtifact | null>(null);
+  const [suiteComparisonBusy, setSuiteComparisonBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -603,6 +612,61 @@ export function App() {
     }
   };
 
+  const refreshSuiteReportLedger = async () => {
+    try {
+      const reports = await listBenchmarkSuiteReports();
+      setSuiteReportLedger(reports);
+      if (reports.length >= 2) {
+        const newest = reports[reports.length - 1];
+        const previous = reports[reports.length - 2];
+        setSuiteComparisonAId((current) =>
+          current !== null && reports.some((entry) => entry.reportId === current)
+            ? current
+            : previous.reportId,
+        );
+        setSuiteComparisonBId((current) =>
+          current !== null && reports.some((entry) => entry.reportId === current)
+            ? current
+            : newest.reportId,
+        );
+      } else {
+        setSuiteComparisonAId(reports[0]?.reportId ?? null);
+        setSuiteComparisonBId(null);
+      }
+    } catch (error) {
+      setNotice(`SUITE COMPARISON LEDGER ERROR // ${String(error)}`);
+    }
+  };
+
+  const runSuiteComparison = async () => {
+    if (suiteComparisonAId === null || suiteComparisonBId === null) {
+      setNotice("SUITE COMPARISON REQUIRES TWO REPORTS");
+      return;
+    }
+    if (suiteComparisonAId === suiteComparisonBId) {
+      setNotice("SUITE COMPARISON REQUIRES DISTINCT REPORTS");
+      return;
+    }
+
+    setSuiteComparisonBusy(true);
+    try {
+      const artifact = await compareBenchmarkSuiteReports(
+        suiteComparisonAId,
+        suiteComparisonBId,
+      );
+      setLastSuiteComparison(artifact);
+      const stats = artifact.receipt.stats;
+      setNotice(
+        `SUITE COMPARISON #${artifact.receipt.comparisonId} // ΔMACRO ${stats.macroMeanScoreDifferenceAMinusB.toFixed(1)} // ΔSUCCESS ${(stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp // ${stats.taskCount} TASKS`,
+      );
+    } catch (error) {
+      setLastSuiteComparison(null);
+      setNotice(`SUITE COMPARISON REFUSED // ${String(error)}`);
+    } finally {
+      setSuiteComparisonBusy(false);
+    }
+  };
+
   const buildSelectedSuiteReport = async () => {
     if (!selectedSuiteCohortId) {
       setNotice("SUITE REPORT REQUIRES A READY 2/2 COHORT");
@@ -617,6 +681,7 @@ export function App() {
         `SUITE REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
       );
       await refreshSuiteReportCandidates();
+      await refreshSuiteReportLedger();
     } catch (error) {
       setLastSuiteReport(null);
       setNotice(`SUITE REPORT REFUSED // ${String(error)}`);
@@ -1091,6 +1156,11 @@ export function App() {
       setSelectedSuiteCohortId(null);
       setLastSuiteReport(null);
       setSuiteReportBusy(false);
+      setSuiteReportLedger([]);
+      setSuiteComparisonAId(null);
+      setSuiteComparisonBId(null);
+      setLastSuiteComparison(null);
+      setSuiteComparisonBusy(false);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -1104,12 +1174,21 @@ export function App() {
       setProfile(info.profile);
       setRunning(true);
       runningRef.current = true;
-      const [priorCampaigns, priorSuiteCandidates] = await Promise.all([
+      const [priorCampaigns, priorSuiteCandidates, priorSuiteReports] = await Promise.all([
         listBenchmarkCampaignReceipts(),
         listBenchmarkSuiteReportCandidates(),
+        listBenchmarkSuiteReports(),
       ]);
       setCampaignLedger(priorCampaigns);
       setSuiteCandidates(priorSuiteCandidates);
+      setSuiteReportLedger(priorSuiteReports);
+      if (priorSuiteReports.length >= 2) {
+        setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
+        setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
+      } else {
+        setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
+        setSuiteComparisonBId(null);
+      }
       const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
       const selectedDigest = modelQualification?.details.digest;
       const matchingSuiteCandidate = selectedDigest
@@ -1121,7 +1200,7 @@ export function App() {
         setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
         setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
       }
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY`);
+      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY // ${priorSuiteReports.length} SUITE REPORTS`);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
@@ -1161,6 +1240,11 @@ export function App() {
       setSelectedSuiteCohortId(null);
       setLastSuiteReport(null);
       setSuiteReportBusy(false);
+      setSuiteReportLedger([]);
+      setSuiteComparisonAId(null);
+      setSuiteComparisonBId(null);
+      setLastSuiteComparison(null);
+      setSuiteComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -1249,7 +1333,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 16 // SUITE REPORTS ONLINE</small>
+                  <small>RUNG 17 // SUITE COMPARISON LAB ONLINE</small>
                 </div>
               )}
             </div>
@@ -1457,6 +1541,65 @@ export function App() {
                 : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ALL REGISTERED TASKS REQUIRED`}
             </small>
           </div>
+          <div className="comparison-strip">
+            <span>SUITE COMPARE</span>
+            <select
+              value={suiteComparisonAId ?? ""}
+              onChange={(event) => {
+                setSuiteComparisonAId(event.target.value ? Number(event.target.value) : null);
+                setLastSuiteComparison(null);
+              }}
+              disabled={suiteReportLedger.length === 0 || suiteComparisonBusy || autodrive?.active}
+              aria-label="Suite Report A"
+            >
+              <option value="">REPORT A</option>
+              {suiteReportLedger.map((entry) => (
+                <option key={`suite-a-${entry.reportId}`} value={entry.reportId}>
+                  {`#${entry.reportId} ${entry.model} ${entry.modelDigest.slice(0, 8)}… // μ ${entry.macroMeanScore1000.toFixed(1)} // ${(entry.overallSuccessRate * 100).toFixed(1)}%`}
+                </option>
+              ))}
+            </select>
+            <select
+              value={suiteComparisonBId ?? ""}
+              onChange={(event) => {
+                setSuiteComparisonBId(event.target.value ? Number(event.target.value) : null);
+                setLastSuiteComparison(null);
+              }}
+              disabled={suiteReportLedger.length === 0 || suiteComparisonBusy || autodrive?.active}
+              aria-label="Suite Report B"
+            >
+              <option value="">REPORT B</option>
+              {suiteReportLedger.map((entry) => (
+                <option key={`suite-b-${entry.reportId}`} value={entry.reportId}>
+                  {`#${entry.reportId} ${entry.model} ${entry.modelDigest.slice(0, 8)}… // μ ${entry.macroMeanScore1000.toFixed(1)} // ${(entry.overallSuccessRate * 100).toFixed(1)}%`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void runSuiteComparison()}
+              disabled={
+                suiteComparisonBusy
+                || suiteComparisonAId === null
+                || suiteComparisonBId === null
+                || suiteComparisonAId === suiteComparisonBId
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {suiteComparisonBusy ? "REVERIFYING..." : "COMPARE SUITES"}
+            </button>
+            <button
+              onClick={() => void refreshSuiteReportLedger()}
+              disabled={suiteComparisonBusy || autodrive?.active}
+            >
+              REFRESH
+            </button>
+            <small>
+              {lastSuiteComparison
+                ? `#${lastSuiteComparison.receipt.comparisonId} // ΔMACRO ${lastSuiteComparison.receipt.stats.macroMeanScoreDifferenceAMinusB.toFixed(1)} // ΔSUCCESS ${(lastSuiteComparison.receipt.stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp // TASK Δ [${lastSuiteComparison.receipt.stats.minTaskMeanDifferenceAMinusB.toFixed(1)}, ${lastSuiteComparison.receipt.stats.maxTaskMeanDifferenceAMinusB.toFixed(1)}]`
+                : `${suiteReportLedger.length} SUITE REPORTS // A−B // TASK-PAIRED // NO WINNER BADGE`}
+            </small>
+          </div>
           <div className="replay-strip">
             <span>REPLAY LEDGER</span>
             <button
@@ -1517,7 +1660,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 16</div>
+          <div className="panel-title">RUNTIME // RUNG 17</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1571,6 +1714,10 @@ export function App() {
             <div><dt>SUITE SUCCESS</dt><dd>{lastSuiteReport ? `${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}%` : "----"}</dd></div>
             <div><dt>TASK μ MIN/MAX</dt><dd>{lastSuiteReport ? `${lastSuiteReport.receipt.stats.minTaskMeanScore1000.toFixed(1)} / ${lastSuiteReport.receipt.stats.maxTaskMeanScore1000.toFixed(1)}` : "----"}</dd></div>
             <div><dt>TASK μ σ</dt><dd>{lastSuiteReport ? lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1) : "----"}</dd></div>
+            <div><dt>SUITE CMP</dt><dd>{lastSuiteComparison ? `#${lastSuiteComparison.receipt.comparisonId}` : "NONE"}</dd></div>
+            <div><dt>Δ MACRO</dt><dd>{lastSuiteComparison ? lastSuiteComparison.receipt.stats.macroMeanScoreDifferenceAMinusB.toFixed(1) : "----"}</dd></div>
+            <div><dt>Δ SUCCESS</dt><dd>{lastSuiteComparison ? `${(lastSuiteComparison.receipt.stats.overallSuccessRateDifferenceAMinusB * 100).toFixed(1)}pp` : "----"}</dd></div>
+            <div><dt>TASK Δ MIN/MAX</dt><dd>{lastSuiteComparison ? `${lastSuiteComparison.receipt.stats.minTaskMeanDifferenceAMinusB.toFixed(1)} / ${lastSuiteComparison.receipt.stats.maxTaskMeanDifferenceAMinusB.toFixed(1)}` : "----"}</dd></div>
           </dl>
 
           <div className="rule" />
