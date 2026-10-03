@@ -83,10 +83,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["PAIRING", "TASK-MATCHED", "Suite Comparison pairs the same frozen task across report A and report B instead of comparing unrelated aggregates."],
-  ["PROVENANCE", "REPLAYED", "Both suite reports, every campaign, and every underlying trial hash are re-verified before comparison."],
-  ["UNCERTAINTY", "PER TASK", "Each task reuses the campaign Welch CI95, Hedges g, and success-rate delta machinery."],
-  ["VERDICT", "NONE", "Suite-level deltas stay descriptive. PhiCade records evidence without minting a winner badge."],
+  ["CADENCE", "NATIVE", "The runtime owns when the next model observation is eligible; the desktop cannot force an early turn."],
+  ["SETTLE", "ACTION-AWARE", "Accepted action delays plus a frozen post-action settle window determine the next observation boundary."],
+  ["BACKOFF", "ADAPTIVE", "Consecutive empty turns exponentially increase observation spacing up to a hard policy cap."],
+  ["EVIDENCE", "RECEIPTED", "Autodrive receipts record total cadence wait, maximum wait, last observation frame, and the exact cadence policy."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -531,7 +531,9 @@ export function App() {
         `OLLAMA T${request.turnId} // F${request.observation.frame} // ${result.response.actions.length} ACTIONS`,
       );
       setNotice(
-        `${autonomous ? "AUTODRIVE" : "OLLAMA"} TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS`,
+        autonomous && currentAutodrive
+          ? `AUTODRIVE TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS // NEXT OBS F${currentAutodrive.nextObservationFrame}`
+          : `OLLAMA TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS`,
       );
     } catch (error) {
       try {
@@ -585,7 +587,7 @@ export function App() {
       setAutodrive(status);
       setLastAutodrive(null);
       setNotice(
-        `AUTODRIVE RUN ${status.runId} // QUALIFIED ${qualification.details.digest.slice(0, 12)}… // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / ${status.policy.maxEmulatedFrames}F`,
+        `AUTODRIVE RUN ${status.runId} // QUALIFIED ${qualification.details.digest.slice(0, 12)}… // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / CADENCE ${status.policy.minObservationIntervalFrames}-${status.policy.maxObservationIntervalFrames}F`,
       );
     } catch (error) {
       setNotice(`AUTODRIVE START ERROR // ${String(error)}`);
@@ -886,6 +888,7 @@ export function App() {
       || providerBusy
       || driverPendingTurnId !== null
       || driverQueuedActions !== 0
+      || frameNumber < autodrive.nextObservationFrame
       || authority?.mode !== "phi-bot"
       || !settings.ollamaModel
     ) {
@@ -903,6 +906,8 @@ export function App() {
     providerBusy,
     driverPendingTurnId,
     driverQueuedActions,
+    frameNumber,
+    autodrive?.nextObservationFrame,
     authority?.mode,
     settings.ollamaModel,
   ]);
@@ -1333,7 +1338,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 17 // SUITE COMPARISON LAB ONLINE</small>
+                  <small>RUNG 18 // ADAPTIVE OBSERVATION CADENCE ONLINE</small>
                 </div>
               )}
             </div>
@@ -1660,7 +1665,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 17</div>
+          <div className="panel-title">RUNTIME // RUNG 18</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1689,6 +1694,11 @@ export function App() {
             <div><dt>AUTO RUN</dt><dd>{autodrive?.active ? `#${autodrive.runId} ACTIVE` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</dd></div>
             <div><dt>AUTO TURNS</dt><dd>{autodrive ? `${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}` : "0/0"}</dd></div>
             <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
+            <div><dt>NEXT OBS</dt><dd>{autodrive?.active ? `F${autodrive.nextObservationFrame}` : "----"}</dd></div>
+            <div><dt>OBS READY</dt><dd>{autodrive?.active ? (frameNumber >= autodrive.nextObservationFrame ? "YES" : `WAIT ${autodrive.nextObservationFrame - frameNumber}F`) : "----"}</dd></div>
+            <div><dt>CADENCE WAIT</dt><dd>{autodrive ? `${autodrive.totalCadenceWaitFrames}F` : "0F"}</dd></div>
+            <div><dt>CADENCE MAX</dt><dd>{autodrive ? `${autodrive.maxCadenceWaitFrames}F` : "0F"}</dd></div>
+            <div><dt>EMPTY STREAK</dt><dd>{autodrive ? autodrive.consecutiveEmptyTurns : 0}</dd></div>
             <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
             <div><dt>BENCH TASK</dt><dd>{session?.benchmarkTask ? session.benchmarkTask.title.toUpperCase() : "NONE"}</dd></div>
             <div><dt>TASK ID</dt><dd>{session?.benchmarkTask?.id ?? "----"}</dd></div>
