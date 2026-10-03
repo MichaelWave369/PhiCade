@@ -480,6 +480,8 @@ export function App() {
   };
 
   const endAutodrive = async () => {
+    providerBusyRef.current = false;
+    setProviderBusy(false);
     try {
       const artifact = await stopAutodrive();
       setLastAutodrive(artifact);
@@ -540,6 +542,10 @@ export function App() {
   }, [autodrive, lastAutodrive?.receipt.runId]);
 
   const changeControlMode = async (mode: ControlMode) => {
+    if (mode === "human") {
+      providerBusyRef.current = false;
+      setProviderBusy(false);
+    }
     try {
       const next = await setControlMode(
         mode,
