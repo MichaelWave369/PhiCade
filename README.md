@@ -5,114 +5,120 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 15
+## Current status — Rung 16
 
-PhiCade now has a **two-task, source-first benchmark suite registry** rather than a
-single hardcoded Φ-Agent Gym ROM.
+PhiCade can now aggregate one exact model cohort across every registered task in
+Benchmark Suite v1 without weakening task-local Comparison Lab semantics.
 
-Benchmark Suite v1 contains:
+Benchmark Suite v1 currently contains:
 
 - **Move the Block to the X** — top-left → bottom-right
 - **Mirror Dash** — bottom-right → top-left
 
-Both tasks are independently assembled, hash-pinned, pixel-scored, oracle-qualified,
-and replay-qualified.
+Current evidence stack includes:
 
-Current stack also retains:
-
-- Tauri 2 + React/TypeScript desktop shell
 - qualified SameBoy 1.0.3 GB/GBC runtime
 - deterministic Replay Ledger
 - governed Φ-Bot seat
 - provider-neutral Agent Driver Protocol
 - loopback-only Ollama vision adapter
-- bounded multi-turn Autodrive
-- digest-bound local model qualification
+- bounded Autodrive
+- digest-bound model qualification
 - exact-digest gameplay receipts
-- repeated benchmark campaigns
+- repeated task-local benchmark campaigns
 - provenance-checked Comparison Lab
+- two-task source-first benchmark registry
+- cross-task cohort discovery
+- provenance-checked Benchmark Suite reports
 - persistent evidence IDs across app sessions
 
 ## Run
 
-\`\`\`bash
+```bash
 npm install
 npm run desktop
-\`\`\`
+```
 
 ## Benchmark Suite v1
 
 Suite manifest:
 
-\`benchmarks/suite-v1.json\`
+`benchmarks/suite-v1.json`
 
-### Task A
+Registered tasks:
 
-\`move-block-to-x-v1\`
+- `move-block-to-x-v1`
+- `move-block-to-x-mirror-v1`
 
-ROM SHA-256:
+Both tasks are independently assembled, hash-pinned, rendered-pixel scored,
+oracle-qualified, and replay-qualified.
 
-\`353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e\`
+## Build task evidence
 
-### Task B — Mirror Dash
+With a registered benchmark ROM loaded and a qualified model handed off:
 
-\`move-block-to-x-mirror-v1\`
+- **BENCH TASK** creates one scored gameplay receipt,
+- **CAMPAIGN 5×** creates repeated evidence for that task,
+- **COMPARISON LAB** compares compatible campaigns from the same task.
 
-ROM SHA-256:
+## Build a Suite Report
 
-\`278a8106343fe1688a1370c0575578417744c96ae52568ab1e97f446dc222bfb\`
+Once the same model cohort has one COMPLETE fully scoreable campaign for every
+registered Suite v1 task:
 
-Native PhiCade recognizes benchmark tasks by exact ROM SHA-256 and exposes the
-loaded task through \`SessionInfo.benchmarkTask\`.
+1. open **SUITE REPORT**,
+2. select a READY cohort,
+3. press **BUILD REPORT**.
 
-With a registered task loaded and a qualified model handed off:
+A cohort pins:
 
-- **BENCH TASK** runs one scored model benchmark,
-- **CAMPAIGN 5×** runs repeated trials for that task,
-- **COMPARISON LAB** compares compatible campaigns from that same frozen task.
+- provider/model/exact digest,
+- model qualification receipt hash,
+- SameBoy binary/identity,
+- Autodrive policy,
+- trials per task.
 
-## Qualification
+Native PhiCade re-verifies every campaign and every underlying trial receipt before
+aggregation.
 
-\`\`\`bash
-bash ./scripts/qualify-sameboy.sh
-\`\`\`
+The report contains:
 
-The qualification script now assembles and qualifies both suite ROMs.
+- one campaign receipt hash per task,
+- each task's original campaign statistics,
+- macro mean score across task means,
+- overall success rate across all trials,
+- min/max task mean,
+- population standard deviation across task means.
 
-It produces:
-
-- \`artifacts/agent-gym-qualification.json\`
-- \`artifacts/agent-gym-mirror-qualification.json\`
-
-alongside the existing SameBoy, replay, Φ-Bot, driver, and Autodrive receipts.
-
-Every suite task must pass:
-
-- exact registry source/ROM hash match,
-- frozen start geometry,
-- NO-INPUT zero-progress control,
-- deterministic oracle success,
-- >= 980/1000 oracle score,
-- exact final-frame replay.
+Incomplete cohorts remain visible but cannot be built.
 
 ## Evidence semantics
 
-A benchmark task's identity is part of its evidence.
+**Comparison Lab stays like-for-like.**
 
-Campaigns pin the task ID plus source/ROM hashes.
+It never directly compares campaigns from different benchmark tasks.
 
-Comparison Lab remains like-for-like and refuses campaigns from different tasks.
+**Suite Report is the explicit cross-task layer.**
 
-Cross-task aggregation is intentionally a later layer rather than a relaxation of
-the existing comparison gate.
+Macro task weighting and trial-weighted success rate are reported separately rather
+than collapsed into one mystery score.
+
+## Qualification
+
+```bash
+bash ./scripts/qualify-sameboy.sh
+```
+
+CI continues to assemble and qualify both suite ROMs and now also tests cross-task
+cohort coverage, digest splitting, and trial-tamper refusal.
 
 See:
 
-- \`docs/BENCHMARK_SUITE_V1.md\`
-- \`docs/MODEL_GAMEPLAY_BENCHMARK.md\`
-- \`docs/BENCHMARK_CAMPAIGNS.md\`
-- \`docs/COMPARISON_LAB.md\`
-- \`docs/ARCHITECTURE.md\`
+- `docs/BENCHMARK_SUITE_V1.md`
+- `docs/BENCHMARK_SUITE_REPORTS.md`
+- `docs/BENCHMARK_CAMPAIGNS.md`
+- `docs/COMPARISON_LAB.md`
+- `docs/ARCHITECTURE.md`
 
 ## Content policy
 
@@ -121,5 +127,5 @@ decryption keys, or copyrighted game assets.
 
 ## License
 
-PhiCade's own code, including both Benchmark Suite v1 task sources, is MIT.
-Third-party emulator cores and model runtimes retain their own licenses and notices.
+PhiCade's own code, including Benchmark Suite v1 task sources, is MIT. Third-party
+emulator cores and model runtimes retain their own licenses and notices.
