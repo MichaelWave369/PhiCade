@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 10
+## Current status — Rung 11
 
-PhiCade now has a **digest-bound local model qualification registry** on top of
-the governed Ollama Autodrive stack.
+PhiCade now includes **Φ-Agent Gym**, a source-first Game Boy benchmark for
+measuring pixel-grounded controller behavior.
 
 Current stack:
 
@@ -20,13 +20,13 @@ Current stack:
 - provider-neutral Agent Driver Protocol
 - loopback-only Ollama vision adapter
 - bounded multi-turn Autodrive
-- exact installed-model digest discovery
-- Ollama capability inspection
-- synthetic local vision probe
-- structured-output qualification probe
-- persistent model qualification receipts
-- native exact-digest AUTO DRIVE gate
-- automatic stale qualification invalidation
+- digest-bound local model qualification
+- source-first Φ-Agent Gym benchmark ROM
+- rendered-pixel benchmark scorer
+- NO-INPUT negative control
+- deterministic oracle positive control
+- benchmark replay determinism check
+- source/ROM/core hash-bound benchmark receipt
 
 ## Run
 
@@ -38,37 +38,45 @@ npm run desktop
 Choose a ROM directory, select a compatible SameBoy libretro core, and load a
 `.gb` or `.gbc` game.
 
-## Qualify a local model
+## Local model qualification
 
 With Ollama running locally:
 
 1. **SCAN MODELS**
 2. select a local model
-3. inspect the displayed capability/digest state
-4. press **QUALIFY MODEL**
+3. press **QUALIFY MODEL**
 
-PhiCade:
+A PASS receipt binds the selected provider/model to the exact currently installed
+digest.
 
-- resolves the exact current model digest,
-- inspects advertised capabilities,
-- requires advertised vision support,
-- generates a 64×64 solid-red diagnostic image,
-- sends the image using a strict red/blue structured-output schema,
-- requires the model to return `red`,
-- persists the result under that exact digest.
+**OLLAMA TURN** remains available for one-shot experimentation.
 
-A PASS receipt unlocks **AUTO DRIVE** for that digest.
+**AUTO DRIVE** requires a current digest-bound qualification PASS.
 
-If the model is re-pulled or otherwise changes digest, the old receipt no longer
-qualifies it.
+## Φ-Agent Gym
 
-## One-shot vs autonomous
+The benchmark source lives at:
 
-**OLLAMA TURN** remains available for controlled one-shot experimentation with an
-unqualified model.
+`benchmarks/agent-gym/main.asm`
 
-**AUTO DRIVE** requires a current digest-bound qualification PASS in addition to
-all existing Rung 9 authority and run-budget controls.
+Task:
+
+**move the solid 8×8 block to the visible X target.**
+
+The benchmark:
+
+- accepts D-pad input only
+- moves 2 pixels per emulated frame
+- is scored from the rendered RGBA framebuffer
+- never exposes game RAM to the scorer/model
+- uses normalized Manhattan-distance progress on a 0–1000 scale
+
+CI assembles the ROM from source and validates:
+
+- NO-INPUT produces zero progress
+- deterministic oracle reaches the target
+- oracle score is at least 980/1000
+- replaying the oracle from the same state yields the exact same final frame hash
 
 ## Qualification
 
@@ -83,9 +91,7 @@ Produces:
 - `artifacts/phibot-qualification.json`
 - `artifacts/agent-driver-qualification.json`
 - `artifacts/autodrive-qualification.json`
-
-Native CI additionally runs mock-Ollama tests for capability inspection, visual
-qualification, and digest invalidation.
+- `artifacts/agent-gym-qualification.json`
 
 See:
 
@@ -97,6 +103,7 @@ See:
 - `docs/OLLAMA_PROVIDER.md`
 - `docs/AUTODRIVE.md`
 - `docs/MODEL_QUALIFICATION.md`
+- `docs/AGENT_GYM.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
@@ -107,5 +114,5 @@ software or software you are authorized to use.
 
 ## License
 
-PhiCade's own code is MIT. Third-party emulator cores and model runtimes retain
-their own licenses and notices.
+PhiCade's own code, including Φ-Agent Gym source, is MIT. Third-party emulator
+cores and model runtimes retain their own licenses and notices.

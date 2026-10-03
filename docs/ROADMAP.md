@@ -95,10 +95,21 @@
 - [x] Changed-digest negative control
 - [x] Mock capability/qualification CI tests
 
+## Rung 11 — Φ-Agent Gym
+- [x] Source-first Game Boy benchmark ROM
+- [x] Machine-readable task manifest
+- [x] Rendered-pixel player detection
+- [x] Manhattan-distance progress score
+- [x] NO-INPUT negative control
+- [x] Oracle D-pad positive control
+- [x] Deterministic replay control
+- [x] Source/ROM/core hash-bound receipt
+- [x] SameBoy CI integration
+
 ## Later
 
-Adaptive observation cadence, model-specific gameplay benchmarks, provider
-capability profiles beyond Ollama, cloud-provider adapters, metadata/cover art,
-additional systems, true multi-port versus play, netplay, spectator mode,
-achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
-Night Circuit.
+Qualified-model gameplay runs against Φ-Agent Gym, adaptive observation cadence,
+model-specific benchmark comparisons, provider capability profiles beyond Ollama,
+cloud-provider adapters, metadata/cover art, additional systems, true multi-port
+versus play, netplay, spectator mode, achievements, tournaments, CommonLine rooms,
+and a shared Phi Game Runtime with Night Circuit.
