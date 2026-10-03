@@ -3471,7 +3471,6 @@ mod tests {
     }
 
     #[test]
-    #[test]
     fn campaign_trial_count_is_bounded() {
         assert!(validate_campaign_trial_count(2).is_err());
         assert!(validate_campaign_trial_count(3).is_ok());
@@ -3550,7 +3549,7 @@ mod tests {
     }
 
     #[test]
-_gameplay_receipt_serializes_score_and_digest_evidence() {
+    fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
         let receipt = ModelGameplayBenchmarkReceipt {
             schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.into(),
             record_status: "COMPLETE".into(),
