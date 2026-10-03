@@ -747,6 +747,7 @@ export function App() {
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
           <span><i className={`lamp ${ollamaOnline ? "lamp-green" : "lamp-amber"}`} /> OLLAMA {providerBusy ? "THINKING" : ollamaOnline ? "LOCAL" : "UNPROBED"}</span>
+          <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
         </div>
       </header>
 
@@ -806,7 +807,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 8 // LOCAL OLLAMA PROVIDER ONLINE</small>
+                  <small>RUNG 9 // GOVERNED AUTODRIVE ONLINE</small>
                 </div>
               )}
             </div>
@@ -814,29 +815,29 @@ export function App() {
 
           <div className="session-strip">
             <button onClick={launchGame} disabled={running || !native}>LOAD / RUN</button>
-            <button onClick={stopGame} disabled={!running || replayRecording}>EJECT</button>
+            <button onClick={stopGame} disabled={!running || replayRecording || autodrive?.active}>EJECT</button>
             <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : "NO CORE LOADED"}</span>
           </div>
 
           <div className="agent-strip">
             <span>Φ-BOT SEAT</span>
-            <button className={authority?.mode === "human" ? "active" : ""} onClick={() => changeControlMode("human")} disabled={!running || replayRecording}>HUMAN</button>
-            <button className={authority?.mode === "phi-bot" ? "active" : ""} onClick={() => changeControlMode("phi-bot")} disabled={!running || replayRecording}>HANDOFF</button>
-            <button className={authority?.mode === "coop" ? "active" : ""} onClick={() => changeControlMode("coop")} disabled={!running || replayRecording}>CO-OP</button>
-            <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording}>VERSUS</button>
-            <button onClick={runReferenceDriverTurn} disabled={!running || replayRecording || !authority || !["phi-bot", "coop"].includes(authority.mode) || driverPendingTurnId !== null}>DRIVER TURN</button>
+            <button className={authority?.mode === "human" ? "active" : ""} onClick={() => changeControlMode("human")} disabled={!running || replayRecording || autodrive?.active}>HUMAN</button>
+            <button className={authority?.mode === "phi-bot" ? "active" : ""} onClick={() => changeControlMode("phi-bot")} disabled={!running || replayRecording || autodrive?.active}>HANDOFF</button>
+            <button className={authority?.mode === "coop" ? "active" : ""} onClick={() => changeControlMode("coop")} disabled={!running || replayRecording || autodrive?.active}>CO-OP</button>
+            <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording || autodrive?.active}>VERSUS</button>
+            <button onClick={runReferenceDriverTurn} disabled={!running || replayRecording || autodrive?.active || !authority || !["phi-bot", "coop"].includes(authority.mode) || driverPendingTurnId !== null}>DRIVER TURN</button>
             <small>{lastObservation ?? (authority?.agentId ? `${authority.agentId} // P${authority.agentSeat} // GRANT TO F${authority.expiresAtFrame}` : "NO AGENT GRANT")}</small>
           </div>
 
           <div className="provider-strip">
             <span>OLLAMA // LOCAL</span>
-            <button onClick={refreshOllamaModels} disabled={!native || ollamaScanning || providerBusy}>
+            <button onClick={refreshOllamaModels} disabled={!native || ollamaScanning || providerBusy || autodrive?.active}>
               {ollamaScanning ? "SCANNING..." : "SCAN MODELS"}
             </button>
             <select
               value={settings.ollamaModel ?? ""}
               onChange={(event) => void chooseOllamaModel(event.target.value)}
-              disabled={ollamaModels.length === 0 || providerBusy}
+              disabled={ollamaModels.length === 0 || providerBusy || autodrive?.active}
               aria-label="Ollama model"
             >
               <option value="">SELECT VISION MODEL</option>
@@ -845,15 +846,30 @@ export function App() {
               ))}
             </select>
             <button
-              onClick={runOllamaDriverTurn}
-              disabled={!running || replayRecording || providerBusy || authority?.mode !== "phi-bot" || !settings.ollamaModel || driverPendingTurnId !== null}
+              onClick={() => void runOllamaDriverTurn(false)}
+              disabled={!running || replayRecording || autodrive?.active || providerBusy || authority?.mode !== "phi-bot" || !settings.ollamaModel || driverPendingTurnId !== null}
             >
-              {providerBusy ? "THINKING..." : "OLLAMA TURN"}
+              {providerBusy && !autodrive?.active ? "THINKING..." : "OLLAMA TURN"}
+            </button>
+            <button
+              className={autodrive?.active ? "autodrive-active" : ""}
+              onClick={() => void (autodrive?.active ? endAutodrive() : beginAutodrive())}
+              disabled={
+                !running
+                || replayRecording
+                || !settings.ollamaModel
+                || authority?.mode !== "phi-bot"
+                || (!autodrive?.active && (!ollamaOnline || providerBusy || driverPendingTurnId !== null || driverQueuedActions !== 0))
+              }
+            >
+              {autodrive?.active ? "STOP AUTO" : "AUTO DRIVE"}
             </button>
             <small>
-              {settings.ollamaModel
-                ? `${settings.ollamaModel} // ${settings.ollamaBaseUrl}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
-                : `NO MODEL // ${settings.ollamaBaseUrl}`}
+              {autodrive?.active
+                ? `RUN ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // ${autodrive.totalActions}/${autodrive.policy.maxTotalActions}A`
+                : settings.ollamaModel
+                  ? `${settings.ollamaModel} // ${settings.ollamaBaseUrl}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
+                  : `NO MODEL // ${settings.ollamaBaseUrl}`}
             </small>
           </div>
 
@@ -862,11 +878,11 @@ export function App() {
             <button
               className={replayRecording ? "recording" : ""}
               onClick={replayRecording ? endReplayRecording : beginReplayRecording}
-              disabled={!running || (!replayRecording && profile?.fastForward !== 1)}
+              disabled={!running || autodrive?.active || (!replayRecording && profile?.fastForward !== 1)}
             >
               {replayRecording ? "STOP + EXPORT" : "REC"}
             </button>
-            <button onClick={verifyReplay} disabled={!running || replayRecording || !lastReplay}>VERIFY LAST</button>
+            <button onClick={verifyReplay} disabled={!running || replayRecording || autodrive?.active || !lastReplay}>VERIFY LAST</button>
             <small>
               {lastReplay
                 ? `${lastReplay.receipt.verification?.result?.toUpperCase() ?? "UNVERIFIED"} // ${lastReplay.replaySha256.slice(0, 12)}…`
@@ -877,10 +893,10 @@ export function App() {
           </div>
 
           <div className="session-tools">
-            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>SAVE S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>LOAD S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording}>REWIND 2S</button>
-            <button onClick={() => queueSystem("reset")} disabled={!running || replayRecording}>RESET</button>
+            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>SAVE S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>LOAD S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording || autodrive?.active}>REWIND 2S</button>
+            <button onClick={() => queueSystem("reset")} disabled={!running || replayRecording || autodrive?.active}>RESET</button>
             <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
             <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
           </div>
@@ -892,7 +908,7 @@ export function App() {
                 key={speed}
                 className={profile?.fastForward === speed ? "active" : ""}
                 onClick={() => updateFastForward(speed)}
-                disabled={!running || replayRecording}
+                disabled={!running || replayRecording || autodrive?.active}
               >
                 {speed}×
               </button>
@@ -917,7 +933,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 8</div>
+          <div className="panel-title">RUNTIME // RUNG 9</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -940,6 +956,10 @@ export function App() {
             <div><dt>DRIVER QUEUE</dt><dd>{driverQueuedActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>OLLAMA</dt><dd>{providerBusy ? "THINK PAUSE" : ollamaOnline ? "ONLINE" : "UNPROBED"}</dd></div>
             <div><dt>MODEL</dt><dd>{settings.ollamaModel ?? "NONE"}</dd></div>
+            <div><dt>AUTO RUN</dt><dd>{autodrive?.active ? `#${autodrive.runId} ACTIVE` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</dd></div>
+            <div><dt>AUTO TURNS</dt><dd>{autodrive ? `${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}` : "0/0"}</dd></div>
+            <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
+            <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -981,7 +1001,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // LOCAL MODEL ≠ RUNTIME AUTHORITY // FRAMEBOUND VISION // STRUCTURED ACTIONS ONLY</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // AUTONOMY ≠ UNBOUNDED AUTHORITY // HUMAN TAKEOVER // EVERY RUN ENDS WITH A RECEIPT</footer>
     </main>
   );
 }
