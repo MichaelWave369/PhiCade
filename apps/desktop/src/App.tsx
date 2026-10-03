@@ -14,13 +14,17 @@ import {
   isNativeShell,
   captureScreenshot,
   cancelAgentTurn,
+  cancelBenchmarkCampaign,
   completeOllamaTurn,
+  continueBenchmarkCampaign,
   failAutodriveProvider,
   flushGameSave,
   getAuthorityStatus,
   getAutodriveStatus,
   getDriverStatus,
+  getBenchmarkCampaignStatus,
   getLastAutodriveReceipt,
+  getLastBenchmarkCampaignReceipt,
   getLastModelGameplayBenchmark,
   getOllamaQualificationStatus,
   issueAgentTurn,
@@ -29,6 +33,7 @@ import {
   loadSettings,
   setControlMode,
   startAutodrive,
+  startBenchmarkCampaign,
   startModelGameplayBenchmark,
   stopAutodrive,
   submitAgentTurn,
@@ -49,6 +54,8 @@ import {
   type AutodriveArtifact,
   type AutodriveStatus,
   type AuthorityStatus,
+  type BenchmarkCampaignArtifact,
+  type BenchmarkCampaignStatus,
   type ControlMode,
   type FramePacket,
   type GameProfile,
@@ -65,10 +72,10 @@ const PHIBOT_AGENT_ID = "phi-local";
 const AGENT_GYM_ROM_SHA256 = "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e";
 
 const milestones = [
-  ["BENCHMARK", "FROZEN", "Only the exact CI-qualified Phi-Agent Gym ROM hash can enter scored model gameplay mode."],
-  ["MODEL", "DIGEST-BOUND", "Every gameplay receipt binds the exact Rung 10-qualified Ollama model digest and qualification receipt hash."],
-  ["SCORING", "PIXEL-ONLY", "Final player position, distance, progress, and score are computed from the rendered framebuffer only."],
-  ["RECEIPT", "AUTOMATIC", "Every Autodrive stop path finalizes the model benchmark, including takeover, failure, expiry, and budgets."],
+  ["TRIALS", "REPEATED", "Campaigns run 3–20 frozen trials; the desktop default is five."],
+  ["PINS", "RECHECKED", "Before every continuation trial, native PhiCade re-queries Ollama and rejects digest drift."],
+  ["EVIDENCE", "IMMUTABLE", "Campaign summaries reference SHA-256 hashes of individual Rung 12 trial receipts."],
+  ["STATS", "NATIVE", "Success rate, mean, median, min/max, and population standard deviation are computed by the shared runtime."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -123,6 +130,8 @@ export function App() {
   const [benchmarkRunning, setBenchmarkRunning] = useState(false);
   const [benchmarkRunId, setBenchmarkRunId] = useState<number | null>(null);
   const [lastModelBenchmark, setLastModelBenchmark] = useState<ModelBenchmarkArtifact | null>(null);
+  const [campaignStatus, setCampaignStatus] = useState<BenchmarkCampaignStatus | null>(null);
+  const [lastCampaign, setLastCampaign] = useState<BenchmarkCampaignArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -608,6 +617,80 @@ export function App() {
     }
   };
 
+  const beginBenchmarkCampaign = async () => {
+    if (!settings.ollamaModel) {
+      setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
+      return;
+    }
+    if (!session || session.gameKey !== AGENT_GYM_ROM_SHA256) {
+      setNotice("CAMPAIGN REQUIRES THE EXACT PHI-AGENT GYM ROM");
+      return;
+    }
+
+    providerBusyRef.current = true;
+    setProviderBusy(true);
+    try {
+      const qualification = await getOllamaQualificationStatus(
+        settings.ollamaBaseUrl,
+        settings.ollamaModel,
+      );
+      setModelQualification(qualification);
+      if (!qualification.qualified) {
+        throw new Error("selected model digest is not qualified for campaign play");
+      }
+
+      const started = await startBenchmarkCampaign(
+        settings.ollamaBaseUrl,
+        "ollama",
+        settings.ollamaModel,
+        qualification.details.digest,
+        defaultAutodrivePolicy,
+        5,
+      );
+      frameRef.current = started.benchmark.autodrive.startedFrame;
+      setFrameNumber(started.benchmark.autodrive.startedFrame);
+      gamepadRef.current = emptyGameBoyButtons();
+      setAutodrive(started.benchmark.autodrive);
+      setAuthority(await getAuthorityStatus());
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
+      setBenchmarkRunning(true);
+      setBenchmarkRunId(started.benchmark.benchmarkRunId);
+      setCampaignStatus(started.status);
+      setLastCampaign(null);
+      setLastModelBenchmark(null);
+      setLastAutodrive(null);
+      setNotice(
+        `CAMPAIGN #${started.status.campaignId} // TRIAL 1/${started.status.totalTrials} // DIGEST ${started.status.modelDigest.slice(0, 12)}…`,
+      );
+    } catch (error) {
+      setNotice(`CAMPAIGN START ERROR // ${String(error)}`);
+    } finally {
+      providerBusyRef.current = false;
+      setProviderBusy(false);
+    }
+  };
+
+  const endBenchmarkCampaign = async () => {
+    providerBusyRef.current = false;
+    setProviderBusy(false);
+    try {
+      const artifact = await cancelBenchmarkCampaign();
+      setLastCampaign(artifact);
+      setCampaignStatus(await getBenchmarkCampaignStatus());
+      setAutodrive(await getAutodriveStatus());
+      setBenchmarkRunning(false);
+      setBenchmarkRunId(null);
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
+      setNotice(
+        `CAMPAIGN #${artifact.receipt.campaignId} PARTIAL // ${artifact.receipt.completedTrials}/${artifact.receipt.totalTrials} TRIALS // MEAN ${artifact.receipt.stats.meanScore1000?.toFixed(1) ?? "N/A"}`,
+      );
+    } catch (error) {
+      setNotice(`CAMPAIGN END ERROR // ${String(error)}`);
+    }
+  };
+
   const endAutodrive = async () => {
     providerBusyRef.current = false;
     setProviderBusy(false);
@@ -680,22 +763,62 @@ export function App() {
       return;
     }
 
-    void getLastModelGameplayBenchmark()
-      .then((artifact) => {
+    setBenchmarkRunning(false);
+    void (async () => {
+      try {
+        const artifact = await getLastModelGameplayBenchmark();
         if (!artifact) return;
         setLastModelBenchmark(artifact);
-        setBenchmarkRunning(false);
+
+        const campaign = await getBenchmarkCampaignStatus();
+        setCampaignStatus(campaign);
+
+        if (campaign?.active && campaign.completedTrials < campaign.totalTrials) {
+          setNotice(
+            `CAMPAIGN #${campaign.campaignId} // TRIAL ${campaign.completedTrials}/${campaign.totalTrials} SEALED // RECHECKING DIGEST`,
+          );
+          const continued = await continueBenchmarkCampaign(settings.ollamaBaseUrl);
+          frameRef.current = continued.benchmark.autodrive.startedFrame;
+          setFrameNumber(continued.benchmark.autodrive.startedFrame);
+          gamepadRef.current = emptyGameBoyButtons();
+          setAutodrive(continued.benchmark.autodrive);
+          setAuthority(await getAuthorityStatus());
+          setDriverPendingTurnId(null);
+          setDriverQueuedActions(0);
+          setBenchmarkRunId(continued.benchmark.benchmarkRunId);
+          setCampaignStatus(continued.status);
+          setBenchmarkRunning(true);
+          setNotice(
+            `CAMPAIGN #${continued.status.campaignId} // TRIAL ${continued.status.completedTrials + 1}/${continued.status.totalTrials} // DIGEST RECONFIRMED`,
+          );
+          return;
+        }
+
+        if (campaign && !campaign.active) {
+          const summary = await getLastBenchmarkCampaignReceipt();
+          if (summary) {
+            setLastCampaign(summary);
+            setBenchmarkRunId(null);
+            const stats = summary.receipt.stats;
+            setNotice(
+              `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.totalTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
+            );
+            return;
+          }
+        }
+
         setBenchmarkRunId(null);
         const receipt = artifact.receipt;
         const score = receipt.score1000 === null ? "SCORING ERROR" : `${receipt.score1000}/1000`;
         setNotice(
           `MODEL BENCHMARK COMPLETE // ${score} // ${receipt.taskSuccess ? "TARGET REACHED" : "INCOMPLETE"} // ${receipt.stopReason.toUpperCase()}`,
         );
-      })
-      .catch((error) => {
-        setNotice(`MODEL BENCHMARK RECEIPT ERROR // ${String(error)}`);
-      });
-  }, [benchmarkRunning, autodrive]);
+      } catch (error) {
+        setBenchmarkRunId(null);
+        setNotice(`BENCHMARK / CAMPAIGN CONTINUATION ERROR // ${String(error)}`);
+      }
+    })();
+  }, [benchmarkRunning, autodrive, settings.ollamaBaseUrl]);
 
   const changeControlMode = async (mode: ControlMode) => {
     if (mode === "human") {
@@ -850,6 +973,8 @@ export function App() {
       setBenchmarkRunning(false);
       setBenchmarkRunId(null);
       setLastModelBenchmark(null);
+      setCampaignStatus(null);
+      setLastCampaign(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -891,6 +1016,8 @@ export function App() {
       setBenchmarkRunning(false);
       setBenchmarkRunId(null);
       setLastModelBenchmark(null);
+      setCampaignStatus(null);
+      setLastCampaign(null);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -917,6 +1044,7 @@ export function App() {
           <span><i className={`lamp ${ollamaOnline ? "lamp-green" : "lamp-amber"}`} /> OLLAMA {providerBusy ? "THINKING" : ollamaOnline ? "LOCAL" : "UNPROBED"}</span>
           <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
+          <span><i className={`lamp ${campaignStatus?.active ? "lamp-amber" : lastCampaign ? "lamp-green" : "lamp-green"}`} /> CAMPAIGN {campaignStatus?.active ? `${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId}` : "STANDBY"}</span>
         </div>
       </header>
 
@@ -976,7 +1104,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 12 // MODEL GAMEPLAY BENCHMARK ONLINE</small>
+                  <small>RUNG 13 // BENCHMARK CAMPAIGNS ONLINE</small>
                 </div>
               )}
             </div>
@@ -1041,25 +1169,47 @@ export function App() {
               {autodrive?.active ? "STOP AUTO" : "AUTO DRIVE"}
             </button>
             <button
-              className={benchmarkRunning ? "benchmark-active" : ""}
+              className={benchmarkRunning && !campaignStatus?.active ? "benchmark-active" : ""}
               onClick={() => void beginModelBenchmark()}
               disabled={
                 !running
                 || replayRecording
                 || autodrive?.active
                 || providerBusy
+                || campaignStatus?.active
                 || authority?.mode !== "phi-bot"
                 || !modelQualification?.qualified
                 || !session
                 || session.gameKey !== AGENT_GYM_ROM_SHA256
               }
             >
-              {benchmarkRunning ? "BENCH RUNNING" : "BENCH GYM"}
+              {benchmarkRunning && !campaignStatus?.active ? "BENCH RUNNING" : "BENCH GYM"}
+            </button>
+            <button
+              className={campaignStatus?.active ? "campaign-active" : ""}
+              onClick={() => void (campaignStatus?.active ? endBenchmarkCampaign() : beginBenchmarkCampaign())}
+              disabled={
+                !campaignStatus?.active
+                && (
+                  !running
+                  || replayRecording
+                  || autodrive?.active
+                  || providerBusy
+                  || authority?.mode !== "phi-bot"
+                  || !modelQualification?.qualified
+                  || !session
+                  || session.gameKey !== AGENT_GYM_ROM_SHA256
+                )
+              }
+            >
+              {campaignStatus?.active ? "END CAMPAIGN" : "CAMPAIGN 5×"}
             </button>
             <small>
-              {benchmarkRunning && autodrive?.active
-                ? `BENCH #${benchmarkRunId} // AUTO ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // SCORE PENDING`
-                : autodrive?.active
+              {campaignStatus?.active && benchmarkRunning && autodrive?.active
+                ? `CAMPAIGN #${campaignStatus.campaignId} // TRIAL ${campaignStatus.completedTrials + 1}/${campaignStatus.totalTrials} // AUTO ${autodrive.runId}`
+                : benchmarkRunning && autodrive?.active
+                  ? `BENCH #${benchmarkRunId} // AUTO ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // SCORE PENDING`
+                  : autodrive?.active
                   ? `RUN ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // ${autodrive.totalActions}/${autodrive.policy.maxTotalActions}A`
                 : settings.ollamaModel
                   ? `${settings.ollamaModel} // ${modelQualification?.details.digest.slice(0, 12) ?? "UNINSPECTED"}… // ${modelQualification?.details.capabilities.join("+") || "NO CAPABILITY DATA"} // ${modelQualification?.qualified ? "QUALIFIED" : "UNQUALIFIED"}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
@@ -1127,7 +1277,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 12</div>
+          <div className="panel-title">RUNTIME // RUNG 13</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1161,6 +1311,11 @@ export function App() {
             <div><dt>BENCH RUN</dt><dd>{benchmarkRunning ? `#${benchmarkRunId} ACTIVE` : lastModelBenchmark ? `#${lastModelBenchmark.receipt.benchmarkRunId}` : "NONE"}</dd></div>
             <div><dt>BENCH SCORE</dt><dd>{lastModelBenchmark?.receipt.score1000 === null || lastModelBenchmark?.receipt.score1000 === undefined ? "----" : `${lastModelBenchmark.receipt.score1000}/1000`}</dd></div>
             <div><dt>BENCH OUTCOME</dt><dd>{lastModelBenchmark ? lastModelBenchmark.receipt.taskSuccess ? "TARGET REACHED" : lastModelBenchmark.receipt.recordStatus : "UNRUN"}</dd></div>
+            <div><dt>CAMPAIGN</dt><dd>{campaignStatus?.active ? `#${campaignStatus.campaignId} ${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId} ${lastCampaign.receipt.recordStatus}` : "NONE"}</dd></div>
+            <div><dt>SUCCESS RATE</dt><dd>{lastCampaign ? `${(lastCampaign.receipt.stats.successRate * 100).toFixed(1)}%` : "----"}</dd></div>
+            <div><dt>MEAN SCORE</dt><dd>{lastCampaign?.receipt.stats.meanScore1000 === null || lastCampaign?.receipt.stats.meanScore1000 === undefined ? "----" : lastCampaign.receipt.stats.meanScore1000.toFixed(1)}</dd></div>
+            <div><dt>MEDIAN</dt><dd>{lastCampaign?.receipt.stats.medianScore1000 === null || lastCampaign?.receipt.stats.medianScore1000 === undefined ? "----" : lastCampaign.receipt.stats.medianScore1000.toFixed(1)}</dd></div>
+            <div><dt>STDDEV</dt><dd>{lastCampaign?.receipt.stats.populationStddevScore1000 === null || lastCampaign?.receipt.stats.populationStddevScore1000 === undefined ? "----" : lastCampaign.receipt.stats.populationStddevScore1000.toFixed(1)}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -1202,7 +1357,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>MEASURE THE MODEL ON A FROZEN WORLD // PIXELS IN // GOVERNED ACTIONS OUT // SCORE + RECEIPT, NOT VIBES</footer>
+      <footer>ONE RUN IS EVIDENCE // REPEATED FROZEN TRIALS REVEAL CONSISTENCY // HASH EVERY TRIAL // AVERAGE NOTHING YOU DID NOT RECORD</footer>
     </main>
   );
 }
