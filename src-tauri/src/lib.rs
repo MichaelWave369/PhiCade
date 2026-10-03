@@ -724,6 +724,31 @@ fn sanitize_component(value: &str) -> String {
     }
 }
 
+
+fn next_numbered_receipt_id(
+    directory: &Path,
+    prefix: &str,
+    suffix: &str,
+) -> Result<u64, String> {
+    let mut max_id = 0u64;
+    let entries = fs::read_dir(directory)
+        .map_err(|error| format!("cannot list {}: {error}", directory.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("cannot read directory entry: {error}"))?;
+        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
+            continue;
+        };
+        if !name.starts_with(prefix) || !name.ends_with(suffix) {
+            continue;
+        }
+        let numeric = &name[prefix.len()..name.len() - suffix.len()];
+        if let Ok(id) = numeric.parse::<u64>() {
+            max_id = max_id.max(id);
+        }
+    }
+    Ok(max_id.saturating_add(1).max(1))
+}
+
 fn session_paths(
     root: &Path,
     game_key: &str,
@@ -741,6 +766,7 @@ fn session_paths(
     let autodrive_dir = root.join("autodrive").join(game_key);
     let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
     let benchmark_campaign_dir = root.join("benchmark-campaigns").join(game_key);
+    let campaign_comparison_dir = root.join("campaign-comparisons").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -756,6 +782,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
     fs::create_dir_all(&benchmark_campaign_dir)
         .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
+    fs::create_dir_all(&campaign_comparison_dir)
+        .map_err(|error| format!("cannot create {}: {error}", campaign_comparison_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -765,6 +793,7 @@ fn session_paths(
         autodrive_dir,
         model_benchmark_dir,
         benchmark_campaign_dir,
+        campaign_comparison_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1470,6 +1499,15 @@ fn start_emulation(
         profile: profile.clone(),
     };
 
+    let next_autodrive_run_id =
+        next_numbered_receipt_id(&paths.autodrive_dir, "run-", ".json")?;
+    let next_model_benchmark_run_id =
+        next_numbered_receipt_id(&paths.model_benchmark_dir, "run-", ".json")?;
+    let next_benchmark_campaign_id =
+        next_numbered_receipt_id(&paths.benchmark_campaign_dir, "campaign-", ".json")?;
+    let next_campaign_comparison_id =
+        next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
+
     let mut emulator_session = EmulatorSession {
         core,
         game_path: info.game_path.clone(),
@@ -1491,13 +1529,14 @@ fn start_emulation(
         next_action_sequence: 0,
         autodrive: None,
         last_autodrive: None,
-        next_autodrive_run_id: 1,
+        next_autodrive_run_id,
         model_benchmark: None,
         last_model_benchmark: None,
-        next_model_benchmark_run_id: 1,
+        next_model_benchmark_run_id,
         benchmark_campaign: None,
         last_benchmark_campaign: None,
-        next_benchmark_campaign_id: 1,
+        next_benchmark_campaign_id,
+        next_campaign_comparison_id,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
