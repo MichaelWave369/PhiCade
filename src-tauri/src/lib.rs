@@ -9,7 +9,7 @@ use phicade_runtime::{
     GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SuiteTaskAggregateInput, SystemCommand,
-    SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suites,
+    SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suites,
     benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
     compare_benchmark_suites,
     compare_campaign_samples, score_benchmark_task_frame,
@@ -20,7 +20,7 @@ use phicade_runtime::{
     AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA, BENCHMARK_SUITE_COMPARISON_SCHEMA,
     BENCHMARK_SUITE_REPORT_SCHEMA, BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID,
     BENCHMARK_SUITE_V3_ID, BENCHMARK_SUITE_V4_ID, BENCHMARK_SUITE_V5_ID,
-    BENCHMARK_SUITE_V6_ID, CAMPAIGN_COMPARISON_SCHEMA,
+    BENCHMARK_SUITE_V6_ID, BENCHMARK_SUITE_V7_ID, CAMPAIGN_COMPARISON_SCHEMA,
     PHIBOT_OBSERVATION_SCHEMA,
     REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
@@ -5639,6 +5639,89 @@ mod tests {
                 .expect("complete v6 candidate");
         assert!(complete_candidate.ready);
         assert_eq!(complete_candidate.covered_tasks, 11);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn suite_v7_requires_both_branch_selectors_without_mutating_v6_coverage() {
+        let root = comparison_test_dir("suite-v7-membership");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        let v7 = benchmark_suite_by_id(BENCHMARK_SUITE_V7_ID).expect("v7 registry");
+        assert_eq!(v7.tasks.len(), 13);
+
+        for task in &v7.tasks[..11] {
+            write_suite_test_campaign(&campaign_root, &model_root, task, 1, "digest-suite");
+        }
+
+        let v6_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V6_ID,
+        )
+        .expect("scan complete v6 suite");
+        let (v6_id, v6_evidence) = v6_cohorts.iter().next().expect("v6 cohort");
+        let v6_candidate = suite_report_candidate(BENCHMARK_SUITE_V6_ID, v6_id, v6_evidence)
+            .expect("v6 candidate");
+        assert!(v6_candidate.ready);
+        assert_eq!(v6_candidate.covered_tasks, 11);
+
+        let v7_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V7_ID,
+        )
+        .expect("scan incomplete v7 suite");
+        let (v7_id, v7_evidence) = v7_cohorts.iter().next().expect("v7 cohort");
+        let v7_candidate = suite_report_candidate(BENCHMARK_SUITE_V7_ID, v7_id, v7_evidence)
+            .expect("v7 candidate");
+        assert!(!v7_candidate.ready);
+        assert_eq!(v7_candidate.covered_tasks, 11);
+        assert_eq!(v7_candidate.suite_task_count, 13);
+
+        write_suite_test_campaign(
+            &campaign_root,
+            &model_root,
+            &benchmark_suite_v7_tasks()[11],
+            1,
+            "digest-suite",
+        );
+        let one_branch = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V7_ID,
+        )
+        .expect("scan one-branch v7 suite");
+        let (one_id, one_evidence) = one_branch.iter().next().expect("one-branch cohort");
+        let one_candidate = suite_report_candidate(BENCHMARK_SUITE_V7_ID, one_id, one_evidence)
+            .expect("one-branch candidate");
+        assert!(!one_candidate.ready);
+        assert_eq!(one_candidate.covered_tasks, 12);
+
+        write_suite_test_campaign(
+            &campaign_root,
+            &model_root,
+            &benchmark_suite_v7_tasks()[12],
+            1,
+            "digest-suite",
+        );
+        let complete = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V7_ID,
+        )
+        .expect("scan complete v7 suite");
+        let (complete_id, complete_evidence) =
+            complete.iter().next().expect("complete v7 cohort");
+        let complete_candidate =
+            suite_report_candidate(BENCHMARK_SUITE_V7_ID, complete_id, complete_evidence)
+                .expect("complete v7 candidate");
+        assert!(complete_candidate.ready);
+        assert_eq!(complete_candidate.covered_tasks, 13);
 
         let _ = fs::remove_dir_all(root);
     }
