@@ -1120,6 +1120,7 @@ export function App() {
           <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
           <span><i className={`lamp ${campaignStatus?.active ? "lamp-amber" : lastCampaign ? "lamp-green" : "lamp-green"}`} /> CAMPAIGN {campaignStatus?.active ? `${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId}` : "STANDBY"}</span>
+          <span><i className={`lamp ${comparisonBusy ? "lamp-amber" : lastComparison ? "lamp-green" : "lamp-green"}`} /> COMPARE {comparisonBusy ? "VERIFYING" : lastComparison ? `#${lastComparison.receipt.comparisonId}` : "STANDBY"}</span>
         </div>
       </header>
 
@@ -1292,6 +1293,62 @@ export function App() {
             </small>
           </div>
 
+          <div className="comparison-strip">
+            <span>COMPARISON LAB</span>
+            <select
+              value={comparisonAId ?? ""}
+              onChange={(event) => {
+                setComparisonAId(event.target.value ? Number(event.target.value) : null);
+                setLastComparison(null);
+              }}
+              disabled={campaignLedger.length === 0 || comparisonBusy || autodrive?.active}
+              aria-label="Comparison campaign A"
+            >
+              <option value="">CAMPAIGN A</option>
+              {campaignLedger.map((entry) => (
+                <option key={`a-${entry.campaignId}`} value={entry.campaignId}>
+                  {`#${entry.campaignId} ${entry.model} ${entry.recordStatus} μ${entry.meanScore1000?.toFixed(1) ?? "ERR"}`}
+                </option>
+              ))}
+            </select>
+            <select
+              value={comparisonBId ?? ""}
+              onChange={(event) => {
+                setComparisonBId(event.target.value ? Number(event.target.value) : null);
+                setLastComparison(null);
+              }}
+              disabled={campaignLedger.length === 0 || comparisonBusy || autodrive?.active}
+              aria-label="Comparison campaign B"
+            >
+              <option value="">CAMPAIGN B</option>
+              {campaignLedger.map((entry) => (
+                <option key={`b-${entry.campaignId}`} value={entry.campaignId}>
+                  {`#${entry.campaignId} ${entry.model} ${entry.recordStatus} μ${entry.meanScore1000?.toFixed(1) ?? "ERR"}`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void runCampaignComparison()}
+              disabled={
+                comparisonBusy
+                || comparisonAId === null
+                || comparisonBId === null
+                || comparisonAId === comparisonBId
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {comparisonBusy ? "VERIFYING..." : "COMPARE"}
+            </button>
+            <button onClick={() => void refreshComparisonCampaigns()} disabled={comparisonBusy || autodrive?.active}>
+              REFRESH
+            </button>
+            <small>
+              {lastComparison
+                ? `#${lastComparison.receipt.comparisonId} // Δμ ${lastComparison.receipt.stats.meanScoreDifferenceAMinusB.toFixed(1)} // CI95 [${lastComparison.receipt.stats.meanDifferenceCi95Low.toFixed(1)}, ${lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1)}] // g ${lastComparison.receipt.stats.hedgesGAMinusB?.toFixed(2) ?? "UNDEFINED"}`
+                : `${campaignLedger.length} CAMPAIGN RECEIPTS // A−B, WELCH CI95, HEDGES g`}
+            </small>
+          </div>
           <div className="replay-strip">
             <span>REPLAY LEDGER</span>
             <button
@@ -1391,6 +1448,12 @@ export function App() {
             <div><dt>MEAN SCORE</dt><dd>{lastCampaign?.receipt.stats.meanScore1000 === null || lastCampaign?.receipt.stats.meanScore1000 === undefined ? "----" : lastCampaign.receipt.stats.meanScore1000.toFixed(1)}</dd></div>
             <div><dt>MEDIAN</dt><dd>{lastCampaign?.receipt.stats.medianScore1000 === null || lastCampaign?.receipt.stats.medianScore1000 === undefined ? "----" : lastCampaign.receipt.stats.medianScore1000.toFixed(1)}</dd></div>
             <div><dt>STDDEV</dt><dd>{lastCampaign?.receipt.stats.populationStddevScore1000 === null || lastCampaign?.receipt.stats.populationStddevScore1000 === undefined ? "----" : lastCampaign.receipt.stats.populationStddevScore1000.toFixed(1)}</dd></div>
+            <div><dt>COMPARE</dt><dd>{lastComparison ? `#${lastComparison.receipt.comparisonId} A#${lastComparison.receipt.campaignA.campaignId} / B#${lastComparison.receipt.campaignB.campaignId}` : "NONE"}</dd></div>
+            <div><dt>Δ MEAN A−B</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanScoreDifferenceAMinusB.toFixed(1) : "----"}</dd></div>
+            <div><dt>CI95 LOW</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95Low.toFixed(1) : "----"}</dd></div>
+            <div><dt>CI95 HIGH</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1) : "----"}</dd></div>
+            <div><dt>HEDGES g</dt><dd>{lastComparison?.receipt.stats.hedgesGAMinusB === null || lastComparison?.receipt.stats.hedgesGAMinusB === undefined ? "----" : lastComparison.receipt.stats.hedgesGAMinusB.toFixed(2)}</dd></div>
+            <div><dt>Δ SUCCESS</dt><dd>{lastComparison ? `${(lastComparison.receipt.stats.successRateDifferenceAMinusB * 100).toFixed(1)}pp` : "----"}</dd></div>
           </dl>
 
           <div className="rule" />
