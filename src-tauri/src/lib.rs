@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    compile_agent_turn, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnRequest,
+    compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnRequest,
     AgentTurnResponse, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
     GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
@@ -1448,15 +1448,6 @@ fn submit_agent_turn(
     Ok(driver_status_for(session))
 }
 
-fn action_source_order(source: &ActionSource) -> u8 {
-    match source {
-        ActionSource::Replay => 0,
-        ActionSource::Script { .. } => 1,
-        ActionSource::PhiBot { .. } => 2,
-        ActionSource::Human { .. } => 3,
-    }
-}
-
 #[tauri::command]
 fn step_emulation(
     state: State<'_, EmulatorState>,
@@ -1486,7 +1477,7 @@ fn step_emulation(
     incoming_actions.sort_by_key(|event| {
         (
             event.frame,
-            action_source_order(&event.source),
+            live_source_order(&event.source),
             event.sequence,
         )
     });
