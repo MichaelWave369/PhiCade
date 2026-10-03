@@ -3714,6 +3714,8 @@ pub fn run() {
             continue_benchmark_campaign,
             benchmark_campaign_status,
             last_benchmark_campaign_receipt,
+            list_benchmark_campaign_receipts,
+            compare_benchmark_campaigns,
             cancel_benchmark_campaign,
             autodrive_status,
             stop_autodrive,
