@@ -21,8 +21,10 @@ import {
   getAutodriveStatus,
   getDriverStatus,
   getLastAutodriveReceipt,
+  getOllamaQualificationStatus,
   issueAgentTurn,
   listOllamaModels,
+  qualifyOllamaModel,
   loadSettings,
   setControlMode,
   startAutodrive,
@@ -49,6 +51,7 @@ import {
   type FramePacket,
   type GameProfile,
   type OllamaModel,
+  type OllamaQualificationStatus,
   type ReplayArtifact,
   type RomEntry,
   type SessionInfo,
@@ -58,10 +61,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["AUTODRIVE", "BOUNDED", "Native policy caps turns, total actions, empty turns, and emulated frame span."],
-  ["TURN LOOP", "QUEUE-AWARE", "A new model turn is issued only after the previous native action queue fully drains."],
-  ["STOP PATHS", "RECEIPTED", "Operator stop, takeover, provider failure, grant expiry, and every budget exit persist a reasoned receipt."],
-  ["TAKEOVER", "IMMEDIATE", "Human takeover clears pending turns, queued bot actions, and held input before authority changes."],
+  ["CAPABILITY", "DISCOVERED", "The selected digest is inspected through Ollama /api/show instead of guessing vision support from its name."],
+  ["VISION PROBE", "MEASURED", "A generated red diagnostic frame must be identified correctly through structured vision output."],
+  ["DIGEST PIN", "EXACT", "Qualification receipts bind provider, model, and exact installed model digest."],
+  ["AUTO GATE", "NATIVE", "AUTO DRIVE refuses any model whose current digest lacks a matching PASS qualification receipt."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -107,6 +110,8 @@ export function App() {
   const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [ollamaScanning, setOllamaScanning] = useState(false);
+  const [modelQualification, setModelQualification] = useState<OllamaQualificationStatus | null>(null);
+  const [qualificationBusy, setQualificationBusy] = useState(false);
   const [providerBusy, setProviderBusy] = useState(false);
   const [lastProviderDurationMs, setLastProviderDurationMs] = useState<number | null>(null);
   const [autodrive, setAutodrive] = useState<AutodriveStatus | null>(null);
@@ -376,10 +381,22 @@ export function App() {
       const models = await listOllamaModels(settings.ollamaBaseUrl);
       setOllamaModels(models);
       setOllamaOnline(true);
+      if (settings.ollamaModel && models.some((candidate) => candidate.name === settings.ollamaModel || candidate.model === settings.ollamaModel)) {
+        try {
+          setModelQualification(
+            await getOllamaQualificationStatus(settings.ollamaBaseUrl, settings.ollamaModel),
+          );
+        } catch {
+          setModelQualification(null);
+        }
+      } else {
+        setModelQualification(null);
+      }
       setNotice(`OLLAMA ONLINE // ${models.length} LOCAL MODELS FOUND`);
     } catch (error) {
       setOllamaModels([]);
       setOllamaOnline(false);
+      setModelQualification(null);
       setNotice(`OLLAMA OFFLINE // ${String(error)}`);
     } finally {
       setOllamaScanning(false);
@@ -389,11 +406,52 @@ export function App() {
   const chooseOllamaModel = async (model: string) => {
     const nextSettings = { ...settings, ollamaModel: model || null };
     setSettings(nextSettings);
+    setModelQualification(null);
     try {
       await saveSettings(nextSettings);
-      setNotice(model ? `OLLAMA MODEL // ${model}` : "OLLAMA MODEL CLEARED");
+      if (model) {
+        const status = await getOllamaQualificationStatus(settings.ollamaBaseUrl, model);
+        setModelQualification(status);
+        setNotice(
+          `OLLAMA MODEL // ${model} // ${status.details.capabilities.join("+") || "NO CAPABILITIES"} // ${status.qualified ? "QUALIFIED" : "UNQUALIFIED"}`,
+        );
+      } else {
+        setNotice("OLLAMA MODEL CLEARED");
+      }
     } catch (error) {
-      setNotice(`SETTINGS ERROR // ${String(error)}`);
+      setNotice(`MODEL INSPECTION ERROR // ${String(error)}`);
+    }
+  };
+
+  const qualifySelectedOllamaModel = async () => {
+    if (!settings.ollamaModel) {
+      setNotice("SELECT AN OLLAMA MODEL FIRST");
+      return;
+    }
+
+    providerBusyRef.current = true;
+    setProviderBusy(true);
+    setQualificationBusy(true);
+    setNotice(`MODEL QUALIFICATION // ${settings.ollamaModel} // SYNTHETIC VISION PROBE`);
+
+    try {
+      const artifact = await qualifyOllamaModel(settings.ollamaBaseUrl, settings.ollamaModel);
+      const status = await getOllamaQualificationStatus(
+        settings.ollamaBaseUrl,
+        settings.ollamaModel,
+      );
+      setModelQualification(status);
+      const receipt = artifact.receipt;
+      setNotice(
+        `MODEL QUALIFICATION ${receipt.result} // ${receipt.model} // ${receipt.digest.slice(0, 12)}… // VISION ${receipt.visionProbePass ? "PASS" : "FAIL"} // JSON ${receipt.structuredOutputPass ? "PASS" : "FAIL"}`,
+      );
+    } catch (error) {
+      setModelQualification(null);
+      setNotice(`MODEL QUALIFICATION ERROR // ${String(error)}`);
+    } finally {
+      providerBusyRef.current = false;
+      setProviderBusy(false);
+      setQualificationBusy(false);
     }
   };
 
@@ -464,15 +522,29 @@ export function App() {
 
   const beginAutodrive = async () => {
     if (!settings.ollamaModel) {
-      setNotice("SELECT A LOCAL OLLAMA VISION MODEL FIRST");
+      setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
       return;
     }
     try {
-      const status = await startAutodrive("ollama", settings.ollamaModel, defaultAutodrivePolicy);
+      const qualification = await getOllamaQualificationStatus(
+        settings.ollamaBaseUrl,
+        settings.ollamaModel,
+      );
+      setModelQualification(qualification);
+      if (!qualification.qualified) {
+        throw new Error("selected model digest is not qualified for autonomous vision play");
+      }
+
+      const status = await startAutodrive(
+        "ollama",
+        settings.ollamaModel,
+        qualification.details.digest,
+        defaultAutodrivePolicy,
+      );
       setAutodrive(status);
       setLastAutodrive(null);
       setNotice(
-        `AUTODRIVE RUN ${status.runId} // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / ${status.policy.maxEmulatedFrames}F`,
+        `AUTODRIVE RUN ${status.runId} // QUALIFIED ${qualification.details.digest.slice(0, 12)}… // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / ${status.policy.maxEmulatedFrames}F`,
       );
     } catch (error) {
       setNotice(`AUTODRIVE START ERROR // ${String(error)}`);
@@ -813,7 +885,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 9 // GOVERNED AUTODRIVE ONLINE</small>
+                  <small>RUNG 10 // MODEL QUALIFICATION REGISTRY ONLINE</small>
                 </div>
               )}
             </div>
@@ -846,11 +918,18 @@ export function App() {
               disabled={ollamaModels.length === 0 || providerBusy || autodrive?.active}
               aria-label="Ollama model"
             >
-              <option value="">SELECT VISION MODEL</option>
+              <option value="">SELECT LOCAL MODEL</option>
               {ollamaModels.map((model) => (
                 <option key={model.digest || model.name} value={model.name}>{model.name}</option>
               ))}
             </select>
+            <button
+              className={modelQualification?.qualified ? "model-qualified" : ""}
+              onClick={() => void qualifySelectedOllamaModel()}
+              disabled={!settings.ollamaModel || providerBusy || qualificationBusy || autodrive?.active}
+            >
+              {qualificationBusy ? "QUALIFYING..." : modelQualification?.qualified ? "QUALIFIED ✓" : "QUALIFY MODEL"}
+            </button>
             <button
               onClick={() => void runOllamaDriverTurn(false)}
               disabled={!running || replayRecording || autodrive?.active || providerBusy || authority?.mode !== "phi-bot" || !settings.ollamaModel || driverPendingTurnId !== null}
@@ -865,7 +944,7 @@ export function App() {
                 || replayRecording
                 || !settings.ollamaModel
                 || authority?.mode !== "phi-bot"
-                || (!autodrive?.active && (!ollamaOnline || providerBusy || driverPendingTurnId !== null || driverQueuedActions !== 0))
+                || (!autodrive?.active && (!modelQualification?.qualified || !ollamaOnline || providerBusy || driverPendingTurnId !== null || driverQueuedActions !== 0))
               }
             >
               {autodrive?.active ? "STOP AUTO" : "AUTO DRIVE"}
@@ -874,7 +953,7 @@ export function App() {
               {autodrive?.active
                 ? `RUN ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // ${autodrive.totalActions}/${autodrive.policy.maxTotalActions}A`
                 : settings.ollamaModel
-                  ? `${settings.ollamaModel} // ${settings.ollamaBaseUrl}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
+                  ? `${settings.ollamaModel} // ${modelQualification?.details.digest.slice(0, 12) ?? "UNINSPECTED"}… // ${modelQualification?.details.capabilities.join("+") || "NO CAPABILITY DATA"} // ${modelQualification?.qualified ? "QUALIFIED" : "UNQUALIFIED"}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
                   : `NO MODEL // ${settings.ollamaBaseUrl}`}
             </small>
           </div>
@@ -939,7 +1018,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 9</div>
+          <div className="panel-title">RUNTIME // RUNG 10</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -962,6 +1041,9 @@ export function App() {
             <div><dt>DRIVER QUEUE</dt><dd>{driverQueuedActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>OLLAMA</dt><dd>{providerBusy ? "THINK PAUSE" : ollamaOnline ? "ONLINE" : "UNPROBED"}</dd></div>
             <div><dt>MODEL</dt><dd>{settings.ollamaModel ?? "NONE"}</dd></div>
+            <div><dt>CAPABILITY</dt><dd>{modelQualification?.details.capabilities.join("+").toUpperCase() || "UNINSPECTED"}</dd></div>
+            <div><dt>MODEL DIGEST</dt><dd>{modelQualification?.details.digest.slice(0, 12).toUpperCase() ?? "------------"}</dd></div>
+            <div><dt>MODEL QUAL</dt><dd>{modelQualification?.qualified ? "PASS" : modelQualification ? "FAIL / STALE" : "UNTESTED"}</dd></div>
             <div><dt>AUTO RUN</dt><dd>{autodrive?.active ? `#${autodrive.runId} ACTIVE` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</dd></div>
             <div><dt>AUTO TURNS</dt><dd>{autodrive ? `${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}` : "0/0"}</dd></div>
             <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
@@ -1007,7 +1089,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // AUTONOMY ≠ UNBOUNDED AUTHORITY // HUMAN TAKEOVER // EVERY RUN ENDS WITH A RECEIPT</footer>
+      <footer>CAPABILITY MUST BE MEASURED // QUALIFICATION BINDS THE DIGEST // ONE-SHOT CAN EXPERIMENT // AUTO REQUIRES PROOF</footer>
     </main>
   );
 }

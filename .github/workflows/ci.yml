@@ -30,7 +30,7 @@ jobs:
       - run: cargo test -p phicade-runtime -p phicade-libretro --all-targets
 
   native:
-    name: tauri / cargo check + Ollama adapter tests
+    name: tauri / cargo check + Ollama adapter/model qualification tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -83,9 +83,22 @@
 - [x] System/timeline-command refusal during autonomous runs
 - [x] SameBoy bounded-loop qualification receipt
 
+## Rung 10 — Model Qualification Registry
+- [x] Exact Ollama model digest discovery
+- [x] /api/show capability inspection
+- [x] Vision capability gate
+- [x] Synthetic image visual probe
+- [x] Structured-output qualification probe
+- [x] Digest-bound persistent receipts
+- [x] One-shot unqualified experimentation
+- [x] Native AUTO DRIVE exact-digest gate
+- [x] Changed-digest negative control
+- [x] Mock capability/qualification CI tests
+
 ## Later
 
-Pinned model-specific qualification, provider capability discovery, adaptive
-observation cadence, cloud-provider adapters, metadata/cover art, additional
-systems, true multi-port versus play, netplay, spectator mode, achievements,
-tournaments, CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.
+Adaptive observation cadence, model-specific gameplay benchmarks, provider
+capability profiles beyond Ollama, cloud-provider adapters, metadata/cover art,
+additional systems, true multi-port versus play, netplay, spectator mode,
+achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
+Night Circuit.
