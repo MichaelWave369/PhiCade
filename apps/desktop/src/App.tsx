@@ -9,18 +9,24 @@ import {
   type GameBoyButtonState,
 } from "./controllers";
 import {
+  defaultAutodrivePolicy,
   defaultSettings,
   isNativeShell,
   captureScreenshot,
   cancelAgentTurn,
   completeOllamaTurn,
+  failAutodriveProvider,
   flushGameSave,
   getAuthorityStatus,
+  getAutodriveStatus,
   getDriverStatus,
+  getLastAutodriveReceipt,
   issueAgentTurn,
   listOllamaModels,
   loadSettings,
   setControlMode,
+  startAutodrive,
+  stopAutodrive,
   submitAgentTurn,
   startReplayRecording,
   stopReplayRecording,
@@ -36,6 +42,8 @@ import {
   validateActionEnvelope,
   type AgentTurnResponse,
   type AppSettings,
+  type AutodriveArtifact,
+  type AutodriveStatus,
   type AuthorityStatus,
   type ControlMode,
   type FramePacket,
@@ -50,10 +58,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["OLLAMA", "LOCAL ONLY", "The first provider adapter is restricted to loopback HTTP and never receives core/session handles."],
-  ["VISION", "FRAMEBOUND", "Raw RGBA becomes PNG and is sent with the exact AgentTurnRequest observation hash."],
-  ["STRUCTURED OUTPUT", "SCHEMA", "Ollama returns only bounded button intents that are converted into AgentTurnResponse."],
-  ["THINK PAUSE", "EXACT FRAME", "The emulator pauses while the local vision model thinks so the observed frame cannot age underneath it."],
+  ["AUTODRIVE", "BOUNDED", "Native policy caps turns, total actions, empty turns, and emulated frame span."],
+  ["TURN LOOP", "QUEUE-AWARE", "A new model turn is issued only after the previous native action queue fully drains."],
+  ["STOP PATHS", "RECEIPTED", "Operator stop, takeover, provider failure, grant expiry, and every budget exit persist a reasoned receipt."],
+  ["TAKEOVER", "IMMEDIATE", "Human takeover clears pending turns, queued bot actions, and held input before authority changes."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -101,6 +109,8 @@ export function App() {
   const [ollamaScanning, setOllamaScanning] = useState(false);
   const [providerBusy, setProviderBusy] = useState(false);
   const [lastProviderDurationMs, setLastProviderDurationMs] = useState<number | null>(null);
+  const [autodrive, setAutodrive] = useState<AutodriveStatus | null>(null);
+  const [lastAutodrive, setLastAutodrive] = useState<AutodriveArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -214,6 +224,7 @@ export function App() {
         } : current);
         setDriverPendingTurnId(packet.driverPendingTurnId);
         setDriverQueuedActions(packet.driverQueuedActions);
+        setAutodrive(packet.autodrive);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -386,7 +397,7 @@ export function App() {
     }
   };
 
-  const runOllamaDriverTurn = async () => {
+  const runOllamaDriverTurn = async (autonomous = false) => {
     if (!settings.ollamaModel) {
       setNotice("SELECT A LOCAL OLLAMA VISION MODEL FIRST");
       return;
@@ -394,7 +405,11 @@ export function App() {
 
     providerBusyRef.current = true;
     setProviderBusy(true);
-    setNotice(`THINK PAUSE // ${settings.ollamaModel} // FRAME ${frameRef.current}`);
+    setNotice(
+      autonomous
+        ? `AUTODRIVE THINK // ${settings.ollamaModel} // FRAME ${frameRef.current}`
+        : `THINK PAUSE // ${settings.ollamaModel} // FRAME ${frameRef.current}`,
+    );
 
     try {
       const request = await issueAgentTurn(PHIBOT_AGENT_ID, 1);
@@ -407,6 +422,8 @@ export function App() {
       const status = await submitAgentTurn(result.response);
       setDriverPendingTurnId(status.pendingTurnId);
       setDriverQueuedActions(status.queuedActions);
+      const currentAutodrive = await getAutodriveStatus();
+      setAutodrive(currentAutodrive);
       const durationMs = result.totalDurationNs === null
         ? null
         : result.totalDurationNs / 1_000_000;
@@ -415,22 +432,112 @@ export function App() {
         `OLLAMA T${request.turnId} // F${request.observation.frame} // ${result.response.actions.length} ACTIONS`,
       );
       setNotice(
-        `OLLAMA TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS`,
+        `${autonomous ? "AUTODRIVE" : "OLLAMA"} TURN ${request.turnId} ACCEPTED // ${result.model} // ${result.response.actions.length} ACTIONS`,
       );
     } catch (error) {
       try {
-        const status = await cancelAgentTurn();
-        setDriverPendingTurnId(status.pendingTurnId);
-        setDriverQueuedActions(status.queuedActions);
+        const currentAutodrive = await getAutodriveStatus();
+        if (autonomous && currentAutodrive?.active) {
+          const artifact = await failAutodriveProvider();
+          setLastAutodrive(artifact);
+          setAutodrive(await getAutodriveStatus());
+          setDriverPendingTurnId(null);
+          setDriverQueuedActions(0);
+        } else if (!autonomous) {
+          const status = await cancelAgentTurn();
+          setDriverPendingTurnId(status.pendingTurnId);
+          setDriverQueuedActions(status.queuedActions);
+        } else {
+          setAutodrive(currentAutodrive);
+          const artifact = await getLastAutodriveReceipt();
+          if (artifact) setLastAutodrive(artifact);
+        }
       } catch {
         setDriverPendingTurnId(null);
       }
-      setNotice(`OLLAMA TURN ERROR // ${String(error)}`);
+      setNotice(`${autonomous ? "AUTODRIVE" : "OLLAMA"} TURN ERROR // ${String(error)}`);
     } finally {
       providerBusyRef.current = false;
       setProviderBusy(false);
     }
   };
+
+  const beginAutodrive = async () => {
+    if (!settings.ollamaModel) {
+      setNotice("SELECT A LOCAL OLLAMA VISION MODEL FIRST");
+      return;
+    }
+    try {
+      const status = await startAutodrive("ollama", settings.ollamaModel, defaultAutodrivePolicy);
+      setAutodrive(status);
+      setLastAutodrive(null);
+      setNotice(
+        `AUTODRIVE RUN ${status.runId} // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / ${status.policy.maxEmulatedFrames}F`,
+      );
+    } catch (error) {
+      setNotice(`AUTODRIVE START ERROR // ${String(error)}`);
+    }
+  };
+
+  const endAutodrive = async () => {
+    try {
+      const artifact = await stopAutodrive();
+      setLastAutodrive(artifact);
+      setAutodrive(await getAutodriveStatus());
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
+      setNotice(
+        `AUTODRIVE STOPPED // ${artifact.receipt.stopReason.toUpperCase()} // ${artifact.receipt.turnsCompleted} TURNS`,
+      );
+    } catch (error) {
+      setNotice(`AUTODRIVE STOP ERROR // ${String(error)}`);
+    }
+  };
+
+  useEffect(() => {
+    if (
+      !running
+      || !autodrive?.active
+      || providerBusy
+      || driverPendingTurnId !== null
+      || driverQueuedActions !== 0
+      || authority?.mode !== "phi-bot"
+      || !settings.ollamaModel
+    ) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      void runOllamaDriverTurn(true);
+    }, 25);
+    return () => window.clearTimeout(timer);
+  }, [
+    running,
+    autodrive?.active,
+    autodrive?.turnsCompleted,
+    providerBusy,
+    driverPendingTurnId,
+    driverQueuedActions,
+    authority?.mode,
+    settings.ollamaModel,
+  ]);
+
+  useEffect(() => {
+    if (
+      !autodrive
+      || autodrive.active
+      || !autodrive.stopReason
+      || lastAutodrive?.receipt.runId === autodrive.runId
+    ) {
+      return;
+    }
+
+    void getLastAutodriveReceipt()
+      .then((artifact) => {
+        if (artifact) setLastAutodrive(artifact);
+      })
+      .catch(() => undefined);
+  }, [autodrive, lastAutodrive?.receipt.runId]);
 
   const changeControlMode = async (mode: ControlMode) => {
     try {
@@ -445,6 +552,12 @@ export function App() {
       setLastObservation(null);
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
+      const currentAutodrive = await getAutodriveStatus();
+      setAutodrive(currentAutodrive);
+      if (currentAutodrive && !currentAutodrive.active) {
+        const artifact = await getLastAutodriveReceipt();
+        if (artifact) setLastAutodrive(artifact);
+      }
       setNotice(
         mode === "human"
           ? "HUMAN TAKEOVER // PHI-BOT GRANT REVOKED"
@@ -570,6 +683,8 @@ export function App() {
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
       setLastProviderDurationMs(null);
+      setAutodrive(null);
+      setLastAutodrive(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -606,6 +721,8 @@ export function App() {
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
       setLastProviderDurationMs(null);
+      setAutodrive(null);
+      setLastAutodrive(null);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
