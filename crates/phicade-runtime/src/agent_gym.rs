@@ -5,6 +5,7 @@ pub const BENCHMARK_SUITE_V1_ID: &str = "phicade-agent-gym-suite-v1";
 pub const BENCHMARK_SUITE_V2_ID: &str = "phicade-agent-gym-suite-v2";
 pub const BENCHMARK_SUITE_V3_ID: &str = "phicade-agent-gym-suite-v3";
 pub const BENCHMARK_SUITE_V4_ID: &str = "phicade-agent-gym-suite-v4";
+pub const BENCHMARK_SUITE_V5_ID: &str = "phicade-agent-gym-suite-v5";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -48,6 +49,18 @@ pub const AGENT_GYM_RELAY_RIGHT_ROM_SHA256: &str =
 pub const AGENT_GYM_RELAY_RIGHT_SOURCE_SHA256: &str =
     "0408d7f1d8325e9e12564a33aa45b8814e889c689e53116a77b13c685657b739";
 
+pub const AGENT_GYM_KEY_GATE_LEFT_ID: &str = "key-gate-left-v1";
+pub const AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256: &str =
+    "904492aa3be9ebfca1f02ff220417eb94ee3f12332dfa4e2263e20c4009094db";
+pub const AGENT_GYM_KEY_GATE_LEFT_SOURCE_SHA256: &str =
+    "d9fcf741c4c5b78faa7276b61829321950384ada58a69f5ab07ed53fe982fa5c";
+
+pub const AGENT_GYM_KEY_GATE_RIGHT_ID: &str = "key-gate-right-v1";
+pub const AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256: &str =
+    "72553ffab515b83e9548b454e85491246b6260474bdddb8d3011c0be1b631442";
+pub const AGENT_GYM_KEY_GATE_RIGHT_SOURCE_SHA256: &str =
+    "e22c6d8f9b42105a5c6d4cb706631736c9cc61738ea8e94a8162c7761435961c";
+
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_START_X: i32 = 16;
@@ -82,9 +95,16 @@ pub const AGENT_GYM_RELAY_RIGHT_TARGET_X: i32 = 120;
 pub const AGENT_GYM_RELAY_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_RELAY_INITIAL_DISTANCE: i32 = 136;
 
+pub const AGENT_GYM_KEY_GATE_START_X: i32 = 72;
+pub const AGENT_GYM_KEY_GATE_START_Y: i32 = 112;
+pub const AGENT_GYM_KEY_GATE_TARGET_X: i32 = 72;
+pub const AGENT_GYM_KEY_GATE_TARGET_Y: i32 = 24;
+pub const AGENT_GYM_KEY_GATE_INITIAL_DISTANCE: i32 = 88;
+
 pub static AGENT_GYM_DPAD_BUTTONS: [&str; 4] = ["UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_TEMPORAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_RELAY_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
+pub static AGENT_GYM_KEY_GATE_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -186,6 +206,16 @@ pub const AGENT_GYM_RELAY_RIGHT_TARGET: PixelPoint = PixelPoint {
     y: AGENT_GYM_RELAY_TARGET_Y,
 };
 
+pub const AGENT_GYM_KEY_GATE_START: PixelPoint = PixelPoint {
+    x: AGENT_GYM_KEY_GATE_START_X,
+    y: AGENT_GYM_KEY_GATE_START_Y,
+};
+
+pub const AGENT_GYM_KEY_GATE_TARGET: PixelPoint = PixelPoint {
+    x: AGENT_GYM_KEY_GATE_TARGET_X,
+    y: AGENT_GYM_KEY_GATE_TARGET_Y,
+};
+
 pub static AGENT_GYM_ORACLE: [OracleLeg; 2] = [
     OracleLeg {
         button: "RIGHT",
@@ -271,6 +301,24 @@ pub static AGENT_GYM_RELAY_RIGHT_ORACLE: [OracleLeg; 7] = [
     OracleLeg { button: "UP", frames: 40 },
     OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "RIGHT", frames: 24 },
+];
+
+pub static AGENT_GYM_KEY_GATE_LEFT_ORACLE: [OracleLeg; 6] = [
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "UP", frames: 20 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "UP", frames: 32 },
+];
+
+pub static AGENT_GYM_KEY_GATE_RIGHT_ORACLE: [OracleLeg; 6] = [
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "UP", frames: 20 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "UP", frames: 32 },
 ];
 
 pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
@@ -385,7 +433,39 @@ pub const AGENT_GYM_RELAY_RIGHT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     oracle: &AGENT_GYM_RELAY_RIGHT_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 7] = [
+pub const AGENT_GYM_KEY_GATE_LEFT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V5_ID,
+    id: AGENT_GYM_KEY_GATE_LEFT_ID,
+    title: "Key Gate: Left",
+    rom_sha256: AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
+    source_sha256: AGENT_GYM_KEY_GATE_LEFT_SOURCE_SHA256,
+    start: AGENT_GYM_KEY_GATE_START,
+    target: AGENT_GYM_KEY_GATE_TARGET,
+    initial_distance: AGENT_GYM_KEY_GATE_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_KEY_GATE_BUTTONS,
+    prompt: "Benchmark task: find the visible key and press A while standing on it to acquire it, return to the locked central gate, press A at the gate to unlock it, then move the solid block onto the visible X target. The key may be on either side; use current pixels rather than assuming a side.",
+    oracle: &AGENT_GYM_KEY_GATE_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_KEY_GATE_RIGHT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V5_ID,
+    id: AGENT_GYM_KEY_GATE_RIGHT_ID,
+    title: "Key Gate: Right",
+    rom_sha256: AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256,
+    source_sha256: AGENT_GYM_KEY_GATE_RIGHT_SOURCE_SHA256,
+    start: AGENT_GYM_KEY_GATE_START,
+    target: AGENT_GYM_KEY_GATE_TARGET,
+    initial_distance: AGENT_GYM_KEY_GATE_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_KEY_GATE_BUTTONS,
+    prompt: "Benchmark task: find the visible key and press A while standing on it to acquire it, return to the locked central gate, press A at the gate to unlock it, then move the solid block onto the visible X target. The key may be on either side; use current pixels rather than assuming a side.",
+    oracle: &AGENT_GYM_KEY_GATE_RIGHT_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 9] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -393,6 +473,8 @@ pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 7] = [
     AGENT_GYM_TEMPORAL_RIGHT_TASK,
     AGENT_GYM_RELAY_LEFT_TASK,
     AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
@@ -417,6 +499,18 @@ pub static BENCHMARK_SUITE_V4_TASKS: [BenchmarkTaskSpec; 7] = [
     AGENT_GYM_TEMPORAL_RIGHT_TASK,
     AGENT_GYM_RELAY_LEFT_TASK,
     AGENT_GYM_RELAY_RIGHT_TASK,
+];
+
+pub static BENCHMARK_SUITE_V5_TASKS: [BenchmarkTaskSpec; 9] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+    AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
@@ -447,8 +541,20 @@ pub static BENCHMARK_SUITE_V4: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V4_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 4] =
-    [&BENCHMARK_SUITE_V1, &BENCHMARK_SUITE_V2, &BENCHMARK_SUITE_V3, &BENCHMARK_SUITE_V4];
+pub static BENCHMARK_SUITE_V5: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V5_ID,
+    title: "Phi-Agent Gym Suite v5",
+    version: 5,
+    tasks: &BENCHMARK_SUITE_V5_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 5] = [
+    &BENCHMARK_SUITE_V1,
+    &BENCHMARK_SUITE_V2,
+    &BENCHMARK_SUITE_V3,
+    &BENCHMARK_SUITE_V4,
+    &BENCHMARK_SUITE_V5,
+];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
     &BENCHMARK_SUITES
@@ -472,6 +578,10 @@ pub fn benchmark_suite_v3_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v4_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V4_TASKS
+}
+
+pub fn benchmark_suite_v5_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V5_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -688,28 +798,51 @@ mod tests {
     }
 
     #[test]
+    fn suite_v5_preserves_v4_and_adds_balanced_stateful_key_gates() {
+        let tasks = benchmark_suite_v5_tasks();
+        assert_eq!(tasks.len(), 9);
+        assert_eq!(tasks[..7], BENCHMARK_SUITE_V4_TASKS);
+        assert_eq!(tasks[7].id, AGENT_GYM_KEY_GATE_LEFT_ID);
+        assert_eq!(tasks[8].id, AGENT_GYM_KEY_GATE_RIGHT_ID);
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V5_ID).unwrap().version, 5);
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.prompt, AGENT_GYM_KEY_GATE_RIGHT_TASK.prompt);
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.allowed_buttons, AGENT_GYM_KEY_GATE_RIGHT_TASK.allowed_buttons);
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.target, AGENT_GYM_KEY_GATE_RIGHT_TASK.target);
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.oracle.len(), 6);
+        assert_eq!(AGENT_GYM_KEY_GATE_RIGHT_TASK.oracle.len(), 6);
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
         let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 4);
+        assert_eq!(memberships.len(), 5);
         assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
         assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(memberships[3].id, BENCHMARK_SUITE_V4_ID);
+        assert_eq!(memberships[4].id, BENCHMARK_SUITE_V5_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 3);
+        assert_eq!(wall_memberships.len(), 4);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
+        assert_eq!(wall_memberships[3].id, BENCHMARK_SUITE_V5_ID);
 
         let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 2);
+        assert_eq!(temporal_memberships.len(), 3);
         assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
+        assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
 
         let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 1);
+        assert_eq!(relay_memberships.len(), 2);
         assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
+        assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
+
+        let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
+        assert_eq!(key_gate_memberships.len(), 1);
+        assert_eq!(key_gate_memberships[0].id, BENCHMARK_SUITE_V5_ID);
     }
 
     #[test]
@@ -764,6 +897,21 @@ mod tests {
         assert_eq!(AGENT_GYM_RELAY_LEFT_TASK.oracle[2].button, "DOWN");
         assert_eq!(AGENT_GYM_RELAY_LEFT_TASK.oracle[6].button, "LEFT");
         assert_eq!(AGENT_GYM_RELAY_RIGHT_TASK.oracle[6].button, "RIGHT");
+    }
+
+    #[test]
+    fn registry_resolves_key_gate_tasks_by_id() {
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_KEY_GATE_LEFT_ID).map(|task| task.id),
+            Some(AGENT_GYM_KEY_GATE_LEFT_ID)
+        );
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_KEY_GATE_RIGHT_ID).map(|task| task.id),
+            Some(AGENT_GYM_KEY_GATE_RIGHT_ID)
+        );
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.oracle[1].button, "A");
+        assert_eq!(AGENT_GYM_KEY_GATE_LEFT_TASK.oracle[4].button, "A");
+        assert_eq!(AGENT_GYM_KEY_GATE_RIGHT_TASK.oracle[0].button, "RIGHT");
     }
 
     #[test]

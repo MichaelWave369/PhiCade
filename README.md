@@ -5,13 +5,12 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 22
+## Current status — Rung 23
 
-PhiCade now has a balanced three-room relay benchmark that tests whether
-earlier visible evidence can survive an intervening navigation task and room
-transitions before it becomes relevant again. Suite v4 preserves every Suite v3
-task and adds opposite LEFT/RIGHT relay objectives with identical corridor and
-terminal scenes.
+PhiCade now has a balanced stateful object-dependency benchmark. A visible key
+must be deliberately acquired with A before the same central gate can be
+unlocked and the visible target reached. Suite v5 preserves every Suite v4 task
+and adds opposite LEFT/RIGHT key placements under identical interaction rules.
 
 Benchmark suites:
 
@@ -19,12 +18,15 @@ Benchmark suites:
 - **Suite v2** — the exact v1 tasks + **Wall Detour**
 - **Suite v3** — the exact v2 tasks + **Temporal Cue: Left** + **Temporal Cue: Right**
 - **Suite v4** — the exact v3 tasks + **Relay Rooms: Left** + **Relay Rooms: Right**
+- **Suite v5** — the exact v4 tasks + **Key Gate: Left** + **Key Gate: Right**
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
   decision screen that requires opposite correct choices
 - **Relay Rooms pair** — opposite briefing cues survive a shared wall-detour
   corridor before an identical terminal scene requires the remembered side
+- **Key Gate pair** — visible prerequisite object must be acquired before a
+  locked barrier can be mutated and traversed
 
 Current evidence stack includes:
 
@@ -47,6 +49,11 @@ Current evidence stack includes:
 - identical post-briefing corridor + terminal scenes across relay variants
 - direct-route negative control + wrong-terminal negative control
 - Benchmark Suite v4 with exact 7-task membership
+- balanced Key Gate LEFT/RIGHT stateful-object probes
+- explicit A-to-pickup + A-to-unlock world-state transitions
+- direct-gate and empty-side negative controls
+- post-pickup and open-gate framebuffer convergence controls
+- Benchmark Suite v5 with exact 9-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -72,6 +79,24 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Stateful key-gate dependency benchmark
+
+Suite v5 adds two source-first Game Boy tasks:
+
+- `key-gate-left-v1`
+- `key-gate-right-v1`
+
+The player starts below a locked barrier with the final X visible above it. A
+key appears on one side. The controller must overlap the real key and press A,
+return to the central gate, press A again to unlock it, then move through to the
+target.
+
+The joint qualifier separately proves that A at the gate without a key fails,
+that A on the empty side does not create key state, and that correct pickup
+causes both variants to converge to the same post-pickup and opened-gate world.
+
+See `docs/STATEFUL_KEY_GATE_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V5.md`.
 
 ## Multi-room relay objective benchmark
 
@@ -185,7 +210,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select **Suite v1**, **Suite v2**, **Suite v3**, or **Suite v4**,
+2. select **Suite v1**, **Suite v2**, **Suite v3**, **Suite v4**, or **Suite v5**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -251,13 +276,15 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all seven registered benchmark ROMs from source,
-jointly qualifies the Temporal Cue and Relay Rooms pairs, tests prior-suite
-preservation, Suite v4 5/7 → 6/7 → 7/7 coverage, digest splitting, and
-trial-tamper refusal.
+CI assembles and qualifies all nine registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue, Relay Rooms, and Key Gate pairs, tests
+prior-suite preservation, Suite v5 7/9 → 8/9 → 9/9 coverage, digest splitting,
+and trial-tamper refusal.
 
 See:
 
+- `docs/STATEFUL_KEY_GATE_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V5.md`
 - `docs/MULTI_ROOM_RELAY_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V4.md`
 - `docs/TEMPORAL_CUE_BENCHMARK.md`

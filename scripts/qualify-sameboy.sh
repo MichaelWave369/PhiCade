@@ -100,8 +100,24 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$RELAY_RIGHT_OBJ" "$RELAY_RIGHT_
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$RELAY_RIGHT_ROM" "$RELAY_RIGHT_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIRELAYRIGHT" "$RELAY_RIGHT_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task H / Key Gate LEFT\n'
+KEY_LEFT_SRC="$ROOT/benchmarks/agent-gym-key-gate-left/main.asm"
+KEY_LEFT_OBJ="$WORK/phi-agent-gym-key-gate-left.o"
+KEY_LEFT_ROM="$WORK/phi-agent-gym-key-gate-left.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$KEY_LEFT_OBJ" "$KEY_LEFT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$KEY_LEFT_ROM" "$KEY_LEFT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIKEYLEFT" "$KEY_LEFT_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task I / Key Gate RIGHT\n'
+KEY_RIGHT_SRC="$ROOT/benchmarks/agent-gym-key-gate-right/main.asm"
+KEY_RIGHT_OBJ="$WORK/phi-agent-gym-key-gate-right.o"
+KEY_RIGHT_ROM="$WORK/phi-agent-gym-key-gate-right.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$KEY_RIGHT_OBJ" "$KEY_RIGHT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$KEY_RIGHT_ROM" "$KEY_RIGHT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIKEYRIGHT" "$KEY_RIGHT_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -205,6 +221,29 @@ cargo run -p phicade-libretro --bin relay_rooms_qualify -- \
   --right-rom "$RELAY_RIGHT_ROM" \
   --receipt "$ROOT/artifacts/relay-rooms-pair-qualification.json"
 
+printf '==> running Phi-Agent Gym task H / Key Gate LEFT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$KEY_LEFT_ROM" \
+  --source "$KEY_LEFT_SRC" \
+  --task "key-gate-left-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-key-gate-left-qualification.json"
+
+printf '==> running Phi-Agent Gym task I / Key Gate RIGHT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$KEY_RIGHT_ROM" \
+  --source "$KEY_RIGHT_SRC" \
+  --task "key-gate-right-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-key-gate-right-qualification.json"
+
+printf '==> running Key Gate pair state-dependency qualification\n'
+cargo run -p phicade-libretro --bin key_gate_qualify -- \
+  --core "$CORE" \
+  --left-rom "$KEY_LEFT_ROM" \
+  --right-rom "$KEY_RIGHT_ROM" \
+  --receipt "$ROOT/artifacts/key-gate-pair-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -220,3 +259,6 @@ printf '    %s\n' "$ROOT/artifacts/temporal-cue-pair-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-relay-left-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-relay-right-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/relay-rooms-pair-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-key-gate-left-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-key-gate-right-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/key-gate-pair-qualification.json"
