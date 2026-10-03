@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["OBJECT", "VISIBLE", "A real key is rendered on one side; the opposite side is intentionally empty."],
-  ["PICKUP", "STATEFUL", "A on the actual key removes it from the world and creates explicit acquired-key state."],
-  ["GATE", "DEPENDENCY", "A at the central gate is refused without the key and removes the barrier only after valid acquisition."],
-  ["EVIDENCE", "PAIRED", "CI proves direct-gate refusal, fake-pickup refusal, state convergence, successful unlock, and frozen provenance."],
+  ["FUSE", "ACQUIRE", "Only the rendered fuse pedestal can create carried-fuse state; the opposite pedestal is a negative control."],
+  ["GENERATOR", "POWER", "The central generator refuses A before fuse acquisition and renders a distinct ON state only after valid install."],
+  ["GATE", "ORDERED", "The central gate refuses A until the generator is powered, then the same interaction removes the barrier."],
+  ["EVIDENCE", "CAUSAL", "CI proves wrong-order refusal plus post-fuse, powered, opened-gate, and final-success convergence across variants."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>SEE OBJECT // ACQUIRE STATE // TEST PREREQUISITE // MUTATE WORLD // PASS GATE // RECEIPT EVERYTHING</footer>
+      <footer>FIND FUSE // ACQUIRE // INSTALL // POWER SYSTEM // OPEN GATE // REACH TARGET // RECEIPT ORDER</footer>
     </main>
   );
 }

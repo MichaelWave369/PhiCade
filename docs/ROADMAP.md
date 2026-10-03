@@ -310,6 +310,27 @@
 - [x] v5 READY only at 9/9
 - [x] Freeze canonical Key Gate source + ROM SHA-256 after qualification
 
+## Rung 24 — Ordered Power Chain Benchmark
+- [x] Balanced LEFT/RIGHT source-first Power Chain tasks
+- [x] Shared side-pedestal movement geometry
+- [x] Explicit A-to-acquire fuse interaction
+- [x] Shared carried-fuse badge
+- [x] Central generator OFF → ON rendered transition
+- [x] Generator install requires acquired fuse
+- [x] Powered gate requires generator state
+- [x] Generator-before-fuse negative control
+- [x] Gate-before-power negative control
+- [x] Empty-pedestal fake-pickup negative control
+- [x] Post-fuse center framebuffer convergence
+- [x] Powered-generator framebuffer convergence
+- [x] Opened-gate framebuffer convergence
+- [x] Same provider instruction across variants
+- [x] Benchmark Suite v6 with exact v5 reuse + both Power Chain tasks
+- [x] v5 READY at 9/9 while v6 remains INCOMPLETE at 9/11
+- [x] v6 remains INCOMPLETE at 10/11
+- [x] v6 READY only at 11/11
+- [x] Freeze canonical Power Chain source + ROM SHA-256 after qualification
+
 ## Later
 
 Additional benchmark capabilities/tasks, additional uncertainty methods, provider
