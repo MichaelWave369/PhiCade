@@ -169,6 +169,7 @@ export type AutodriveStopReason =
   | "action-budget"
   | "frame-budget"
   | "empty-turn-limit"
+  | "task-success"
   | "provider-failure"
   | "grant-expired"
   | "core-shutdown";
