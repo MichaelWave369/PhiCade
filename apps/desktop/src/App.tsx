@@ -1189,6 +1189,7 @@ export function App() {
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
           <span><i className={`lamp ${campaignStatus?.active ? "lamp-amber" : lastCampaign ? "lamp-green" : "lamp-green"}`} /> CAMPAIGN {campaignStatus?.active ? `${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId}` : "STANDBY"}</span>
           <span><i className={`lamp ${comparisonBusy ? "lamp-amber" : lastComparison ? "lamp-green" : "lamp-green"}`} /> COMPARE {comparisonBusy ? "VERIFYING" : lastComparison ? `#${lastComparison.receipt.comparisonId}` : "STANDBY"}</span>
+          <span><i className={`lamp ${suiteReportBusy ? "lamp-amber" : lastSuiteReport ? "lamp-green" : "lamp-green"}`} /> SUITE {suiteReportBusy ? "VERIFYING" : lastSuiteReport ? `#${lastSuiteReport.receipt.reportId}` : suiteCandidates.some((candidate) => candidate.ready) ? "READY" : "INCOMPLETE"}</span>
         </div>
       </header>
 
@@ -1248,7 +1249,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 15 // COMPARISON LAB ONLINE</small>
+                  <small>RUNG 16 // SUITE REPORTS ONLINE</small>
                 </div>
               )}
             </div>
@@ -1417,6 +1418,45 @@ export function App() {
                 : `${campaignLedger.length} CAMPAIGN RECEIPTS // A−B, WELCH CI95, HEDGES g`}
             </small>
           </div>
+          <div className="suite-strip">
+            <span>SUITE REPORT</span>
+            <select
+              value={selectedSuiteCohortId ?? ""}
+              onChange={(event) => {
+                setSelectedSuiteCohortId(event.target.value || null);
+                setLastSuiteReport(null);
+              }}
+              disabled={suiteCandidates.length === 0 || suiteReportBusy || autodrive?.active}
+              aria-label="Benchmark Suite cohort"
+            >
+              <option value="">SELECT COHORT</option>
+              {suiteCandidates.map((candidate) => (
+                <option key={candidate.cohortId} value={candidate.cohortId}>
+                  {`${candidate.model} ${candidate.modelDigest.slice(0, 8)}… // ${candidate.coveredTasks}/${candidate.suiteTaskCount} TASKS // ${candidate.trialsPerTask}× // ${candidate.ready ? "READY" : "INCOMPLETE"}`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void buildSelectedSuiteReport()}
+              disabled={
+                suiteReportBusy
+                || !selectedSuiteCohortId
+                || !suiteCandidates.some((candidate) => candidate.cohortId === selectedSuiteCohortId && candidate.ready)
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {suiteReportBusy ? "VERIFYING..." : "BUILD REPORT"}
+            </button>
+            <button onClick={() => void refreshSuiteReportCandidates()} disabled={suiteReportBusy || autodrive?.active}>
+              REFRESH
+            </button>
+            <small>
+              {lastSuiteReport
+                ? `#${lastSuiteReport.receipt.reportId} // MACRO μ ${lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // σTASK ${lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1)}`
+                : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ALL REGISTERED TASKS REQUIRED`}
+            </small>
+          </div>
           <div className="replay-strip">
             <span>REPLAY LEDGER</span>
             <button
@@ -1477,7 +1517,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 15</div>
+          <div className="panel-title">RUNTIME // RUNG 16</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1524,6 +1564,13 @@ export function App() {
             <div><dt>CI95 HIGH</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1) : "----"}</dd></div>
             <div><dt>HEDGES g</dt><dd>{lastComparison?.receipt.stats.hedgesGAMinusB === null || lastComparison?.receipt.stats.hedgesGAMinusB === undefined ? "----" : lastComparison.receipt.stats.hedgesGAMinusB.toFixed(2)}</dd></div>
             <div><dt>Δ SUCCESS</dt><dd>{lastComparison ? `${(lastComparison.receipt.stats.successRateDifferenceAMinusB * 100).toFixed(1)}pp` : "----"}</dd></div>
+            <div><dt>SUITE COHORTS</dt><dd>{`${suiteCandidates.filter((candidate) => candidate.ready).length}/${suiteCandidates.length}`}</dd></div>
+            <div><dt>SUITE REPORT</dt><dd>{lastSuiteReport ? `#${lastSuiteReport.receipt.reportId}` : "NONE"}</dd></div>
+            <div><dt>SUITE TASKS</dt><dd>{lastSuiteReport ? `${lastSuiteReport.receipt.stats.taskCount}` : "----"}</dd></div>
+            <div><dt>MACRO MEAN</dt><dd>{lastSuiteReport ? lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1) : "----"}</dd></div>
+            <div><dt>SUITE SUCCESS</dt><dd>{lastSuiteReport ? `${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}%` : "----"}</dd></div>
+            <div><dt>TASK μ MIN/MAX</dt><dd>{lastSuiteReport ? `${lastSuiteReport.receipt.stats.minTaskMeanScore1000.toFixed(1)} / ${lastSuiteReport.receipt.stats.maxTaskMeanScore1000.toFixed(1)}` : "----"}</dd></div>
+            <div><dt>TASK μ σ</dt><dd>{lastSuiteReport ? lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1) : "----"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -1565,7 +1612,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>ONE SUITE // TWO FROZEN WORLDS // EXACT HASH IDENTITY // ONE GOVERNED BENCHMARK PATH // NO TASK-SPECIFIC BACKDOORS</footer>
+      <footer>ONE MODEL COHORT // ALL REGISTERED TASKS // REVERIFY EVERY CAMPAIGN + TRIAL // MACRO TASK SCORE // NO CROSS-TASK SHORTCUTS</footer>
     </main>
   );
 }
