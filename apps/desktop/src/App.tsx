@@ -583,6 +583,47 @@ export function App() {
     }
   };
 
+  const refreshSuiteReportCandidates = async () => {
+    try {
+      const candidates = await listBenchmarkSuiteReportCandidates();
+      setSuiteCandidates(candidates);
+      const ready = candidates.filter((candidate) => candidate.ready);
+      setSelectedSuiteCohortId((current) => {
+        if (current && ready.some((candidate) => candidate.cohortId === current)) {
+          return current;
+        }
+        const selectedDigest = modelQualification?.details.digest;
+        const sameModel = selectedDigest
+          ? ready.find((candidate) => candidate.modelDigest === selectedDigest)
+          : null;
+        return sameModel?.cohortId ?? ready[0]?.cohortId ?? null;
+      });
+    } catch (error) {
+      setNotice(`SUITE REPORT LEDGER ERROR // ${String(error)}`);
+    }
+  };
+
+  const buildSelectedSuiteReport = async () => {
+    if (!selectedSuiteCohortId) {
+      setNotice("SUITE REPORT REQUIRES A READY 2/2 COHORT");
+      return;
+    }
+    setSuiteReportBusy(true);
+    try {
+      const artifact = await buildBenchmarkSuiteReport(selectedSuiteCohortId);
+      setLastSuiteReport(artifact);
+      const stats = artifact.receipt.stats;
+      setNotice(
+        `SUITE REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
+      );
+      await refreshSuiteReportCandidates();
+    } catch (error) {
+      setLastSuiteReport(null);
+      setNotice(`SUITE REPORT REFUSED // ${String(error)}`);
+    } finally {
+      setSuiteReportBusy(false);
+    }
+  };
   const refreshComparisonCampaigns = async () => {
     try {
       const entries = await listBenchmarkCampaignReceipts();
