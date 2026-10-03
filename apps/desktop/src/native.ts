@@ -226,6 +226,44 @@ export interface OllamaModel {
   digest: string;
 }
 
+export interface OllamaModelDetails {
+  name: string;
+  digest: string;
+  capabilities: string[];
+  family: string | null;
+  parameterSize: string | null;
+  quantizationLevel: string | null;
+}
+
+export interface OllamaQualificationReceipt {
+  schema: string;
+  result: "PASS" | "FAIL";
+  provider: "ollama";
+  model: string;
+  digest: string;
+  capabilities: string[];
+  visionAdvertised: boolean;
+  structuredOutputPass: boolean;
+  visionProbePass: boolean;
+  probeExpected: string;
+  probeObserved: string | null;
+  totalDurationNs: number | null;
+  evalCount: number | null;
+  error: string | null;
+}
+
+export interface OllamaQualificationArtifact {
+  receiptPath: string;
+  receipt: OllamaQualificationReceipt;
+}
+
+export interface OllamaQualificationStatus {
+  details: OllamaModelDetails;
+  qualified: boolean;
+  receipt: OllamaQualificationReceipt | null;
+  receiptPath: string | null;
+}
+
 export interface OllamaTurnResult {
   provider: "ollama";
   model: string;
@@ -414,6 +452,27 @@ export async function listOllamaModels(
   return invoke<OllamaModel[]>("list_ollama_models", { baseUrl });
 }
 
+export async function inspectOllamaModel(
+  baseUrl: string,
+  model: string,
+): Promise<OllamaModelDetails> {
+  return invoke<OllamaModelDetails>("inspect_ollama_model", { baseUrl, model });
+}
+
+export async function qualifyOllamaModel(
+  baseUrl: string,
+  model: string,
+): Promise<OllamaQualificationArtifact> {
+  return invoke<OllamaQualificationArtifact>("qualify_ollama_model", { baseUrl, model });
+}
+
+export async function getOllamaQualificationStatus(
+  baseUrl: string,
+  model: string,
+): Promise<OllamaQualificationStatus> {
+  return invoke<OllamaQualificationStatus>("ollama_qualification_status", { baseUrl, model });
+}
+
 export async function completeOllamaTurn(
   request: AgentTurnRequest,
   baseUrl: string,
@@ -430,9 +489,15 @@ export async function completeOllamaTurn(
 export async function startAutodrive(
   provider: string,
   model: string,
+  modelDigest: string,
   policy: AutodrivePolicy = defaultAutodrivePolicy,
 ): Promise<AutodriveStatus> {
-  return invoke<AutodriveStatus>("start_autodrive", { provider, model, policy });
+  return invoke<AutodriveStatus>("start_autodrive", {
+    provider,
+    model,
+    modelDigest,
+    policy,
+  });
 }
 
 export async function getAutodriveStatus(): Promise<AutodriveStatus | null> {
