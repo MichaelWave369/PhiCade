@@ -91,6 +91,48 @@ impl AutodriveStatus {
     pub fn frame_span(&self) -> u64 {
         self.current_frame.saturating_sub(self.started_frame)
     }
+
+    pub fn pre_turn_stop_reason(&self) -> Option<AutodriveStopReason> {
+        if self.frame_span() >= self.policy.max_emulated_frames {
+            return Some(AutodriveStopReason::FrameBudget);
+        }
+        if self.turns_issued >= self.policy.max_turns {
+            return Some(AutodriveStopReason::TurnBudget);
+        }
+        if self.total_actions >= self.policy.max_total_actions {
+            return Some(AutodriveStopReason::ActionBudget);
+        }
+        None
+    }
+
+    pub fn note_turn_issued(&mut self) {
+        self.turns_issued = self.turns_issued.saturating_add(1);
+    }
+
+    pub fn can_accept_actions(&self, action_count: usize) -> bool {
+        self.total_actions
+            .saturating_add(u32::try_from(action_count).unwrap_or(u32::MAX))
+            <= self.policy.max_total_actions
+    }
+
+    pub fn note_turn_completed(&mut self, action_count: usize) {
+        self.turns_completed = self.turns_completed.saturating_add(1);
+        self.total_actions = self
+            .total_actions
+            .saturating_add(u32::try_from(action_count).unwrap_or(u32::MAX));
+        if action_count == 0 {
+            self.consecutive_empty_turns = self.consecutive_empty_turns.saturating_add(1);
+        } else {
+            self.consecutive_empty_turns = 0;
+        }
+    }
+
+    pub fn post_turn_stop_reason(&self) -> Option<AutodriveStopReason> {
+        if self.consecutive_empty_turns >= self.policy.max_consecutive_empty_turns {
+            return Some(AutodriveStopReason::EmptyTurnLimit);
+        }
+        None
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,6 +171,93 @@ mod tests {
             ..AutodrivePolicy::default()
         };
         assert!(policy.validate().is_err());
+    }
+
+    #[test]
+    fn turn_budget_stops_before_issuing_one_too_many() {
+        let mut status = AutodriveStatus {
+            schema: AUTODRIVE_STATUS_SCHEMA.into(),
+            run_id: 1,
+            active: true,
+            provider: "ollama".into(),
+            model: "vision".into(),
+            started_frame: 100,
+            current_frame: 100,
+            turns_issued: 0,
+            turns_completed: 0,
+            total_actions: 0,
+            consecutive_empty_turns: 0,
+            policy: AutodrivePolicy {
+                max_turns: 2,
+                ..AutodrivePolicy::default()
+            },
+            stop_reason: None,
+        };
+        assert_eq!(status.pre_turn_stop_reason(), None);
+        status.note_turn_issued();
+        status.note_turn_issued();
+        assert_eq!(
+            status.pre_turn_stop_reason(),
+            Some(AutodriveStopReason::TurnBudget)
+        );
+    }
+
+    #[test]
+    fn empty_turn_limit_is_explicit() {
+        let mut status = AutodriveStatus {
+            schema: AUTODRIVE_STATUS_SCHEMA.into(),
+            run_id: 1,
+            active: true,
+            provider: "ollama".into(),
+            model: "vision".into(),
+            started_frame: 100,
+            current_frame: 100,
+            turns_issued: 2,
+            turns_completed: 0,
+            total_actions: 0,
+            consecutive_empty_turns: 0,
+            policy: AutodrivePolicy {
+                max_consecutive_empty_turns: 2,
+                ..AutodrivePolicy::default()
+            },
+            stop_reason: None,
+        };
+        status.note_turn_completed(0);
+        assert_eq!(status.post_turn_stop_reason(), None);
+        status.note_turn_completed(0);
+        assert_eq!(
+            status.post_turn_stop_reason(),
+            Some(AutodriveStopReason::EmptyTurnLimit)
+        );
+    }
+
+    #[test]
+    fn action_budget_rejects_oversized_completion() {
+        let mut status = AutodriveStatus {
+            schema: AUTODRIVE_STATUS_SCHEMA.into(),
+            run_id: 1,
+            active: true,
+            provider: "ollama".into(),
+            model: "vision".into(),
+            started_frame: 100,
+            current_frame: 100,
+            turns_issued: 1,
+            turns_completed: 0,
+            total_actions: 3,
+            consecutive_empty_turns: 0,
+            policy: AutodrivePolicy {
+                max_total_actions: 4,
+                ..AutodrivePolicy::default()
+            },
+            stop_reason: None,
+        };
+        assert!(!status.can_accept_actions(2));
+        assert!(status.can_accept_actions(1));
+        status.note_turn_completed(1);
+        assert_eq!(
+            status.pre_turn_stop_reason(),
+            Some(AutodriveStopReason::ActionBudget)
+        );
     }
 
     #[test]
