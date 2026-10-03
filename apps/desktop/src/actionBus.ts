@@ -4,10 +4,12 @@ export type ActionSource =
   | { kind: "script"; name: string }
   | { kind: "phi-bot"; agentId: string };
 
+export type SystemCommand = "pause" | "reset" | "save-state" | "load-state";
+
 export type GameAction =
   | { kind: "button"; button: string; pressed: boolean }
   | { kind: "axis"; axis: string; value: number }
-  | { kind: "system"; command: "pause" | "reset" | "save-state" | "load-state" };
+  | { kind: "system"; command: SystemCommand; slot?: number | null };
 
 export interface ActionEnvelope {
   sequence: number;

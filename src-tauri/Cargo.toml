@@ -1,0 +1,21 @@
+[package]
+name = "phicade"
+version = "0.2.0"
+description = "PhiCade native desktop shell"
+authors = ["Michael Hughes"]
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "phicade_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+phicade-runtime = { path = "../crates/phicade-runtime" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"

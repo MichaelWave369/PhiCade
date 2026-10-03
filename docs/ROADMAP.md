@@ -12,21 +12,22 @@
 
 ## Rung 2 — Native shell
 
-- [ ] Wrap the UI in Tauri
-- [ ] Add user-selected local directory access
-- [ ] Persist settings without ROM content
-- [ ] Add controller enumeration
-- [ ] Define canonical JSON/IPC representation of ActionEnvelope
+- [x] Wrap the UI in Tauri
+- [x] Add user-selected local directory access
+- [x] Persist settings without ROM content
+- [x] Add controller enumeration
+- [x] Define canonical JSON/IPC representation of ActionEnvelope
+- [x] Add native-shell CI compile gate
 
 ## Rung 3 — First qualified core
 
-- [ ] Pick a permissibly redistributable test target/core
-- [ ] Record core license + provenance + binary hash
+- [ ] Select the first core/target with compatible redistribution terms
+- [ ] Freeze source, version, license, and provenance
 - [ ] Load a public-domain/homebrew fixture
-- [ ] Video frame presentation
-- [ ] Audio output
-- [ ] Human controller input through Action Bus
-- [ ] Golden smoke-test receipt
+- [ ] Present video frames in the CRT surface
+- [ ] Produce audio through the host output
+- [ ] Translate human gamepad state into Action Bus events
+- [ ] Produce a golden smoke-test receipt
 
 ## Rung 4 — Session machinery
 

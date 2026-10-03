@@ -7,6 +7,8 @@ pub mod action_bus;
 pub mod core;
 pub mod library;
 
-pub use action_bus::{ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemAction};
+pub use action_bus::{
+    ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
+};
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use library::{GameImage, SystemId};
