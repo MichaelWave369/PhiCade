@@ -7,6 +7,7 @@ pub const BENCHMARK_SUITE_V3_ID: &str = "phicade-agent-gym-suite-v3";
 pub const BENCHMARK_SUITE_V4_ID: &str = "phicade-agent-gym-suite-v4";
 pub const BENCHMARK_SUITE_V5_ID: &str = "phicade-agent-gym-suite-v5";
 pub const BENCHMARK_SUITE_V6_ID: &str = "phicade-agent-gym-suite-v6";
+pub const BENCHMARK_SUITE_V7_ID: &str = "phicade-agent-gym-suite-v7";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -74,6 +75,18 @@ pub const AGENT_GYM_POWER_CHAIN_RIGHT_ROM_SHA256: &str =
 pub const AGENT_GYM_POWER_CHAIN_RIGHT_SOURCE_SHA256: &str =
     "687f150dbf82bb634c8975362d02b967f1aa26299ac36380bbfa0eb99d4e68eb";
 
+pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID: &str = "branch-selector-triangle-v1";
+pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256: &str =
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_SOURCE_SHA256: &str =
+    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID: &str = "branch-selector-square-v1";
+pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256: &str =
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_SOURCE_SHA256: &str =
+    "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_START_X: i32 = 16;
@@ -120,11 +133,18 @@ pub const AGENT_GYM_POWER_CHAIN_TARGET_X: i32 = 72;
 pub const AGENT_GYM_POWER_CHAIN_TARGET_Y: i32 = 24;
 pub const AGENT_GYM_POWER_CHAIN_INITIAL_DISTANCE: i32 = 88;
 
+pub const AGENT_GYM_BRANCH_SELECTOR_START_X: i32 = 72;
+pub const AGENT_GYM_BRANCH_SELECTOR_START_Y: i32 = 112;
+pub const AGENT_GYM_BRANCH_SELECTOR_TARGET_X: i32 = 72;
+pub const AGENT_GYM_BRANCH_SELECTOR_TARGET_Y: i32 = 24;
+pub const AGENT_GYM_BRANCH_SELECTOR_INITIAL_DISTANCE: i32 = 88;
+
 pub static AGENT_GYM_DPAD_BUTTONS: [&str; 4] = ["UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_TEMPORAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_RELAY_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_KEY_GATE_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_POWER_CHAIN_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
+pub static AGENT_GYM_BRANCH_SELECTOR_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -246,6 +266,16 @@ pub const AGENT_GYM_POWER_CHAIN_TARGET: PixelPoint = PixelPoint {
     y: AGENT_GYM_POWER_CHAIN_TARGET_Y,
 };
 
+pub const AGENT_GYM_BRANCH_SELECTOR_START: PixelPoint = PixelPoint {
+    x: AGENT_GYM_BRANCH_SELECTOR_START_X,
+    y: AGENT_GYM_BRANCH_SELECTOR_START_Y,
+};
+
+pub const AGENT_GYM_BRANCH_SELECTOR_TARGET: PixelPoint = PixelPoint {
+    x: AGENT_GYM_BRANCH_SELECTOR_TARGET_X,
+    y: AGENT_GYM_BRANCH_SELECTOR_TARGET_Y,
+};
+
 pub static AGENT_GYM_ORACLE: [OracleLeg; 2] = [
     OracleLeg {
         button: "RIGHT",
@@ -365,6 +395,32 @@ pub static AGENT_GYM_POWER_CHAIN_LEFT_ORACLE: [OracleLeg; 10] = [
 ];
 
 pub static AGENT_GYM_POWER_CHAIN_RIGHT_ORACLE: [OracleLeg; 10] = [
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 20 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 32 },
+];
+
+pub static AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ORACLE: [OracleLeg; 10] = [
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 20 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 32 },
+];
+
+pub static AGENT_GYM_BRANCH_SELECTOR_SQUARE_ORACLE: [OracleLeg; 10] = [
     OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "LEFT", frames: 28 },
@@ -553,7 +609,39 @@ pub const AGENT_GYM_POWER_CHAIN_RIGHT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpe
     oracle: &AGENT_GYM_POWER_CHAIN_RIGHT_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 11] = [
+pub const AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V7_ID,
+    id: AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID,
+    title: "Branch Selector: Triangle",
+    rom_sha256: AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ROM_SHA256,
+    source_sha256: AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_SOURCE_SHA256,
+    start: AGENT_GYM_BRANCH_SELECTOR_START,
+    target: AGENT_GYM_BRANCH_SELECTOR_TARGET,
+    initial_distance: AGENT_GYM_BRANCH_SELECTOR_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_BRANCH_SELECTOR_BUTTONS,
+    prompt: "Benchmark task: both a triangle module on the left and a square module on the right are visible. Match the central selector symbol to the same-shaped module and press A on that module. Choosing the wrong module enters an irreversible fail state. Return to the center generator, press A to install the accepted module and power the system, then move to the gate, press A to open it, and reach the visible X target.",
+    oracle: &AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ORACLE,
+};
+
+pub const AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V7_ID,
+    id: AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID,
+    title: "Branch Selector: Square",
+    rom_sha256: AGENT_GYM_BRANCH_SELECTOR_SQUARE_ROM_SHA256,
+    source_sha256: AGENT_GYM_BRANCH_SELECTOR_SQUARE_SOURCE_SHA256,
+    start: AGENT_GYM_BRANCH_SELECTOR_START,
+    target: AGENT_GYM_BRANCH_SELECTOR_TARGET,
+    initial_distance: AGENT_GYM_BRANCH_SELECTOR_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_BRANCH_SELECTOR_BUTTONS,
+    prompt: "Benchmark task: both a triangle module on the left and a square module on the right are visible. Match the central selector symbol to the same-shaped module and press A on that module. Choosing the wrong module enters an irreversible fail state. Return to the center generator, press A to install the accepted module and power the system, then move to the gate, press A to open it, and reach the visible X target.",
+    oracle: &AGENT_GYM_BRANCH_SELECTOR_SQUARE_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 13] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -565,6 +653,8 @@ pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 11] = [
     AGENT_GYM_KEY_GATE_RIGHT_TASK,
     AGENT_GYM_POWER_CHAIN_LEFT_TASK,
     AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
@@ -617,6 +707,22 @@ pub static BENCHMARK_SUITE_V6_TASKS: [BenchmarkTaskSpec; 11] = [
     AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
 ];
 
+pub static BENCHMARK_SUITE_V7_TASKS: [BenchmarkTaskSpec; 13] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+    AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
+    AGENT_GYM_POWER_CHAIN_LEFT_TASK,
+    AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK,
+];
+
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     id: BENCHMARK_SUITE_V1_ID,
     title: "Phi-Agent Gym Suite v1",
@@ -659,13 +765,21 @@ pub static BENCHMARK_SUITE_V6: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V6_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 6] = [
+pub static BENCHMARK_SUITE_V7: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V7_ID,
+    title: "Phi-Agent Gym Suite v7",
+    version: 7,
+    tasks: &BENCHMARK_SUITE_V7_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 7] = [
     &BENCHMARK_SUITE_V1,
     &BENCHMARK_SUITE_V2,
     &BENCHMARK_SUITE_V3,
     &BENCHMARK_SUITE_V4,
     &BENCHMARK_SUITE_V5,
     &BENCHMARK_SUITE_V6,
+    &BENCHMARK_SUITE_V7,
 ];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
@@ -698,6 +812,10 @@ pub fn benchmark_suite_v5_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v6_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V6_TASKS
+}
+
+pub fn benchmark_suite_v7_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V7_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -943,45 +1061,76 @@ mod tests {
     }
 
     #[test]
+    fn suite_v7_preserves_v6_and_adds_balanced_conditional_branches() {
+        let tasks = benchmark_suite_v7_tasks();
+        assert_eq!(tasks.len(), 13);
+        assert_eq!(tasks[..11], BENCHMARK_SUITE_V6_TASKS);
+        assert_eq!(tasks[11].id, AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID);
+        assert_eq!(tasks[12].id, AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID);
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V7_ID).unwrap().version, 7);
+        assert_eq!(
+            AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.prompt,
+            AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK.prompt
+        );
+        assert_eq!(
+            AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.target,
+            AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK.target
+        );
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.oracle.len(), 10);
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK.oracle.len(), 10);
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
         let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 6);
+        assert_eq!(memberships.len(), 7);
         assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
         assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(memberships[3].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(memberships[4].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(memberships[5].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(memberships[6].id, BENCHMARK_SUITE_V7_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 5);
+        assert_eq!(wall_memberships.len(), 6);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(wall_memberships[3].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(wall_memberships[4].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(wall_memberships[5].id, BENCHMARK_SUITE_V7_ID);
 
         let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 4);
+        assert_eq!(temporal_memberships.len(), 5);
         assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(temporal_memberships[3].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(temporal_memberships[4].id, BENCHMARK_SUITE_V7_ID);
 
         let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 3);
+        assert_eq!(relay_memberships.len(), 4);
         assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(relay_memberships[2].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(relay_memberships[3].id, BENCHMARK_SUITE_V7_ID);
 
         let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
-        assert_eq!(key_gate_memberships.len(), 2);
+        assert_eq!(key_gate_memberships.len(), 3);
         assert_eq!(key_gate_memberships[0].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(key_gate_memberships[1].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(key_gate_memberships[2].id, BENCHMARK_SUITE_V7_ID);
 
         let power_memberships = benchmark_suites_for_task(AGENT_GYM_POWER_CHAIN_LEFT_ID);
-        assert_eq!(power_memberships.len(), 1);
+        assert_eq!(power_memberships.len(), 2);
         assert_eq!(power_memberships[0].id, BENCHMARK_SUITE_V6_ID);
+        assert_eq!(power_memberships[1].id, BENCHMARK_SUITE_V7_ID);
+
+        let branch_memberships =
+            benchmark_suites_for_task(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID);
+        assert_eq!(branch_memberships.len(), 1);
+        assert_eq!(branch_memberships[0].id, BENCHMARK_SUITE_V7_ID);
     }
 
     #[test]
@@ -1067,6 +1216,23 @@ mod tests {
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[3].button, "WAIT");
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[4].button, "A");
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[7].button, "A");
+    }
+
+    #[test]
+    fn registry_resolves_branch_selector_tasks_by_id() {
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID).map(|task| task.id),
+            Some(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID)
+        );
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID).map(|task| task.id),
+            Some(AGENT_GYM_BRANCH_SELECTOR_SQUARE_ID)
+        );
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.oracle[0].button, "LEFT");
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK.oracle[0].button, "RIGHT");
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.oracle[1].button, "A");
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.oracle[4].button, "A");
+        assert_eq!(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK.oracle[7].button, "A");
     }
 
     #[test]
