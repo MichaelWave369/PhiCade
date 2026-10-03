@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["CUE", "VISIBLE", "The temporal pair begins with opposite LEFT/RIGHT arrow evidence rendered into the framebuffer."],
-  ["SEPARATE", "FORCED", "A dismisses the cue, a 90-frame lockout follows, and carried direction cannot cross the boundary."],
-  ["CHOICE", "PIXEL-IDENTICAL", "Both ROMs later present the same two-door framebuffer while requiring opposite correct actions."],
-  ["MEMORY", "GOVERNED", "The explicit hash-bound capsule is the intended cross-turn state channel; native authority still owns acceptance."],
+  ["BRIEFING", "MEMORIZE", "A visible LEFT/RIGHT briefing cue is the only variant-specific evidence before the mission begins."],
+  ["CORRIDOR", "NAVIGATE", "Both variants enter the same wall-detour room; direct RIGHT is blocked and the route requires DOWN → RIGHT → UP."],
+  ["TERMINAL", "RECALL", "Both variants reach the same terminal scene, where the earlier briefing side determines the correct final choice."],
+  ["EVIDENCE", "PAIRED", "CI freezes room hashes, shortcut refusal, wrong-choice failure, correct-choice success, and exact source/ROM provenance."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>SEE CUE // WRITE MEMORY // LOSE CUE // IDENTICAL LATER PIXELS // CHOOSE AGAIN // RECEIPT EVERYTHING</footer>
+      <footer>BRIEFING // REMEMBER // NAVIGATE ANOTHER ROOM // SAME TERMINAL // RECALL OBJECTIVE // RECEIPT EVERYTHING</footer>
     </main>
   );
 }
