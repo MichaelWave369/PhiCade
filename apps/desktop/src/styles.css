@@ -593,7 +593,7 @@ footer {
 /* Rung 8: local Ollama provider */
 .provider-strip {
   display: grid;
-  grid-template-columns: auto auto minmax(150px, 1fr) auto auto auto auto minmax(180px, 1.4fr);
+  grid-template-columns: auto auto minmax(150px, 1fr) auto auto auto auto auto minmax(180px, 1.4fr);
   gap: 6px;
   align-items: center;
   margin-top: 8px;
@@ -682,6 +682,19 @@ footer {
 }
 
 .provider-strip button.benchmark-active::before {
+  content: "◆ ";
+}
+
+
+
+/* Rung 13: benchmark campaigns */
+.provider-strip button.campaign-active {
+  color: var(--amber);
+  border-color: var(--amber);
+  box-shadow: inset 0 0 18px rgba(255, 200, 87, .12), 0 0 12px rgba(255, 200, 87, .08);
+}
+
+.provider-strip button.campaign-active::before {
   content: "◆ ";
 }
 
