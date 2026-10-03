@@ -206,8 +206,8 @@ export interface AutodriveStatus {
   consecutiveEmptyTurns: number;
   nextObservationFrame: number;
   lastObservationFrame: number | null;
-  totalCadenceWaitFrames: number;
-  maxCadenceWaitFrames: number;
+  totalScheduledCadenceWaitFrames: number;
+  maxScheduledCadenceWaitFrames: number;
   policy: AutodrivePolicy;
   stopReason: AutodriveStopReason | null;
 }
@@ -225,8 +225,8 @@ export interface AutodriveReceipt {
   turnsIssued: number;
   turnsCompleted: number;
   totalActions: number;
-  totalCadenceWaitFrames: number;
-  maxCadenceWaitFrames: number;
+  totalScheduledCadenceWaitFrames: number;
+  maxScheduledCadenceWaitFrames: number;
   lastObservationFrame: number | null;
   stopReason: AutodriveStopReason;
   finalFrameSha256: string;
