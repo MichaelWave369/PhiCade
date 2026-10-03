@@ -1868,7 +1868,7 @@ fn step_emulation(
             .autodrive
             .as_ref()
             .is_some_and(|status| status.active)
-            && matches!(event.action, ActionKind::System { .. });
+            && matches!(&event.action, ActionKind::System { .. });
 
         if decision.accepted && !autodrive_blocks_system {
             event.sequence = session.next_action_sequence;
