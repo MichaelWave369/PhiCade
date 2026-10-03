@@ -305,6 +305,90 @@ struct CampaignComparisonArtifact {
     receipt: CampaignComparisonReceipt,
 }
 
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SuiteTaskCampaignRef {
+    task_id: String,
+    task_title: String,
+    campaign_id: u64,
+    campaign_receipt_sha256: String,
+    source_sha256: String,
+    rom_sha256: String,
+    stats: BenchmarkCampaignStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteReportReceipt {
+    schema: String,
+    record_status: String,
+    report_id: u64,
+    suite_id: String,
+    cohort_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    trials_per_task: u16,
+    tasks: Vec<SuiteTaskCampaignRef>,
+    stats: BenchmarkSuiteAggregateStats,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteReportArtifact {
+    receipt_path: String,
+    receipt: BenchmarkSuiteReportReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SuiteCandidateTask {
+    task_id: String,
+    task_title: String,
+    campaign_id: u64,
+    mean_score_1000: f64,
+    success_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BenchmarkSuiteReportCandidate {
+    cohort_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    trials_per_task: u16,
+    covered_tasks: u16,
+    suite_task_count: u16,
+    ready: bool,
+    tasks: Vec<SuiteCandidateTask>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SuiteCohortIdentity {
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    total_trials: u16,
+}
+
+#[derive(Debug, Clone)]
+struct SuiteCohortEvidence {
+    identity: SuiteCohortIdentity,
+    tasks: std::collections::BTreeMap<String, (PathBuf, BenchmarkCampaignReceipt)>,
+}
+
 struct EmulatorSession {
     core: LibretroCore,
     game_path: String,
@@ -334,6 +418,7 @@ struct EmulatorSession {
     last_benchmark_campaign: Option<BenchmarkCampaignExport>,
     next_benchmark_campaign_id: u64,
     next_campaign_comparison_id: u64,
+    next_suite_report_id: u64,
 }
 
 impl Drop for EmulatorSession {
