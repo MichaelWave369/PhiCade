@@ -145,9 +145,12 @@
         "LEFT",
         "A",
         "RIGHT",
+        "WAIT",
         "A",
+        "WAIT",
         "UP",
         "A",
+        "WAIT",
         "UP"
       ],
       "qualificationReceipt": "artifacts/agent-gym-power-chain-left-qualification.json"
@@ -162,9 +165,12 @@
         "RIGHT",
         "A",
         "LEFT",
+        "WAIT",
         "A",
+        "WAIT",
         "UP",
         "A",
+        "WAIT",
         "UP"
       ],
       "qualificationReceipt": "artifacts/agent-gym-power-chain-right-qualification.json"
