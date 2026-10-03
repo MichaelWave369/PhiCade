@@ -2652,7 +2652,7 @@ fn verify_campaign_trial_receipts(
 }
 
 fn validate_campaign_for_comparison(
-    session: &EmulatorSession,
+    model_benchmark_dir: &Path,
     campaign: &BenchmarkCampaignReceipt,
 ) -> Result<(), String> {
     if campaign.record_status != "COMPLETE" {
@@ -2693,7 +2693,7 @@ fn validate_campaign_for_comparison(
             campaign.campaign_id
         ));
     }
-    verify_campaign_trial_receipts(&session.paths.model_benchmark_dir, campaign)
+    verify_campaign_trial_receipts(model_benchmark_dir, campaign)
 }
 
 fn validate_campaign_compatibility(
@@ -2808,8 +2808,8 @@ fn compare_benchmark_campaigns(
     let (path_a, a) = load_benchmark_campaign_receipt(session, campaign_a_id)?;
     let (path_b, b) = load_benchmark_campaign_receipt(session, campaign_b_id)?;
 
-    validate_campaign_for_comparison(session, &a)?;
-    validate_campaign_for_comparison(session, &b)?;
+    validate_campaign_for_comparison(&session.paths.model_benchmark_dir, &a)?;
+    validate_campaign_for_comparison(&session.paths.model_benchmark_dir, &b)?;
     validate_campaign_compatibility(&a, &b)?;
 
     let scores_a: Vec<u16> = a.trials.iter().filter_map(|trial| trial.score_1000).collect();
