@@ -475,7 +475,7 @@ pub static AGENT_GYM_BRANCH_SELECTOR_SQUARE_ORACLE: [OracleLeg; 10] = [
     OracleLeg { button: "UP", frames: 32 },
 ];
 
-pub static AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ORACLE: [OracleLeg; 15] = [
+pub static AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ORACLE: [OracleLeg; 16] = [
     OracleLeg { button: "LEFT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "RIGHT", frames: 28 },
@@ -485,51 +485,54 @@ pub static AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ORACLE: [OracleLeg; 15] = [
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 4 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 12 },
-    OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 16 },
-];
-
-pub static AGENT_GYM_NESTED_TRIANGLE_CROSS_ORACLE: [OracleLeg; 15] = [
-    OracleLeg { button: "LEFT", frames: 28 },
-    OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "RIGHT", frames: 28 },
-    OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 16 },
-    OracleLeg { button: "RIGHT", frames: 28 },
-    OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "LEFT", frames: 28 },
-    OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "A", frames: 1 },
-    OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 12 },
+    OracleLeg { button: "UP", frames: 8 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 16 },
 ];
 
-pub static AGENT_GYM_NESTED_SQUARE_CIRCLE_ORACLE: [OracleLeg; 15] = [
-    OracleLeg { button: "RIGHT", frames: 28 },
-    OracleLeg { button: "A", frames: 1 },
+pub static AGENT_GYM_NESTED_TRIANGLE_CROSS_ORACLE: [OracleLeg; 16] = [
     OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 16 },
-    OracleLeg { button: "LEFT", frames: 28 },
-    OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "LEFT", frames: 28 },
     OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 4 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 12 },
+    OracleLeg { button: "UP", frames: 8 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 16 },
 ];
 
-pub static AGENT_GYM_NESTED_SQUARE_CROSS_ORACLE: [OracleLeg; 15] = [
+pub static AGENT_GYM_NESTED_SQUARE_CIRCLE_ORACLE: [OracleLeg; 16] = [
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 16 },
+    OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 4 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 8 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 16 },
+];
+
+pub static AGENT_GYM_NESTED_SQUARE_CROSS_ORACLE: [OracleLeg; 16] = [
     OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "LEFT", frames: 28 },
@@ -539,9 +542,10 @@ pub static AGENT_GYM_NESTED_SQUARE_CROSS_ORACLE: [OracleLeg; 15] = [
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "LEFT", frames: 28 },
     OracleLeg { button: "WAIT", frames: 2 },
+    OracleLeg { button: "UP", frames: 4 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
-    OracleLeg { button: "UP", frames: 12 },
+    OracleLeg { button: "UP", frames: 8 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 16 },
@@ -1308,10 +1312,10 @@ mod tests {
             AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK.prompt,
             AGENT_GYM_NESTED_SQUARE_CROSS_TASK.prompt
         );
-        assert_eq!(AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK.oracle.len(), 15);
-        assert_eq!(AGENT_GYM_NESTED_TRIANGLE_CROSS_TASK.oracle.len(), 15);
-        assert_eq!(AGENT_GYM_NESTED_SQUARE_CIRCLE_TASK.oracle.len(), 15);
-        assert_eq!(AGENT_GYM_NESTED_SQUARE_CROSS_TASK.oracle.len(), 15);
+        assert_eq!(AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK.oracle.len(), 16);
+        assert_eq!(AGENT_GYM_NESTED_TRIANGLE_CROSS_TASK.oracle.len(), 16);
+        assert_eq!(AGENT_GYM_NESTED_SQUARE_CIRCLE_TASK.oracle.len(), 16);
+        assert_eq!(AGENT_GYM_NESTED_SQUARE_CROSS_TASK.oracle.len(), 16);
     }
 
     #[test]
