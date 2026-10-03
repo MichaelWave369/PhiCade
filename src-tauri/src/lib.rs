@@ -1,9 +1,10 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
-    ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification, ReplayVerificationResult,
-    SystemCommand, SystemId, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    ActionEnvelope, ActionKind, ActionSource, AgentGrant, AuthorityPolicy, AudioBuffer, ControlMode,
+    EmulatorCore, FrameBuffer, GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -68,6 +69,9 @@ struct EmulatorSession {
     last_frame: FrameBuffer,
     recording: Option<ReplayRecording>,
     last_replay: Option<ReplayExport>,
+    authority: AuthorityPolicy,
+    authority_rejections: u64,
+    last_authority_reason: Option<String>,
 }
 
 impl Drop for EmulatorSession {
@@ -168,6 +172,23 @@ struct FramePacket {
     replay_recording: bool,
     replay_actions: usize,
     replay_checkpoints: usize,
+    control_mode: ControlMode,
+    authority_rejections: u64,
+    last_authority_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AuthorityStatus {
+    mode: ControlMode,
+    playable_ports: u8,
+    agent_id: Option<String>,
+    agent_seat: Option<u8>,
+    allowed_buttons: Vec<String>,
+    allowed_axes: Vec<String>,
+    expires_at_frame: Option<u64>,
+    rejected_actions: u64,
+    last_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1093,6 +1114,9 @@ fn start_emulation(
         last_frame: FrameBuffer::default(),
         recording: None,
         last_replay: None,
+        authority: AuthorityPolicy::new(1),
+        authority_rejections: 0,
+        last_authority_reason: None,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
