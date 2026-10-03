@@ -1,6 +1,6 @@
 use phicade_libretro::LibretroCore;
 use phicade_runtime::{
-    benchmark_task_by_id, locate_agent_gym_player, ActionEnvelope, ActionKind, ActionSource,
+    benchmark_task_by_id, benchmark_task_success, locate_agent_gym_player, ActionEnvelope, ActionKind, ActionSource,
     AudioBuffer, BenchmarkTaskSpec, EmulatorCore, FrameBuffer, GameImage, PixelPoint, SystemId,
     AGENT_GYM_TEMPORAL_LEFT_ID, AGENT_GYM_TEMPORAL_RIGHT_ID,
 };
@@ -174,7 +174,7 @@ fn carried_direction_probe(
 fn neutral_rearm_and_move(
     core: &mut LibretroCore,
     direction: &str,
-    target: PixelPoint,
+    task: &BenchmarkTaskSpec,
     video: &mut FrameBuffer,
     audio: &mut AudioBuffer,
 ) -> Result<(PixelPoint, bool), String> {
@@ -215,7 +215,7 @@ fn neutral_rearm_and_move(
     )?;
     no_input(core, SETTLE_FRAMES, video, audio, "settle recovered choice")?;
     let player = locate_agent_gym_player(video)?;
-    Ok((player, player == target))
+    Ok((player, benchmark_task_success(task, player)))
 }
 
 fn qualify_variant(
@@ -286,7 +286,7 @@ fn qualify_variant(
     let (recovered_final_player, neutral_rearm_recovery_pass) = neutral_rearm_and_move(
         &mut core,
         direction,
-        task.target,
+        task,
         &mut video,
         &mut audio,
     )?;
