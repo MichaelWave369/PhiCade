@@ -7,7 +7,7 @@ use phicade_runtime::{
     FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
     ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
     AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256,
-    AGENT_GYM_START, AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
+    AGENT_GYM_START, AGENT_GYM_TARGET, AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
     AUTODRIVE_STATUS_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
     score_agent_gym_frame,
 };
@@ -1585,6 +1585,106 @@ fn autodrive_artifact(export: &AutodriveExport) -> AutodriveArtifact {
     }
 }
 
+fn model_benchmark_artifact(export: &ModelBenchmarkExport) -> ModelBenchmarkArtifact {
+    ModelBenchmarkArtifact {
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finish_model_benchmark(
+    session: &mut EmulatorSession,
+    autodrive: &AutodriveExport,
+) -> Result<Option<ModelBenchmarkArtifact>, String> {
+    let Some(run) = session.model_benchmark.clone() else {
+        return Ok(None);
+    };
+    if run.autodrive_run_id != autodrive.receipt.run_id {
+        return Ok(None);
+    }
+
+    let scored: Result<AgentGymScore, String> = score_agent_gym_frame(&session.last_frame);
+    let (
+        record_status,
+        final_player,
+        final_distance,
+        progress,
+        score_1000,
+        task_success,
+        scoring_error,
+    ) = match scored {
+        Ok(score) => (
+            "COMPLETE".to_owned(),
+            Some(score.player),
+            Some(score.final_distance),
+            Some(score.progress),
+            Some(score.score_1000),
+            score.success,
+            None,
+        ),
+        Err(error) => (
+            "SCORING_ERROR".to_owned(),
+            None,
+            None,
+            None,
+            None,
+            false,
+            Some(error),
+        ),
+    };
+
+    let receipt = ModelGameplayBenchmarkReceipt {
+        schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.to_owned(),
+        record_status,
+        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_run_id: run.run_id,
+        provider: run.provider,
+        model: run.model,
+        model_digest: run.model_digest,
+        model_qualification_sha256: run.model_qualification_sha256,
+        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
+        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        core_sha256: run.core_sha256,
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        autodrive_receipt_sha256: sha256_file(&autodrive.receipt_path)?,
+        autodrive_run_id: autodrive.receipt.run_id,
+        policy: autodrive.receipt.policy.clone(),
+        stop_reason: autodrive.receipt.stop_reason,
+        started_frame: run.started_frame,
+        ended_frame: autodrive.receipt.ended_frame,
+        start_player: run.start_player,
+        final_player,
+        target: AGENT_GYM_TARGET,
+        initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+        final_distance,
+        progress,
+        score_1000,
+        task_success,
+        turns_issued: autodrive.receipt.turns_issued,
+        turns_completed: autodrive.receipt.turns_completed,
+        total_actions: autodrive.receipt.total_actions,
+        final_frame_sha256: autodrive.receipt.final_frame_sha256.clone(),
+        scoring_error,
+    };
+
+    let receipt_path = session
+        .paths
+        .model_benchmark_dir
+        .join(format!("run-{:06}.json", run.run_id));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize model gameplay benchmark receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+
+    let export = ModelBenchmarkExport {
+        receipt_path,
+        receipt,
+    };
+    session.last_model_benchmark = Some(export.clone());
+    session.model_benchmark = None;
+    Ok(Some(model_benchmark_artifact(&export)))
+}
+
 fn finish_autodrive(
     session: &mut EmulatorSession,
     reason: AutodriveStopReason,
@@ -1641,6 +1741,7 @@ fn finish_autodrive(
         receipt,
     };
     session.last_autodrive = Some(export.clone());
+    let _ = finish_model_benchmark(session, &export)?;
     Ok(autodrive_artifact(&export))
 }
 
