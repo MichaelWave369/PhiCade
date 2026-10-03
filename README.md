@@ -3,39 +3,41 @@
 > **Old worlds. New players.**
 
 PhiCade is an open-source retro game runtime and emulator front end built around
-one core idea: every player enters through the same Action Bus.
+one core idea: every player enters through the same governed runtime seam.
 
-Human controls, deterministic replays, scripts, network input, and Phi-Bot seats
-can therefore share the same authority and evidence machinery.
+## Current status — Rung 7
 
-## Current status — Rung 6
-
-PhiCade now has a governed Phi-Bot gameplay seat on top of the qualified SameBoy
-runtime, persistent session machinery, and Replay Ledger.
+PhiCade now has a provider-neutral Agent Driver Protocol on top of its governed
+Phi-Bot seat, Replay Ledger, persistent session machinery, and qualified SameBoy
+runtime.
 
 Highlights:
 
-- React + TypeScript + Vite terminal UI
-- Tauri 2 + Rust desktop shell
-- user-selected local ROM directory
-- qualified SameBoy 1.0.3 libretro host
-- GB/GBC video + audio
-- battery RAM, save states, rewind, screenshots, per-game profiles
-- deterministic content-addressed Replay Ledger
-- frame/state/input verification receipts
+- Tauri 2 + React/TypeScript desktop shell
+- qualified SameBoy 1.0.3 GB/GBC host
+- battery RAM, save states, rewind, screenshots, profiles
+- content-addressed deterministic Replay Ledger
 - framebuffer-only Phi-Bot observation API
-- explicit agentId + seat authority grants
-- scoped allowed-button/axis/system-command permissions
-- grant expiry and per-frame action limits
-- HUMAN, PHI-BOT and CO-OP control modes
-- immediate human takeover / grant revocation
-- explicit VERSUS refusal on the one-port SameBoy core
-- authority rejection telemetry
-- CI human-vs-agent exact-state parity qualification
-- CI privileged-action rejection and takeover qualification
+- HUMAN / PHI-BOT / CO-OP authority modes
+- immediate human takeover
+- scoped and expiring agent grants
+- transport-neutral AgentTurnRequest / AgentTurnResponse
+- observation hash + frame binding
+- action-count and delayed-action budgets
+- stale/mismatched response rejection
+- native scheduled driver inbox
+- host-canonical action sequencing
+- human-last same-frame co-op precedence
+- deterministic desktop reference driver
+- CI driver-vs-direct behavioral parity qualification
 
-No commercial ROMs, proprietary console BIOS files, or third-party core binaries
-are committed to this repository.
+No model provider is hard-coded into the game runtime.
+
+A local model, cloud model, script, or deterministic controller only needs to turn:
+
+`AgentTurnRequest -> AgentTurnResponse`
+
+Everything after that remains PhiCade's responsibility.
 
 ## Run
 
@@ -44,22 +46,19 @@ npm install
 npm run desktop
 ```
 
-Choose a ROM directory, select a compatible SameBoy libretro binary, choose a
+Choose a ROM directory, select a compatible SameBoy libretro core, choose a
 `.gb` or `.gbc` image, and use **LOAD / RUN**.
 
-## Phi-Bot seat
+For the agent path:
 
-The operator deck provides:
+1. select **HANDOFF** or **CO-OP**
+2. press **DRIVER TURN**
+3. PhiCade issues a real observation-bound turn request
+4. the reference driver produces a bounded response
+5. native PhiCade schedules it into the same authority/core path
 
-- **HUMAN** — revoke the bot grant and return gameplay to the human
-- **HANDOFF** — grant seat 1 to `phi-local`
-- **CO-OP** — human and Phi-Bot share seat 1
-- **VERSUS** — demonstrates the current SameBoy single-port refusal
-- **OBSERVE + ACT** — fetch a real framebuffer observation and enqueue a
-  deterministic demo action through the same Action Bus
-
-The demo control is deliberately simple. Rung 6 builds the governed seat, not a
-claim that a particular AI policy is good at games.
+The reference driver is intentionally simple. Rung 7 proves the integration
+contract, not model intelligence.
 
 ## Qualification
 
@@ -72,6 +71,7 @@ Produces:
 - `artifacts/sameboy-qualification.json`
 - `artifacts/replay-qualification.json`
 - `artifacts/phibot-qualification.json`
+- `artifacts/agent-driver-qualification.json`
 
 See:
 
@@ -79,6 +79,7 @@ See:
 - `docs/SESSION_MACHINERY.md`
 - `docs/REPLAY_LEDGER.md`
 - `docs/PHIBOT_SEAT.md`
+- `docs/AGENT_DRIVER_PROTOCOL.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
