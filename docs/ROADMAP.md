@@ -163,10 +163,25 @@
 - [x] Desktop BENCH/CAMPAIGN gates for any registered task
 - [x] Comparison Lab remains like-for-like across task identity
 
+## Rung 16 — Benchmark Suite Reports
+- [x] Cross-task campaign cohort discovery
+- [x] Exact model/digest/qualification/core/policy/trial-count cohort pin
+- [x] READY only with every registered Suite v1 task
+- [x] Deterministic highest-campaign selection per task
+- [x] Re-verify every campaign and underlying trial receipt
+- [x] Persistent suite-report receipt IDs
+- [x] Campaign receipt SHA-256 binding per task
+- [x] Shared macro task-mean aggregation
+- [x] Trial-weighted overall success rate
+- [x] Task mean min/max + population stddev
+- [x] Desktop READY/INCOMPLETE cohort lane
+- [x] Digest-split, incomplete, and tamper CI controls
+- [x] Comparison Lab remains task-local
+
 ## Later
 
-Adaptive observation cadence, additional benchmark tasks, multi-task aggregate
-reports, additional uncertainty methods, provider capability profiles beyond
+Adaptive observation cadence, additional benchmark tasks, suite-to-suite model
+comparison, additional uncertainty methods, provider capability profiles beyond
 Ollama, cloud-provider adapters, metadata/cover art, additional systems, true
 multi-port versus play, netplay, spectator mode, achievements, tournaments,
 CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.
