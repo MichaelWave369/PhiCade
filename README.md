@@ -5,10 +5,10 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 9
+## Current status — Rung 10
 
-PhiCade can now run a local Ollama vision model through a **bounded autonomous
-multi-turn gameplay loop**.
+PhiCade now has a **digest-bound local model qualification registry** on top of
+the governed Ollama Autodrive stack.
 
 Current stack:
 
@@ -18,13 +18,15 @@ Current stack:
 - deterministic Replay Ledger
 - governed Phi-Bot seat
 - provider-neutral Agent Driver Protocol
-- loopback-only local Ollama vision adapter
-- native bounded Autodrive policy
-- queue-aware repeated model turns
-- immediate human takeover
-- explicit provider/grant/budget stop reasons
-- persistent autonomous-run receipts
-- SameBoy bounded-loop CI qualification
+- loopback-only Ollama vision adapter
+- bounded multi-turn Autodrive
+- exact installed-model digest discovery
+- Ollama capability inspection
+- synthetic local vision probe
+- structured-output qualification probe
+- persistent model qualification receipts
+- native exact-digest AUTO DRIVE gate
+- automatic stale qualification invalidation
 
 ## Run
 
@@ -36,34 +38,37 @@ npm run desktop
 Choose a ROM directory, select a compatible SameBoy libretro core, and load a
 `.gb` or `.gbc` game.
 
-## Local autonomous play
+## Qualify a local model
 
 With Ollama running locally:
 
 1. **SCAN MODELS**
-2. select a vision-capable local model
-3. load a game
-4. choose **HANDOFF**
-5. press **AUTO DRIVE**
+2. select a local model
+3. inspect the displayed capability/digest state
+4. press **QUALIFY MODEL**
 
-Default autonomous limits are:
+PhiCade:
 
-- 32 turns
-- 128 total proposed actions
-- 4 consecutive empty turns
-- 3,600 emulated frames
+- resolves the exact current model digest,
+- inspects advertised capabilities,
+- requires advertised vision support,
+- generates a 64×64 solid-red diagnostic image,
+- sends the image using a strict red/blue structured-output schema,
+- requires the model to return `red`,
+- persists the result under that exact digest.
 
-PhiCade pauses the emulator during each vision inference, resumes to execute the
-bounded action sequence, waits for the native queue to drain, then issues the next
-turn.
+A PASS receipt unlocks **AUTO DRIVE** for that digest.
 
-**HUMAN remains live at all times** and immediately terminates the run and revokes
-the bot grant.
+If the model is re-pulled or otherwise changes digest, the old receipt no longer
+qualifies it.
 
-AUTO DRIVE can also stop because of provider failure, grant expiry, turn/action/
-frame budgets, repeated empty turns, or core shutdown.
+## One-shot vs autonomous
 
-Each completed/stopped run writes a receipt under the local game fingerprint.
+**OLLAMA TURN** remains available for controlled one-shot experimentation with an
+unqualified model.
+
+**AUTO DRIVE** requires a current digest-bound qualification PASS in addition to
+all existing Rung 9 authority and run-budget controls.
 
 ## Qualification
 
@@ -79,7 +84,8 @@ Produces:
 - `artifacts/agent-driver-qualification.json`
 - `artifacts/autodrive-qualification.json`
 
-Native CI also runs the local mock-Ollama adapter tests.
+Native CI additionally runs mock-Ollama tests for capability inspection, visual
+qualification, and digest invalidation.
 
 See:
 
@@ -90,6 +96,7 @@ See:
 - `docs/AGENT_DRIVER_PROTOCOL.md`
 - `docs/OLLAMA_PROVIDER.md`
 - `docs/AUTODRIVE.md`
+- `docs/MODEL_QUALIFICATION.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
