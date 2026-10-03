@@ -1,7 +1,8 @@
 use phicade_libretro::LibretroCore;
 use phicade_runtime::{
+    agent_gym_distance, agent_gym_score_1000, agent_gym_success, locate_agent_gym_player,
     ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
-    SystemId,
+    PixelPoint, SystemId, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_TARGET, AGENT_GYM_AGENT_GYM_WARMUP_FRAMES,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -10,21 +11,6 @@ use std::{
     path::{Path, PathBuf},
     process,
 };
-
-const TARGET_X: i32 = 136;
-const TARGET_Y: i32 = 112;
-const PLAYER_SIZE: usize = 8;
-const WARMUP_FRAMES: u64 = 120;
-const RIGHT_FRAMES: u64 = 60;
-const DOWN_FRAMES: u64 = 44;
-const SETTLE_FRAMES: u64 = 6;
-
-#[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PixelPoint {
-    x: i32,
-    y: i32,
-}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -249,14 +235,14 @@ fn run() -> Result<(), String> {
 
     let mut video = FrameBuffer::default();
     let mut audio = AudioBuffer::default();
-    run_no_input(&mut core, WARMUP_FRAMES, &mut video, &mut audio)?;
+    run_no_input(&mut core, AGENT_GYM_WARMUP_FRAMES, &mut video, &mut audio)?;
 
     let start_frame = core.frame_count();
     let start_player = locate_player(&video)?;
-    let initial_distance = distance(start_player);
-    if initial_distance < 150 {
+    let initial_distance = agent_gym_distance(start_player);
+    if initial_distance != AGENT_GYM_INITIAL_DISTANCE {
         return Err(format!(
-            "gym start geometry is not challenging enough: distance={initial_distance}"
+            "gym start geometry drifted: expected {AGENT_GYM_INITIAL_DISTANCE}, got {initial_distance}"
         ));
     }
 
@@ -268,7 +254,7 @@ fn run() -> Result<(), String> {
     let run_frames = RIGHT_FRAMES + DOWN_FRAMES + SETTLE_FRAMES + 1;
     run_no_input(&mut core, run_frames, &mut video, &mut audio)?;
     let no_input_final_player = locate_player(&video)?;
-    let no_input_distance = distance(no_input_final_player);
+    let no_input_distance = agent_gym_distance(no_input_final_player);
     let no_input_progress = initial_distance - no_input_distance;
     let no_input_control_pass = no_input_progress == 0;
 
@@ -277,10 +263,10 @@ fn run() -> Result<(), String> {
     core.restore_input_mask(frozen_mask);
     run_oracle(&mut core, &mut video, &mut audio)?;
     let oracle_final_player = locate_player(&video)?;
-    let oracle_final_distance = distance(oracle_final_player);
+    let oracle_final_distance = agent_gym_distance(oracle_final_player);
     let oracle_progress = initial_distance - oracle_final_distance;
-    let oracle_score_1000 = score(initial_distance, oracle_final_distance);
-    let oracle_success = oracle_final_distance <= 4;
+    let oracle_score_1000 = agent_gym_score_1000(initial_distance, oracle_final_distance);
+    let oracle_success = agent_gym_success(oracle_final_player);
     let oracle_control_pass = oracle_success && oracle_score_1000 >= 980;
     let oracle_final_frame_sha256 = sha256_bytes(&video.rgba8);
     let end_frame = core.frame_count();
@@ -309,10 +295,7 @@ fn run() -> Result<(), String> {
         start_frame,
         end_frame,
         start_player,
-        target: PixelPoint {
-            x: TARGET_X,
-            y: TARGET_Y,
-        },
+        target: AGENT_GYM_TARGET,
         initial_distance,
         no_input_final_player,
         no_input_distance,
