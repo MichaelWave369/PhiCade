@@ -132,8 +132,24 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$POWER_RIGHT_OBJ" "$POWER_RIGHT_
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$POWER_RIGHT_ROM" "$POWER_RIGHT_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIPOWERRIGHT" "$POWER_RIGHT_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task L / Branch Selector TRIANGLE\n'
+BRANCH_TRI_SRC="$ROOT/benchmarks/agent-gym-branch-selector-triangle/main.asm"
+BRANCH_TRI_OBJ="$WORK/phi-agent-gym-branch-selector-triangle.o"
+BRANCH_TRI_ROM="$WORK/phi-agent-gym-branch-selector-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BRANCH_TRI_OBJ" "$BRANCH_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BRANCH_TRI_ROM" "$BRANCH_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBRANCHTRI" "$BRANCH_TRI_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task M / Branch Selector SQUARE\n'
+BRANCH_SQ_SRC="$ROOT/benchmarks/agent-gym-branch-selector-square/main.asm"
+BRANCH_SQ_OBJ="$WORK/phi-agent-gym-branch-selector-square.o"
+BRANCH_SQ_ROM="$WORK/phi-agent-gym-branch-selector-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BRANCH_SQ_OBJ" "$BRANCH_SQ_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BRANCH_SQ_ROM" "$BRANCH_SQ_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBRANCHSQ" "$BRANCH_SQ_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -283,6 +299,29 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "power-chain-right-v1" \
   --receipt "$ROOT/artifacts/agent-gym-power-chain-right-qualification.json"
 
+printf '==> running Branch Selector pair conditional-branch qualification\n'
+cargo run -p phicade-libretro --bin branch_selector_qualify -- \
+  --core "$CORE" \
+  --triangle-rom "$BRANCH_TRI_ROM" \
+  --square-rom "$BRANCH_SQ_ROM" \
+  --receipt "$ROOT/artifacts/branch-selector-pair-qualification.json"
+
+printf '==> running Phi-Agent Gym task L / Branch Selector TRIANGLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BRANCH_TRI_ROM" \
+  --source "$BRANCH_TRI_SRC" \
+  --task "branch-selector-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-branch-selector-triangle-qualification.json"
+
+printf '==> running Phi-Agent Gym task M / Branch Selector SQUARE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BRANCH_SQ_ROM" \
+  --source "$BRANCH_SQ_SRC" \
+  --task "branch-selector-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-branch-selector-square-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -304,3 +343,6 @@ printf '    %s\n' "$ROOT/artifacts/key-gate-pair-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-power-chain-left-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-power-chain-right-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/power-chain-pair-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/branch-selector-pair-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-branch-selector-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-branch-selector-square-qualification.json"
