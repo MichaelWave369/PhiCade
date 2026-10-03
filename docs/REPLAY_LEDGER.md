@@ -65,7 +65,7 @@ not land exactly on the periodic interval.
 
 ## Recording constraints
 
-Replay v1 deliberately keeps the timeline linear.
+Replay v1 deliberately keeps the timeline linear and input-only. SameBoy qualification showed that RESET after restoring a serialized snapshot is not replay-exact in the frozen configuration, so v1 does not claim system-command determinism.
 
 While recording:
 
@@ -74,7 +74,7 @@ While recording:
 - load-state is blocked
 - rewind is blocked
 - per-game profile changes are blocked
-- reset is allowed and recorded
+- reset is blocked
 - ordinary button/axis input is allowed and recorded
 - screenshots and battery-RAM flushes remain host observations/persistence and do
   not enter the replay input tape
@@ -141,7 +141,7 @@ control.
 Positive control:
 
 - warm up the frozen SameBoy core
-- record a synthetic action stream containing button transitions and RESET
+- record a synthetic controller-action stream
 - checkpoint every 30 frames
 - restore the initial state
 - replay the tape
@@ -150,9 +150,9 @@ Positive control:
 Negative control:
 
 - clone the same replay
-- replace the recorded RESET with a different button action
+- replace an A-button press with a B-button press while leaving the original A release in place
 - run verification again
-- require the divergence detector to report a fork
+- require the held-input-mask checkpoint to report a fork
 
 CI fails if either exact replay fails or the deliberately corrupted replay escapes
 detection.
