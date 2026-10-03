@@ -1995,23 +1995,14 @@ fn start_autodrive(
         .map(|(status, _)| status)
 }
 
-#[tauri::command]
-fn start_model_gameplay_benchmark(
-    app: AppHandle,
-    state: State<'_, EmulatorState>,
+fn start_model_gameplay_benchmark_inner(
+    app: &AppHandle,
+    session: &mut EmulatorSession,
     provider: String,
     model: String,
     model_digest: String,
     policy: AutodrivePolicy,
 ) -> Result<ModelBenchmarkStart, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_mut()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
     if session.game_key != AGENT_GYM_ROM_SHA256 {
         return Err(format!(
             "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
@@ -2128,6 +2119,42 @@ fn start_model_gameplay_benchmark(
         benchmark_run_id,
         autodrive,
     })
+
+}
+
+#[tauri::command]
+fn start_model_gameplay_benchmark(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<ModelBenchmarkStart, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session
+        .benchmark_campaign
+        .as_ref()
+        .is_some_and(|campaign| campaign.active)
+    {
+        return Err("single benchmark start is disabled while a campaign is active".into());
+    }
+
+    start_model_gameplay_benchmark_inner(
+        &app,
+        session,
+        provider,
+        model,
+        model_digest,
+        policy,
+    )
 }
 
 #[tauri::command]
