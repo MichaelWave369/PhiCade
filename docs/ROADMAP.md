@@ -308,7 +308,7 @@
 - [x] v4 READY at 7/7 while v5 remains INCOMPLETE at 7/9
 - [x] v5 remains INCOMPLETE at 8/9
 - [x] v5 READY only at 9/9
-- [ ] Freeze canonical Key Gate source + ROM SHA-256 after qualification
+- [x] Freeze canonical Key Gate source + ROM SHA-256 after qualification
 
 ## Later
 
