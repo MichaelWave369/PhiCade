@@ -37,8 +37,8 @@
       "id": "temporal-cue-left-v1",
       "title": "Temporal Cue: Left",
       "source": "benchmarks/agent-gym-temporal-left/main.asm",
-      "sourceSha256": "2222222222222222222222222222222222222222222222222222222222222222",
-      "romSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "sourceSha256": "450ecadadb3ed51e1e613e4edd06007880309c4841fbae313bb45f0a75932a4c",
+      "romSha256": "da16bdda571bd2f3d5581097e1643ce7496ae3ea586f3b1756330a2b3fc171f5",
       "oracle": ["A", "WAIT", "LEFT"],
       "qualificationReceipt": "artifacts/agent-gym-temporal-left-qualification.json"
     },
