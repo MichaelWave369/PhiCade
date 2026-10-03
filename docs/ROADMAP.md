@@ -31,12 +31,13 @@
 
 ## Rung 4 — Session machinery
 
-- [ ] Save RAM
-- [ ] Save/load state
-- [ ] Fast-forward
-- [ ] Rewind buffer
-- [ ] Screenshots
-- [ ] Per-game profiles
+- [x] Save RAM
+- [x] Save/load state
+- [x] Fast-forward
+- [x] Rewind buffer
+- [x] Screenshots
+- [x] Per-game profiles
+- [x] CI state round-trip qualification receipt
 
 ## Rung 5 — Replay Ledger
 

@@ -62,3 +62,14 @@ core can observe them. The core never polls browser/controller APIs directly. Sa
 libretro callback exposes its native high-rate audio stream (2,097,152 Hz in the frozen
 qualification); the native host resamples rates above the Web Audio nominal range to
 48 kHz before PCM crosses the Tauri IPC boundary.
+
+
+## Rung 4 state qualification
+
+Rung 4 upgrades the receipt to `phicade.core-qualification.v2`. The gate now
+serializes the running core, advances 30 frames, restores the snapshot, advances the
+same 30 frames again, and requires an exact final-frame SHA-256 match.
+
+The receipt records serialized-state size, round-trip frame count, round-trip frame
+hash, pass/fail, and exposed save-RAM size in addition to the Rung 3 provenance and
+A/V fields.

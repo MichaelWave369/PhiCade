@@ -4,7 +4,7 @@ export type ActionSource =
   | { kind: "script"; name: string }
   | { kind: "phi-bot"; agentId: string };
 
-export type SystemCommand = "pause" | "reset" | "save-state" | "load-state";
+export type SystemCommand = "pause" | "reset" | "save-state" | "load-state" | "rewind";
 
 export type GameAction =
   | { kind: "button"; button: string; pressed: boolean }

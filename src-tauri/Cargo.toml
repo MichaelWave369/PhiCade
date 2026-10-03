@@ -1,6 +1,6 @@
 [package]
 name = "phicade"
-version = "0.3.0"
+version = "0.4.0"
 description = "PhiCade native desktop shell"
 authors = ["Michael Hughes"]
 edition = "2021"
@@ -15,6 +15,9 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 base64 = "0.22"
+hex = "0.4"
+png = "0.17"
+sha2 = "0.10"
 phicade-libretro = { path = "../crates/phicade-libretro" }
 phicade-runtime = { path = "../crates/phicade-runtime" }
 serde = { version = "1", features = ["derive"] }

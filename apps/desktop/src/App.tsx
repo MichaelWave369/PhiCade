@@ -11,17 +11,21 @@ import {
 import {
   defaultSettings,
   isNativeShell,
+  captureScreenshot,
+  flushGameSave,
   loadSettings,
   saveSettings,
   scanRomDirectory,
   selectRomDirectory,
   selectSameBoyCore,
+  setGameProfile,
   startEmulation,
   stepEmulation,
   stopEmulation,
   validateActionEnvelope,
   type AppSettings,
   type FramePacket,
+  type GameProfile,
   type RomEntry,
   type SessionInfo,
 } from "./native";
@@ -29,10 +33,10 @@ import {
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
 
 const milestones = [
-  ["NATIVE SHELL", "READY", "Tauri owns native filesystem, settings, and core loading."],
-  ["SAMEBOY", "QUALIFIED", "Pinned SameBoy 1.0.3 libretro core with CI provenance gate."],
-  ["A/V BRIDGE", "LIVE", "Core video reaches the CRT canvas and audio reaches Web Audio."],
-  ["ACTION INPUT", "LIVE", "Standard gamepad changes enter the same governed Action Bus."],
+  ["BATTERY RAM", "PERSISTENT", "Save RAM is namespaced by local ROM SHA-256 and flushed automatically."],
+  ["STATE SLOTS", "GOVERNED", "Save/load requests enter through Action Bus system commands."],
+  ["REWIND", "LIVE", "Bounded core snapshots provide governed state rewind without input side channels."],
+  ["SESSION PROFILE", "PERSISTENT", "Per-game speed, rewind depth, interval, and state slot survive restarts."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -64,6 +68,8 @@ export function App() {
   const [running, setRunning] = useState(false);
   const [frameNumber, setFrameNumber] = useState(0);
   const [audioRate, setAudioRate] = useState(0);
+  const [rewindSnapshots, setRewindSnapshots] = useState(0);
+  const [profile, setProfile] = useState<GameProfile | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -118,6 +124,7 @@ export function App() {
   };
 
   const playAudio = (packet: FramePacket) => {
+    if (packet.fastForward > 1) return;
     if (!packet.audioBase64 || packet.sampleRateHz <= 0) return;
     const context = audioContextRef.current;
     if (!context) return;
@@ -164,6 +171,7 @@ export function App() {
         drawFrame(packet);
         playAudio(packet);
         setAudioRate((current) => current === packet.sampleRateHz ? current : packet.sampleRateHz);
+        setRewindSnapshots((current) => current === packet.rewindSnapshots ? current : packet.rewindSnapshots);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -249,6 +257,49 @@ export function App() {
     void validateActionEnvelope(event).catch((error: unknown) => setNotice(`ACTION IPC ERROR // ${String(error)}`));
   };
 
+  const queueSystem = (
+    command: "reset" | "save-state" | "load-state" | "rewind",
+    slot?: number,
+  ) => {
+    queueAction({
+      kind: "system",
+      command,
+      ...(slot === undefined ? {} : { slot }),
+    });
+    const label = command.toUpperCase().replace("-", " ");
+    setNotice(`ACTION BUS // ${label}${slot === undefined ? "" : ` // ${slot}`}`);
+  };
+
+  const updateFastForward = async (fastForward: 1 | 2 | 4) => {
+    if (!profile) return;
+    try {
+      const updated = await setGameProfile({ ...profile, fastForward });
+      setProfile(updated);
+      setSession((current) => current ? { ...current, profile: updated } : current);
+      setNotice(`PROFILE SAVED // FAST-FORWARD ${fastForward}×`);
+    } catch (error) {
+      setNotice(`PROFILE ERROR // ${String(error)}`);
+    }
+  };
+
+  const takeScreenshot = async () => {
+    try {
+      const path = await captureScreenshot();
+      setNotice(`SCREENSHOT SAVED // ${path}`);
+    } catch (error) {
+      setNotice(`SCREENSHOT ERROR // ${String(error)}`);
+    }
+  };
+
+  const flushBatteryRam = async () => {
+    try {
+      await flushGameSave();
+      setNotice("BATTERY RAM FLUSHED");
+    } catch (error) {
+      setNotice(`SAVE RAM ERROR // ${String(error)}`);
+    }
+  };
+
   const launchGame = async () => {
     if (!native) {
       setNotice("EMULATION REQUIRES THE TAURI DESKTOP SHELL");
@@ -278,9 +329,11 @@ export function App() {
       frameRef.current = 0;
       setFrameNumber(0);
       setAudioRate(0);
+      setRewindSnapshots(0);
 
       const info = await startEmulation(corePath, selectedGame.path);
       setSession(info);
+      setProfile(info.profile);
       setRunning(true);
       setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName}`);
     } catch (error) {
@@ -295,7 +348,9 @@ export function App() {
     try {
       await stopEmulation();
       setSession(null);
-      setNotice("CORE SESSION STOPPED");
+      setProfile(null);
+      setRewindSnapshots(0);
+      setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
     }
@@ -372,7 +427,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 3 // SAMEBOY QUALIFIED CORE BAY</small>
+                  <small>RUNG 4 // SESSION MACHINERY ONLINE</small>
                 </div>
               )}
             </div>
@@ -382,6 +437,30 @@ export function App() {
             <button onClick={launchGame} disabled={running || !native}>LOAD / RUN</button>
             <button onClick={stopGame} disabled={!running}>EJECT</button>
             <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : "NO CORE LOADED"}</span>
+          </div>
+
+          <div className="session-tools">
+            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running}>SAVE S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running}>LOAD S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("rewind", 2)} disabled={!running}>REWIND 2S</button>
+            <button onClick={() => queueSystem("reset")} disabled={!running}>RESET</button>
+            <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
+            <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
+          </div>
+
+          <div className="speed-strip">
+            <span>FAST-FORWARD</span>
+            {([1, 2, 4] as const).map((speed) => (
+              <button
+                key={speed}
+                className={profile?.fastForward === speed ? "active" : ""}
+                onClick={() => updateFastForward(speed)}
+                disabled={!running}
+              >
+                {speed}×
+              </button>
+            ))}
+            <small>{profile ? `REWIND ${profile.rewindSeconds}S / EVERY ${profile.rewindIntervalFrames}F` : "PROFILE OFFLINE"}</small>
           </div>
 
           <div className="control-strip">
@@ -401,7 +480,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 3</div>
+          <div className="panel-title">RUNTIME // RUNG 4</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -409,6 +488,10 @@ export function App() {
             <div><dt>GAMEPADS</dt><dd>{controllers.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>CORE</dt><dd>{running ? "ONLINE" : "STANDBY"}</dd></div>
             <div><dt>AUDIO</dt><dd>{running ? (audioRate ? `${audioRate} HZ` : "SYNC") : "OFFLINE"}</dd></div>
+            <div><dt>SPEED</dt><dd>{running ? `${profile?.fastForward ?? 1}×` : "OFFLINE"}</dd></div>
+            <div><dt>REWIND</dt><dd>{rewindSnapshots.toString().padStart(6, "0")}</dd></div>
+            <div><dt>STATE SLOT</dt><dd>S{profile?.saveSlot ?? 0}</dd></div>
+            <div><dt>GAME HASH</dt><dd>{session ? session.gameKey.slice(0, 8).toUpperCase() : "--------"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -440,7 +523,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // USER-SUPPLIED GAME IMAGES // PINNED CORE PROVENANCE // ACTION BUS ONLY</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // HASH-NAMESPACED SAVES // GOVERNED STATE CHANGES // ACTION BUS ONLY</footer>
     </main>
   );
 }

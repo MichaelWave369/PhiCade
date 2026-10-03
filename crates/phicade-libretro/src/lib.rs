@@ -17,6 +17,7 @@ pub const SAMEBOY_VERSION: &str = "1.0.3";
 pub const SAMEBOY_LICENSE: &str = "Expat";
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
+const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
 const B: c_uint = 0;
 const SELECT: c_uint = 2;
 const START: c_uint = 3;
@@ -164,6 +165,11 @@ type RetroLoadGame = unsafe extern "C" fn(*const RetroGameInfo) -> bool;
 type RetroUnloadGame = unsafe extern "C" fn();
 type RetroReset = unsafe extern "C" fn();
 type RetroRun = unsafe extern "C" fn();
+type RetroSerializeSize = unsafe extern "C" fn() -> usize;
+type RetroSerialize = unsafe extern "C" fn(*mut c_void, usize) -> bool;
+type RetroUnserialize = unsafe extern "C" fn(*const c_void, usize) -> bool;
+type RetroGetMemoryData = unsafe extern "C" fn(c_uint) -> *mut c_void;
+type RetroGetMemorySize = unsafe extern "C" fn(c_uint) -> usize;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -187,6 +193,11 @@ pub struct LibretroCore {
     load_game_fn: RetroLoadGame,
     reset_fn: RetroReset,
     run_fn: RetroRun,
+    serialize_size_fn: RetroSerializeSize,
+    serialize_fn: RetroSerialize,
+    unserialize_fn: RetroUnserialize,
+    get_memory_data_fn: RetroGetMemoryData,
+    get_memory_size_fn: RetroGetMemorySize,
     loaded: bool,
     game_bytes: Vec<u8>,
     game_path: Option<CString>,
@@ -225,6 +236,11 @@ impl LibretroCore {
             let unload_game: RetroUnloadGame = load_symbol(&library, b"retro_unload_game\0")?;
             let reset_fn: RetroReset = load_symbol(&library, b"retro_reset\0")?;
             let run_fn: RetroRun = load_symbol(&library, b"retro_run\0")?;
+            let serialize_size_fn: RetroSerializeSize = load_symbol(&library, b"retro_serialize_size\0")?;
+            let serialize_fn: RetroSerialize = load_symbol(&library, b"retro_serialize\0")?;
+            let unserialize_fn: RetroUnserialize = load_symbol(&library, b"retro_unserialize\0")?;
+            let get_memory_data_fn: RetroGetMemoryData = load_symbol(&library, b"retro_get_memory_data\0")?;
+            let get_memory_size_fn: RetroGetMemorySize = load_symbol(&library, b"retro_get_memory_size\0")?;
 
             {
                 let mut state = callbacks().lock().map_err(|_| CoreError::Runtime("callback state poisoned".into()))?;
@@ -268,6 +284,11 @@ impl LibretroCore {
                 load_game_fn,
                 reset_fn,
                 run_fn,
+                serialize_size_fn,
+                serialize_fn,
+                unserialize_fn,
+                get_memory_data_fn,
+                get_memory_size_fn,
                 loaded: false,
                 game_bytes: Vec::new(),
                 game_path: None,
@@ -282,6 +303,80 @@ impl LibretroCore {
     pub fn frame_count(&self) -> u64 { self.frame }
     pub fn shutdown_requested(&self) -> bool {
         callbacks().lock().map(|s| s.shutdown).unwrap_or(false)
+    }
+
+    pub fn serialize_state(&self) -> Result<Vec<u8>, CoreError> {
+        if !self.loaded {
+            return Err(CoreError::InvalidState("no game loaded".into()));
+        }
+        let size = unsafe { (self.serialize_size_fn)() };
+        if size == 0 {
+            return Err(CoreError::Runtime("core reported zero-byte serialize state".into()));
+        }
+        let mut bytes = vec![0u8; size];
+        let ok = unsafe { (self.serialize_fn)(bytes.as_mut_ptr().cast(), size) };
+        if !ok {
+            return Err(CoreError::Runtime("core refused state serialization".into()));
+        }
+        Ok(bytes)
+    }
+
+    pub fn restore_state(&mut self, bytes: &[u8], frame: u64) -> Result<(), CoreError> {
+        if !self.loaded {
+            return Err(CoreError::InvalidState("no game loaded".into()));
+        }
+        if bytes.is_empty() {
+            return Err(CoreError::InvalidState("cannot restore an empty state".into()));
+        }
+        let ok = unsafe { (self.unserialize_fn)(bytes.as_ptr().cast(), bytes.len()) };
+        if !ok {
+            return Err(CoreError::Runtime("core refused state restore".into()));
+        }
+        self.frame = frame;
+        self.input_mask = 0;
+        if let Ok(mut state) = callbacks().lock() {
+            state.input_mask = 0;
+            state.audio.clear();
+        }
+        Ok(())
+    }
+
+    pub fn save_ram_size(&self) -> usize {
+        if !self.loaded { return 0; }
+        unsafe { (self.get_memory_size_fn)(RETRO_MEMORY_SAVE_RAM) }
+    }
+
+    pub fn read_save_ram(&self) -> Result<Vec<u8>, CoreError> {
+        if !self.loaded {
+            return Err(CoreError::InvalidState("no game loaded".into()));
+        }
+        let size = self.save_ram_size();
+        if size == 0 { return Ok(Vec::new()); }
+        let data = unsafe { (self.get_memory_data_fn)(RETRO_MEMORY_SAVE_RAM) };
+        if data.is_null() {
+            return Err(CoreError::Runtime("core exposed save RAM size without data pointer".into()));
+        }
+        Ok(unsafe { slice::from_raw_parts(data.cast::<u8>(), size) }.to_vec())
+    }
+
+    pub fn write_save_ram(&mut self, bytes: &[u8]) -> Result<(), CoreError> {
+        if !self.loaded {
+            return Err(CoreError::InvalidState("no game loaded".into()));
+        }
+        let size = self.save_ram_size();
+        if size == 0 { return Ok(()); }
+        if bytes.len() != size {
+            return Err(CoreError::InvalidState(format!(
+                "save RAM size mismatch: file={} core={size}",
+                bytes.len()
+            )));
+        }
+        let data = unsafe { (self.get_memory_data_fn)(RETRO_MEMORY_SAVE_RAM) };
+        if data.is_null() {
+            return Err(CoreError::Runtime("core exposed save RAM size without data pointer".into()));
+        }
+        unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), data.cast::<u8>(), size) };
+        Ok(())
     }
 
     fn apply_actions(&mut self, actions: &[ActionEnvelope]) -> Result<(), CoreError> {
