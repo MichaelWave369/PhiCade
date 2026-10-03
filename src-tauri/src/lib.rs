@@ -1646,6 +1646,8 @@ fn start_emulation(
         next_numbered_receipt_id(&paths.benchmark_campaign_dir, "campaign-", ".json")?;
     let next_campaign_comparison_id =
         next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
+    let next_suite_report_id =
+        next_numbered_receipt_id(&paths.suite_report_dir, "suite-report-", ".json")?;
 
     let mut emulator_session = EmulatorSession {
         core,
@@ -1676,6 +1678,7 @@ fn start_emulation(
         last_benchmark_campaign: None,
         next_benchmark_campaign_id,
         next_campaign_comparison_id,
+        next_suite_report_id,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
