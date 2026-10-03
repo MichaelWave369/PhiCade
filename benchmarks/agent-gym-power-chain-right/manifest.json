@@ -15,7 +15,7 @@
     "pickupRequiresOverlap": true
   },
   "generator": {
-    "screen": [72, 104],
+    "screen": [72, 96],
     "interactionPlayerScreen": [72, 112],
     "installButton": "A",
     "requiresFuse": true,
