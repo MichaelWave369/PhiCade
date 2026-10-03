@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["SELECTOR", "OBSERVE", "Both modules are present; a visible central symbol determines which branch is valid for this run."],
-  ["BRANCH", "COMMIT", "A on the wrong module enters an irreversible FAIL state; blind trial-and-error cannot recover."],
-  ["CONVERGE", "CAUSAL", "A correct selection removes variant-specific evidence and rejoins the shared generator → gate → target chain."],
-  ["EVIDENCE", "PAIRED", "CI proves fail-state convergence, correct-state convergence, dead-end refusal, and exact source/ROM provenance."],
+  ["STAGE 1", "FAMILY", "TRIANGLE/SQUARE is visible first; the future Stage 2 condition is intentionally absent from the framebuffer."],
+  ["STAGE 2", "REVEAL", "Only a correct first commitment reveals CIRCLE/CROSS, forcing a fresh observation instead of one memorized route."],
+  ["FAILURE", "DEPTH", "A wrong family or wrong submodule independently collapses the run into the same irreversible FAIL world."],
+  ["CONVERGE", "FACTORIAL", "After two correct choices, all four 2×2 variants become one generator → gate → target world."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>READ SELECTOR // CHOOSE BRANCH // COMMIT // CONVERGE // POWER // OPEN GATE // RECEIPT DECISION</footer>
+      <footer>READ FAMILY // COMMIT // REVEAL SUBMODULE // COMMIT // CONVERGE // POWER // GATE // RECEIPT GRAPH</footer>
     </main>
   );
 }
