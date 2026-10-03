@@ -1,0 +1,13 @@
+{
+  "name": "phicade",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @phicade/desktop",
+    "build": "npm run build --workspace @phicade/desktop",
+    "typecheck": "npm run typecheck --workspace @phicade/desktop"
+  }
+}

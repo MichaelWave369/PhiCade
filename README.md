@@ -1,25 +1,64 @@
 # PhiCade
 
-**Old worlds. New players.**
+> **Old worlds. New players.**
 
-PhiCade is an open-source retro game runtime and emulator front end designed around a shared Action Bus so human input, replay input, scripts, and future governed AI players can use the same deterministic control path.
+PhiCade is an open-source retro game runtime and emulator front end built around
+one core idea: every player enters through the same Action Bus.
 
-> PhiCade does not distribute commercial ROMs, BIOS files, encryption keys, or other copyrighted game content. Use homebrew/public-domain test software or software you are legally entitled to use.
+Human controls, deterministic replays, scripts, network input, and a future
+Phi-Bot seat can therefore share the same authority and evidence machinery.
 
-## Status
+## Rung 1
 
-Early architecture scaffold. The first implementation rung establishes the desktop shell, runtime contracts, ROM-library boundary, and CI before emulator cores are integrated.
+The first scaffold is intentionally core-neutral:
 
-## Direction
+- React + TypeScript + Vite terminal UI
+- Rust runtime workspace
+- normalized Action Bus
+- emulator-core adapter trait
+- ROM/firmware safety boundary
+- architecture + roadmap docs
+- GitHub Actions for web build and Rust tests
 
-- Native desktop shell: Tauri + Rust
-- UI: React + TypeScript
-- Emulator integration: core-adapter boundary designed for libretro-compatible cores
-- Shared input model: Action Bus
-- Deterministic replay and evidence receipts
-- Save-state and rewind architecture
-- Future Phi-Bot seat through the same authority/input path as humans
+Real emulation begins after the core ABI, provenance, and licensing gates exist.
+That is less flashy than dropping random DLLs into a folder, but considerably
+less cursed.
+
+## Run the shell
+
+```bash
+npm install
+npm run dev
+```
+
+## Test the runtime
+
+```bash
+cargo test --workspace --all-targets
+```
+
+## Repository map
+
+```text
+apps/desktop/              React/Vite PhiCade shell
+crates/phicade-runtime/    Core-neutral Rust runtime contracts
+docs/ARCHITECTURE.md       Input/core trust boundaries
+docs/ROM_POLICY.md         Game image + firmware repository policy
+docs/ROADMAP.md            Implementation rungs
+```
+
+## Content policy
+
+PhiCade does **not** distribute commercial ROMs, proprietary BIOS/firmware,
+decryption keys, or copyrighted game assets. Use homebrew/public-domain test
+software or software you are legally entitled to use.
+
+## Planned core model
+
+PhiCade is being designed for adapter-based emulation, including
+libretro-compatible cores where their licenses and redistribution terms are
+compatible with the way PhiCade ships them.
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).
