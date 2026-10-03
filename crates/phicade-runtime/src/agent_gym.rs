@@ -51,15 +51,15 @@ pub const AGENT_GYM_RELAY_RIGHT_SOURCE_SHA256: &str =
 
 pub const AGENT_GYM_KEY_GATE_LEFT_ID: &str = "key-gate-left-v1";
 pub const AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256: &str =
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    "904492aa3be9ebfca1f02ff220417eb94ee3f12332dfa4e2263e20c4009094db";
 pub const AGENT_GYM_KEY_GATE_LEFT_SOURCE_SHA256: &str =
-    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    "d9fcf741c4c5b78faa7276b61829321950384ada58a69f5ab07ed53fe982fa5c";
 
 pub const AGENT_GYM_KEY_GATE_RIGHT_ID: &str = "key-gate-right-v1";
 pub const AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256: &str =
-    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+    "72553ffab515b83e9548b454e85491246b6260474bdddb8d3011c0be1b631442";
 pub const AGENT_GYM_KEY_GATE_RIGHT_SOURCE_SHA256: &str =
-    "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd";
+    "e22c6d8f9b42105a5c6d4cb706631736c9cc61738ea8e94a8162c7761435961c";
 
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
