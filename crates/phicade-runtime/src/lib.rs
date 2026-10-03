@@ -19,7 +19,7 @@ pub use action_bus::{
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
 pub use agent_gym::{
     agent_gym_distance, agent_gym_score_1000, agent_gym_success, locate_agent_gym_player,
-    PixelPoint, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256,
+    score_agent_gym_frame, AgentGymScore, PixelPoint, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256,
     AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_SUCCESS_DISTANCE,
     AGENT_GYM_TARGET, AGENT_GYM_WARMUP_FRAMES,
 };
