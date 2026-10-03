@@ -10,16 +10,16 @@
 - [x] CI for TypeScript build and Rust tests
 
 ## Rung 2 — Native shell
-- [x] Wrap the UI in Tauri
-- [x] Add user-selected local directory access
-- [x] Persist settings without ROM content
-- [x] Add controller enumeration
-- [x] Define canonical JSON/IPC representation of ActionEnvelope
-- [x] Add native-shell CI compile gate
+- [x] Tauri desktop shell
+- [x] Local directory access
+- [x] Persistent settings
+- [x] Controller discovery
+- [x] Canonical ActionEnvelope IPC
+- [x] Native compile gate
 
 ## Rung 3 — First qualified core
 - [x] SameBoy 1.0.3 / GB+GBC provenance freeze
-- [x] MIT-licensed dmg-acid2 smoke fixture
+- [x] MIT-licensed dmg-acid2 fixture
 - [x] Video/audio bridge
 - [x] Human gamepad through Action Bus
 - [x] SHA-256 qualification receipt
@@ -31,7 +31,7 @@
 - [x] Rewind buffer
 - [x] Screenshots
 - [x] Per-game profiles
-- [x] CI state round-trip qualification
+- [x] State round-trip qualification
 
 ## Rung 5 — Replay Ledger
 - [x] Deterministic input recording
@@ -63,18 +63,29 @@
 
 ## Rung 8 — Local Ollama provider
 - [x] Loopback-only Ollama REST adapter
-- [x] Local model discovery via /api/tags
+- [x] Local model discovery
 - [x] RGBA framebuffer → PNG vision payload
 - [x] JSON-schema-constrained button output
 - [x] AgentTurnResponse conversion
 - [x] THINK PAUSE frame consistency
-- [x] Explicit pending-turn cancellation on provider failure
+- [x] Provider-failure turn cancellation
 - [x] Persistent local model selection
 - [x] Loopback mock-server CI tests
 
+## Rung 9 — Governed Autodrive
+- [x] Native bounded autonomous-run policy
+- [x] Turn/action/frame/empty-turn budgets
+- [x] Queue-aware multi-turn loop
+- [x] Persistent stop-reason receipts
+- [x] Immediate HUMAN takeover
+- [x] Grant-expiry stop + neutralization
+- [x] Provider-failure stop
+- [x] System/timeline-command refusal during autonomous runs
+- [x] SameBoy bounded-loop qualification receipt
+
 ## Later
 
-Pinned model-specific qualification, provider capability discovery, autonomous
-multi-turn driving, cloud-provider adapters, metadata/cover art, additional
+Pinned model-specific qualification, provider capability discovery, adaptive
+observation cadence, cloud-provider adapters, metadata/cover art, additional
 systems, true multi-port versus play, netplay, spectator mode, achievements,
 tournaments, CommonLine rooms, and a shared Phi Game Runtime with Night Circuit.
