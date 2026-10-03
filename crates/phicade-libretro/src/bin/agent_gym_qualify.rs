@@ -1,7 +1,8 @@
 use phicade_libretro::LibretroCore;
 use phicade_runtime::{
+    agent_gym_distance, agent_gym_score_1000, agent_gym_success, locate_agent_gym_player,
     ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
-    SystemId,
+    PixelPoint, SystemId, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_TARGET, AGENT_GYM_WARMUP_FRAMES,
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -11,20 +12,9 @@ use std::{
     process,
 };
 
-const TARGET_X: i32 = 136;
-const TARGET_Y: i32 = 112;
-const PLAYER_SIZE: usize = 8;
-const WARMUP_FRAMES: u64 = 120;
 const RIGHT_FRAMES: u64 = 60;
 const DOWN_FRAMES: u64 = 44;
 const SETTLE_FRAMES: u64 = 6;
-
-#[derive(Debug, Clone, Copy, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PixelPoint {
-    x: i32,
-    y: i32,
-}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -71,71 +61,6 @@ fn sha256_file(path: &Path) -> Result<String, String> {
     fs::read(path)
         .map(|bytes| sha256_bytes(&bytes))
         .map_err(|error| format!("cannot read {}: {error}", path.display()))
-}
-
-fn dark(pixel: &[u8]) -> bool {
-    if pixel.len() < 4 {
-        return false;
-    }
-    let r = u16::from(pixel[0]);
-    let g = u16::from(pixel[1]);
-    let b = u16::from(pixel[2]);
-    (r + g + b) / 3 < 112
-}
-
-fn locate_player(video: &FrameBuffer) -> Result<PixelPoint, String> {
-    let width = usize::try_from(video.width).map_err(|_| "video width overflow")?;
-    let height = usize::try_from(video.height).map_err(|_| "video height overflow")?;
-    if width < PLAYER_SIZE || height < PLAYER_SIZE {
-        return Err(format!("unexpected gym framebuffer {}x{}", width, height));
-    }
-    if video.rgba8.len() != width * height * 4 {
-        return Err("gym framebuffer byte length mismatch".into());
-    }
-
-    let mut best: Option<(usize, usize, usize)> = None;
-    for y in 0..=height - PLAYER_SIZE {
-        for x in 0..=width - PLAYER_SIZE {
-            let mut dark_count = 0usize;
-            for py in y..y + PLAYER_SIZE {
-                let row = py * width * 4;
-                for px in x..x + PLAYER_SIZE {
-                    let offset = row + px * 4;
-                    if dark(&video.rgba8[offset..offset + 4]) {
-                        dark_count += 1;
-                    }
-                }
-            }
-
-            if best.is_none_or(|(_, _, count)| dark_count > count) {
-                best = Some((x, y, dark_count));
-            }
-        }
-    }
-
-    let (x, y, count) = best.ok_or_else(|| "no candidate player patch found".to_owned())?;
-    if count < 52 {
-        return Err(format!(
-            "solid player patch not found: best 8x8 dark-pixel count was {count}"
-        ));
-    }
-
-    Ok(PixelPoint {
-        x: i32::try_from(x).map_err(|_| "player x overflow")?,
-        y: i32::try_from(y).map_err(|_| "player y overflow")?,
-    })
-}
-
-fn distance(point: PixelPoint) -> i32 {
-    (point.x - TARGET_X).abs() + (point.y - TARGET_Y).abs()
-}
-
-fn score(initial: i32, final_distance: i32) -> u16 {
-    if initial <= 0 {
-        return 1000;
-    }
-    let progress = (initial - final_distance).clamp(0, initial);
-    u16::try_from((i64::from(progress) * 1000) / i64::from(initial)).unwrap_or(0)
 }
 
 fn button_event(sequence: u64, frame: u64, button: &str, pressed: bool) -> ActionEnvelope {
@@ -249,14 +174,14 @@ fn run() -> Result<(), String> {
 
     let mut video = FrameBuffer::default();
     let mut audio = AudioBuffer::default();
-    run_no_input(&mut core, WARMUP_FRAMES, &mut video, &mut audio)?;
+    run_no_input(&mut core, AGENT_GYM_WARMUP_FRAMES, &mut video, &mut audio)?;
 
     let start_frame = core.frame_count();
-    let start_player = locate_player(&video)?;
-    let initial_distance = distance(start_player);
-    if initial_distance < 150 {
+    let start_player = locate_agent_gym_player(&video)?;
+    let initial_distance = agent_gym_distance(start_player);
+    if initial_distance != AGENT_GYM_INITIAL_DISTANCE {
         return Err(format!(
-            "gym start geometry is not challenging enough: distance={initial_distance}"
+            "gym start geometry drifted: expected {AGENT_GYM_INITIAL_DISTANCE}, got {initial_distance}"
         ));
     }
 
@@ -267,8 +192,8 @@ fn run() -> Result<(), String> {
 
     let run_frames = RIGHT_FRAMES + DOWN_FRAMES + SETTLE_FRAMES + 1;
     run_no_input(&mut core, run_frames, &mut video, &mut audio)?;
-    let no_input_final_player = locate_player(&video)?;
-    let no_input_distance = distance(no_input_final_player);
+    let no_input_final_player = locate_agent_gym_player(&video)?;
+    let no_input_distance = agent_gym_distance(no_input_final_player);
     let no_input_progress = initial_distance - no_input_distance;
     let no_input_control_pass = no_input_progress == 0;
 
@@ -276,11 +201,11 @@ fn run() -> Result<(), String> {
         .map_err(|error| format!("restore gym oracle state: {error:?}"))?;
     core.restore_input_mask(frozen_mask);
     run_oracle(&mut core, &mut video, &mut audio)?;
-    let oracle_final_player = locate_player(&video)?;
-    let oracle_final_distance = distance(oracle_final_player);
+    let oracle_final_player = locate_agent_gym_player(&video)?;
+    let oracle_final_distance = agent_gym_distance(oracle_final_player);
     let oracle_progress = initial_distance - oracle_final_distance;
-    let oracle_score_1000 = score(initial_distance, oracle_final_distance);
-    let oracle_success = oracle_final_distance <= 4;
+    let oracle_score_1000 = agent_gym_score_1000(initial_distance, oracle_final_distance);
+    let oracle_success = agent_gym_success(oracle_final_player);
     let oracle_control_pass = oracle_success && oracle_score_1000 >= 980;
     let oracle_final_frame_sha256 = sha256_bytes(&video.rgba8);
     let end_frame = core.frame_count();
@@ -309,10 +234,7 @@ fn run() -> Result<(), String> {
         start_frame,
         end_frame,
         start_player,
-        target: PixelPoint {
-            x: TARGET_X,
-            y: TARGET_Y,
-        },
+        target: AGENT_GYM_TARGET,
         initial_distance,
         no_input_final_player,
         no_input_distance,

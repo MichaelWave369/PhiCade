@@ -50,6 +50,7 @@ pub enum AutodriveStopReason {
     ActionBudget,
     FrameBudget,
     EmptyTurnLimit,
+    TaskSuccess,
     ProviderFailure,
     GrantExpired,
     CoreShutdown,

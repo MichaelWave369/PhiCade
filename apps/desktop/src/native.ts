@@ -169,6 +169,7 @@ export type AutodriveStopReason =
   | "action-budget"
   | "frame-budget"
   | "empty-turn-limit"
+  | "task-success"
   | "provider-failure"
   | "grant-expired"
   | "core-shutdown";
@@ -210,6 +211,57 @@ export interface AutodriveReceipt {
 export interface AutodriveArtifact {
   receiptPath: string;
   receipt: AutodriveReceipt;
+}
+
+
+export interface PixelPoint {
+  x: number;
+  y: number;
+}
+
+export interface ModelGameplayBenchmarkReceipt {
+  schema: string;
+  recordStatus: "COMPLETE" | "SCORING_ERROR";
+  benchmarkId: string;
+  benchmarkRunId: number;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  gymSourceSha256: string;
+  gymRomSha256: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  autodriveReceiptSha256: string;
+  autodriveRunId: number;
+  policy: AutodrivePolicy;
+  stopReason: AutodriveStopReason;
+  startedFrame: number;
+  endedFrame: number;
+  startPlayer: PixelPoint;
+  finalPlayer: PixelPoint | null;
+  target: PixelPoint;
+  initialDistance: number;
+  finalDistance: number | null;
+  progress: number | null;
+  score1000: number | null;
+  taskSuccess: boolean;
+  turnsIssued: number;
+  turnsCompleted: number;
+  totalActions: number;
+  finalFrameSha256: string;
+  scoringError: string | null;
+}
+
+export interface ModelBenchmarkArtifact {
+  receiptPath: string;
+  receipt: ModelGameplayBenchmarkReceipt;
+}
+
+export interface ModelBenchmarkStart {
+  benchmarkRunId: number;
+  autodrive: AutodriveStatus;
 }
 
 export const defaultAutodrivePolicy: AutodrivePolicy = {
@@ -514,4 +566,23 @@ export async function failAutodriveProvider(): Promise<AutodriveArtifact> {
 
 export async function getLastAutodriveReceipt(): Promise<AutodriveArtifact | null> {
   return invoke<AutodriveArtifact | null>("last_autodrive_receipt");
+}
+
+
+export async function startModelGameplayBenchmark(
+  provider: string,
+  model: string,
+  modelDigest: string,
+  policy: AutodrivePolicy = defaultAutodrivePolicy,
+): Promise<ModelBenchmarkStart> {
+  return invoke<ModelBenchmarkStart>("start_model_gameplay_benchmark", {
+    provider,
+    model,
+    modelDigest,
+    policy,
+  });
+}
+
+export async function getLastModelGameplayBenchmark(): Promise<ModelBenchmarkArtifact | null> {
+  return invoke<ModelBenchmarkArtifact | null>("last_model_gameplay_benchmark");
 }

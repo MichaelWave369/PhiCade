@@ -21,6 +21,7 @@ import {
   getAutodriveStatus,
   getDriverStatus,
   getLastAutodriveReceipt,
+  getLastModelGameplayBenchmark,
   getOllamaQualificationStatus,
   issueAgentTurn,
   listOllamaModels,
@@ -28,6 +29,7 @@ import {
   loadSettings,
   setControlMode,
   startAutodrive,
+  startModelGameplayBenchmark,
   stopAutodrive,
   submitAgentTurn,
   startReplayRecording,
@@ -50,6 +52,7 @@ import {
   type ControlMode,
   type FramePacket,
   type GameProfile,
+  type ModelBenchmarkArtifact,
   type OllamaModel,
   type OllamaQualificationStatus,
   type ReplayArtifact,
@@ -59,12 +62,13 @@ import {
 
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
 const PHIBOT_AGENT_ID = "phi-local";
+const AGENT_GYM_ROM_SHA256 = "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e";
 
 const milestones = [
-  ["CAPABILITY", "DISCOVERED", "The selected digest is inspected through Ollama /api/show instead of guessing vision support from its name."],
-  ["VISION PROBE", "MEASURED", "A generated red diagnostic frame must be identified correctly through structured vision output."],
-  ["DIGEST PIN", "EXACT", "Qualification receipts bind provider, model, and exact installed model digest."],
-  ["AUTO GATE", "NATIVE", "AUTO DRIVE refuses any model whose current digest lacks a matching PASS qualification receipt."],
+  ["BENCHMARK", "FROZEN", "Only the exact CI-qualified Phi-Agent Gym ROM hash can enter scored model gameplay mode."],
+  ["MODEL", "DIGEST-BOUND", "Every gameplay receipt binds the exact Rung 10-qualified Ollama model digest and qualification receipt hash."],
+  ["SCORING", "PIXEL-ONLY", "Final player position, distance, progress, and score are computed from the rendered framebuffer only."],
+  ["RECEIPT", "AUTOMATIC", "Every Autodrive stop path finalizes the model benchmark, including takeover, failure, expiry, and budgets."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -116,6 +120,9 @@ export function App() {
   const [lastProviderDurationMs, setLastProviderDurationMs] = useState<number | null>(null);
   const [autodrive, setAutodrive] = useState<AutodriveStatus | null>(null);
   const [lastAutodrive, setLastAutodrive] = useState<AutodriveArtifact | null>(null);
+  const [benchmarkRunning, setBenchmarkRunning] = useState(false);
+  const [benchmarkRunId, setBenchmarkRunId] = useState<number | null>(null);
+  const [lastModelBenchmark, setLastModelBenchmark] = useState<ModelBenchmarkArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -551,6 +558,56 @@ export function App() {
     }
   };
 
+  const beginModelBenchmark = async () => {
+    if (!settings.ollamaModel) {
+      setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
+      return;
+    }
+    if (!session || session.gameKey !== AGENT_GYM_ROM_SHA256) {
+      setNotice("BENCHMARK REQUIRES THE EXACT PHI-AGENT GYM ROM");
+      return;
+    }
+
+    providerBusyRef.current = true;
+    setProviderBusy(true);
+    try {
+      const qualification = await getOllamaQualificationStatus(
+        settings.ollamaBaseUrl,
+        settings.ollamaModel,
+      );
+      setModelQualification(qualification);
+      if (!qualification.qualified) {
+        throw new Error("selected model digest is not qualified for benchmark play");
+      }
+
+      const started = await startModelGameplayBenchmark(
+        "ollama",
+        settings.ollamaModel,
+        qualification.details.digest,
+        defaultAutodrivePolicy,
+      );
+      frameRef.current = started.autodrive.startedFrame;
+      setFrameNumber(started.autodrive.startedFrame);
+      gamepadRef.current = emptyGameBoyButtons();
+      setAutodrive(started.autodrive);
+      setAuthority(await getAuthorityStatus());
+      setDriverPendingTurnId(null);
+      setDriverQueuedActions(0);
+      setBenchmarkRunning(true);
+      setBenchmarkRunId(started.benchmarkRunId);
+      setLastModelBenchmark(null);
+      setLastAutodrive(null);
+      setNotice(
+        `MODEL BENCHMARK #${started.benchmarkRunId} // ${settings.ollamaModel} // GYM RESET + WARMED // SCORE PENDING`,
+      );
+    } catch (error) {
+      setNotice(`MODEL BENCHMARK START ERROR // ${String(error)}`);
+    } finally {
+      providerBusyRef.current = false;
+      setProviderBusy(false);
+    }
+  };
+
   const endAutodrive = async () => {
     providerBusyRef.current = false;
     setProviderBusy(false);
@@ -612,6 +669,33 @@ export function App() {
       })
       .catch(() => undefined);
   }, [autodrive, lastAutodrive?.receipt.runId]);
+
+  useEffect(() => {
+    if (
+      !benchmarkRunning
+      || !autodrive
+      || autodrive.active
+      || !autodrive.stopReason
+    ) {
+      return;
+    }
+
+    void getLastModelGameplayBenchmark()
+      .then((artifact) => {
+        if (!artifact) return;
+        setLastModelBenchmark(artifact);
+        setBenchmarkRunning(false);
+        setBenchmarkRunId(null);
+        const receipt = artifact.receipt;
+        const score = receipt.score1000 === null ? "SCORING ERROR" : `${receipt.score1000}/1000`;
+        setNotice(
+          `MODEL BENCHMARK COMPLETE // ${score} // ${receipt.taskSuccess ? "TARGET REACHED" : "INCOMPLETE"} // ${receipt.stopReason.toUpperCase()}`,
+        );
+      })
+      .catch((error) => {
+        setNotice(`MODEL BENCHMARK RECEIPT ERROR // ${String(error)}`);
+      });
+  }, [benchmarkRunning, autodrive]);
 
   const changeControlMode = async (mode: ControlMode) => {
     if (mode === "human") {
@@ -763,6 +847,9 @@ export function App() {
       setLastProviderDurationMs(null);
       setAutodrive(null);
       setLastAutodrive(null);
+      setBenchmarkRunning(false);
+      setBenchmarkRunId(null);
+      setLastModelBenchmark(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -801,6 +888,9 @@ export function App() {
       setLastProviderDurationMs(null);
       setAutodrive(null);
       setLastAutodrive(null);
+      setBenchmarkRunning(false);
+      setBenchmarkRunId(null);
+      setLastModelBenchmark(null);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -826,6 +916,7 @@ export function App() {
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
           <span><i className={`lamp ${ollamaOnline ? "lamp-green" : "lamp-amber"}`} /> OLLAMA {providerBusy ? "THINKING" : ollamaOnline ? "LOCAL" : "UNPROBED"}</span>
           <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
+          <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
         </div>
       </header>
 
@@ -885,7 +976,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 10 // MODEL QUALIFICATION REGISTRY ONLINE</small>
+                  <small>RUNG 12 // MODEL GAMEPLAY BENCHMARK ONLINE</small>
                 </div>
               )}
             </div>
@@ -949,9 +1040,27 @@ export function App() {
             >
               {autodrive?.active ? "STOP AUTO" : "AUTO DRIVE"}
             </button>
+            <button
+              className={benchmarkRunning ? "benchmark-active" : ""}
+              onClick={() => void beginModelBenchmark()}
+              disabled={
+                !running
+                || replayRecording
+                || autodrive?.active
+                || providerBusy
+                || authority?.mode !== "phi-bot"
+                || !modelQualification?.qualified
+                || !session
+                || session.gameKey !== AGENT_GYM_ROM_SHA256
+              }
+            >
+              {benchmarkRunning ? "BENCH RUNNING" : "BENCH GYM"}
+            </button>
             <small>
-              {autodrive?.active
-                ? `RUN ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // ${autodrive.totalActions}/${autodrive.policy.maxTotalActions}A`
+              {benchmarkRunning && autodrive?.active
+                ? `BENCH #${benchmarkRunId} // AUTO ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // SCORE PENDING`
+                : autodrive?.active
+                  ? `RUN ${autodrive.runId} // ${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}T // ${autodrive.totalActions}/${autodrive.policy.maxTotalActions}A`
                 : settings.ollamaModel
                   ? `${settings.ollamaModel} // ${modelQualification?.details.digest.slice(0, 12) ?? "UNINSPECTED"}… // ${modelQualification?.details.capabilities.join("+") || "NO CAPABILITY DATA"} // ${modelQualification?.qualified ? "QUALIFIED" : "UNQUALIFIED"}${lastProviderDurationMs === null ? "" : ` // ${Math.round(lastProviderDurationMs)}MS`}`
                   : `NO MODEL // ${settings.ollamaBaseUrl}`}
@@ -1018,7 +1127,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 10</div>
+          <div className="panel-title">RUNTIME // RUNG 12</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1048,6 +1157,10 @@ export function App() {
             <div><dt>AUTO TURNS</dt><dd>{autodrive ? `${autodrive.turnsCompleted}/${autodrive.policy.maxTurns}` : "0/0"}</dd></div>
             <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
             <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
+            <div><dt>GYM ROM</dt><dd>{session?.gameKey === AGENT_GYM_ROM_SHA256 ? "FROZEN V1" : "NO"}</dd></div>
+            <div><dt>BENCH RUN</dt><dd>{benchmarkRunning ? `#${benchmarkRunId} ACTIVE` : lastModelBenchmark ? `#${lastModelBenchmark.receipt.benchmarkRunId}` : "NONE"}</dd></div>
+            <div><dt>BENCH SCORE</dt><dd>{lastModelBenchmark?.receipt.score1000 === null || lastModelBenchmark?.receipt.score1000 === undefined ? "----" : `${lastModelBenchmark.receipt.score1000}/1000`}</dd></div>
+            <div><dt>BENCH OUTCOME</dt><dd>{lastModelBenchmark ? lastModelBenchmark.receipt.taskSuccess ? "TARGET REACHED" : lastModelBenchmark.receipt.recordStatus : "UNRUN"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -1089,7 +1202,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY MUST BE MEASURED // QUALIFICATION BINDS THE DIGEST // ONE-SHOT CAN EXPERIMENT // AUTO REQUIRES PROOF</footer>
+      <footer>MEASURE THE MODEL ON A FROZEN WORLD // PIXELS IN // GOVERNED ACTIONS OUT // SCORE + RECEIPT, NOT VIBES</footer>
     </main>
   );
 }

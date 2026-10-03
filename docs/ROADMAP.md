@@ -106,10 +106,23 @@
 - [x] Source/ROM/core hash-bound receipt
 - [x] SameBoy CI integration
 
+## Rung 12 — Model Gameplay Benchmark
+- [x] Exact frozen Φ-Agent Gym ROM gate
+- [x] Shared runtime/CI pixel scorer
+- [x] Exact model digest + qualification-receipt binding
+- [x] SameBoy binary + Autodrive receipt hash binding
+- [x] Native reset + 120-frame benchmark warmup
+- [x] Frozen start-geometry verification
+- [x] D-pad-only benchmark grant
+- [x] Visible-task-only provider instruction
+- [x] Automatic task-success stop
+- [x] Automatic score receipt for every Autodrive stop path
+- [x] Full native governance/benchmark CI tests
+
 ## Later
 
-Qualified-model gameplay runs against Φ-Agent Gym, adaptive observation cadence,
-model-specific benchmark comparisons, provider capability profiles beyond Ollama,
-cloud-provider adapters, metadata/cover art, additional systems, true multi-port
-versus play, netplay, spectator mode, achievements, tournaments, CommonLine rooms,
-and a shared Phi Game Runtime with Night Circuit.
+Adaptive observation cadence, repeated-trial model benchmarks, statistical
+comparison reports, provider capability profiles beyond Ollama, cloud-provider
+adapters, metadata/cover art, additional systems, true multi-port versus play,
+netplay, spectator mode, achievements, tournaments, CommonLine rooms, and a shared
+Phi Game Runtime with Night Circuit.

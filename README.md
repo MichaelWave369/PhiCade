@@ -5,16 +5,15 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 11
+## Current status — Rung 12
 
-PhiCade now includes **Φ-Agent Gym**, a source-first Game Boy benchmark for
-measuring pixel-grounded controller behavior.
+PhiCade can now produce **scored gameplay receipts for an exact qualified local
+model digest** in the frozen Φ-Agent Gym world.
 
 Current stack:
 
 - Tauri 2 + React/TypeScript desktop shell
 - qualified SameBoy 1.0.3 GB/GBC runtime
-- save RAM, states, rewind, screenshots, profiles
 - deterministic Replay Ledger
 - governed Phi-Bot seat
 - provider-neutral Agent Driver Protocol
@@ -22,11 +21,12 @@ Current stack:
 - bounded multi-turn Autodrive
 - digest-bound local model qualification
 - source-first Φ-Agent Gym benchmark ROM
-- rendered-pixel benchmark scorer
-- NO-INPUT negative control
-- deterministic oracle positive control
-- benchmark replay determinism check
-- source/ROM/core hash-bound benchmark receipt
+- shared rendered-pixel benchmark scorer
+- exact-gym-hash model benchmark gate
+- D-pad-only benchmark authority
+- automatic task-success stop
+- exact model/qualification/core/autodrive evidence binding
+- persistent model gameplay score receipts
 
 ## Run
 
@@ -35,10 +35,7 @@ npm install
 npm run desktop
 ```
 
-Choose a ROM directory, select a compatible SameBoy libretro core, and load a
-`.gb` or `.gbc` game.
-
-## Local model qualification
+## Qualify a local model
 
 With Ollama running locally:
 
@@ -47,70 +44,48 @@ With Ollama running locally:
 3. press **QUALIFY MODEL**
 
 A PASS receipt binds the selected provider/model to the exact currently installed
-digest.
-
-**OLLAMA TURN** remains available for one-shot experimentation.
-
+digest. **OLLAMA TURN** remains available for one-shot experimentation.
 **AUTO DRIVE** requires a current digest-bound qualification PASS.
 
-## Φ-Agent Gym
+## Score a qualified model
 
-The benchmark source lives at:
+Load the exact Φ-Agent Gym ROM whose SHA-256 is:
 
-`benchmarks/agent-gym/main.asm`
+`353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e`
 
-Task:
+Then:
 
-**move the solid 8×8 block to the visible X target.**
+1. select a Rung 10-qualified model,
+2. choose **HANDOFF**,
+3. press **BENCH GYM**.
 
-The benchmark:
+PhiCade resets and warms the gym to the frozen start, narrows the grant to D-pad
+only, starts governed Autodrive, and automatically scores the rendered frame when
+the run ends.
 
-- accepts D-pad input only
-- moves 2 pixels per emulated frame
-- is scored from the rendered RGBA framebuffer
-- never exposes game RAM to the scorer/model
-- uses normalized Manhattan-distance progress on a 0–1000 scale
+If the model reaches the target, the run stops immediately with `task-success`.
 
-CI assembles the ROM from source and validates:
+The persisted gameplay receipt binds the exact model digest, model qualification
+receipt hash, gym source/ROM hashes, SameBoy binary hash, Autodrive receipt hash,
+policy, stop reason, score, and final frame hash.
 
-- NO-INPUT produces zero progress
-- deterministic oracle reaches the target
-- oracle score is at least 980/1000
-- replaying the oracle from the same state yields the exact same final frame hash
+A complete receipt does not imply success. A model can honestly score 0/1000.
 
-## Qualification
+## CI qualification
 
 ```bash
 bash ./scripts/qualify-sameboy.sh
 ```
 
-Produces:
+CI qualifies the frozen environment and scoring machinery. Real model gameplay
+receipts are local runtime evidence and are not fabricated by CI.
 
-- `artifacts/sameboy-qualification.json`
-- `artifacts/replay-qualification.json`
-- `artifacts/phibot-qualification.json`
-- `artifacts/agent-driver-qualification.json`
-- `artifacts/autodrive-qualification.json`
-- `artifacts/agent-gym-qualification.json`
-
-See:
-
-- `docs/cores/SAMEBOY.md`
-- `docs/SESSION_MACHINERY.md`
-- `docs/REPLAY_LEDGER.md`
-- `docs/PHIBOT_SEAT.md`
-- `docs/AGENT_DRIVER_PROTOCOL.md`
-- `docs/OLLAMA_PROVIDER.md`
-- `docs/AUTODRIVE.md`
-- `docs/MODEL_QUALIFICATION.md`
-- `docs/AGENT_GYM.md`
-- `docs/ARCHITECTURE.md`
+See `docs/MODEL_GAMEPLAY_BENCHMARK.md` for the full receipt contract.
 
 ## Content policy
 
 PhiCade does **not** distribute commercial ROMs, proprietary BIOS/firmware,
-decryption keys, or copyrighted game assets. Use homebrew/public-domain test
-software or software you are authorized to use.
+decryption keys, or copyrighted game assets.
 
 ## License
 

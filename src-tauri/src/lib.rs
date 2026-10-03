@@ -2,12 +2,15 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
-    AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt, AutodriveStatus,
-    AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
-    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    AGENT_TURN_REQUEST_SCHEMA, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
+    AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
+    AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
+    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
+    AUTODRIVE_STATUS_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    score_agent_gym_frame,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -31,6 +34,7 @@ const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
 const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
 const REPLAY_CHECKPOINT_INTERVAL_FRAMES: u64 = 60;
 const STATE_MAGIC: &[u8] = b"PHICADE_STATE_V1\0";
+const MODEL_GAMEPLAY_BENCHMARK_SCHEMA: &str = "phicade.model-gameplay-benchmark.v1";
 
 #[derive(Default)]
 struct EmulatorState {
@@ -50,6 +54,7 @@ struct SessionPaths {
     screenshot_dir: PathBuf,
     replay_dir: PathBuf,
     autodrive_dir: PathBuf,
+    model_benchmark_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -71,6 +76,76 @@ struct ReplayExport {
 struct AutodriveExport {
     receipt_path: PathBuf,
     receipt: AutodriveReceipt,
+}
+
+#[derive(Debug, Clone)]
+struct ModelBenchmarkRun {
+    run_id: u64,
+    autodrive_run_id: u64,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    started_frame: u64,
+    start_player: PixelPoint,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelGameplayBenchmarkReceipt {
+    schema: String,
+    record_status: String,
+    benchmark_id: String,
+    benchmark_run_id: u64,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    gym_source_sha256: String,
+    gym_rom_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    autodrive_receipt_sha256: String,
+    autodrive_run_id: u64,
+    policy: AutodrivePolicy,
+    stop_reason: AutodriveStopReason,
+    started_frame: u64,
+    ended_frame: u64,
+    start_player: PixelPoint,
+    final_player: Option<PixelPoint>,
+    target: PixelPoint,
+    initial_distance: i32,
+    final_distance: Option<i32>,
+    progress: Option<i32>,
+    score_1000: Option<u16>,
+    task_success: bool,
+    turns_issued: u16,
+    turns_completed: u16,
+    total_actions: u32,
+    final_frame_sha256: String,
+    scoring_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct ModelBenchmarkExport {
+    receipt_path: PathBuf,
+    receipt: ModelGameplayBenchmarkReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelBenchmarkArtifact {
+    receipt_path: String,
+    receipt: ModelGameplayBenchmarkReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelBenchmarkStart {
+    benchmark_run_id: u64,
+    autodrive: AutodriveStatus,
 }
 
 struct EmulatorSession {
@@ -95,6 +170,9 @@ struct EmulatorSession {
     autodrive: Option<AutodriveStatus>,
     last_autodrive: Option<AutodriveExport>,
     next_autodrive_run_id: u64,
+    model_benchmark: Option<ModelBenchmarkRun>,
+    last_model_benchmark: Option<ModelBenchmarkExport>,
+    next_model_benchmark_run_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -514,6 +592,7 @@ fn session_paths(
     let profile_dir = root.join("profiles");
     let replay_dir = root.join("replays").join(game_key);
     let autodrive_dir = root.join("autodrive").join(game_key);
+    let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -525,6 +604,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", replay_dir.display()))?;
     fs::create_dir_all(&autodrive_dir)
         .map_err(|error| format!("cannot create {}: {error}", autodrive_dir.display()))?;
+    fs::create_dir_all(&model_benchmark_dir)
+        .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -532,6 +613,7 @@ fn session_paths(
         screenshot_dir,
         replay_dir,
         autodrive_dir,
+        model_benchmark_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1259,6 +1341,9 @@ fn start_emulation(
         autodrive: None,
         last_autodrive: None,
         next_autodrive_run_id: 1,
+        model_benchmark: None,
+        last_model_benchmark: None,
+        next_model_benchmark_run_id: 1,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
@@ -1501,6 +1586,106 @@ fn autodrive_artifact(export: &AutodriveExport) -> AutodriveArtifact {
     }
 }
 
+fn model_benchmark_artifact(export: &ModelBenchmarkExport) -> ModelBenchmarkArtifact {
+    ModelBenchmarkArtifact {
+        receipt_path: export.receipt_path.to_string_lossy().to_string(),
+        receipt: export.receipt.clone(),
+    }
+}
+
+fn finish_model_benchmark(
+    session: &mut EmulatorSession,
+    autodrive: &AutodriveExport,
+) -> Result<Option<ModelBenchmarkArtifact>, String> {
+    let Some(run) = session.model_benchmark.clone() else {
+        return Ok(None);
+    };
+    if run.autodrive_run_id != autodrive.receipt.run_id {
+        return Ok(None);
+    }
+
+    let scored: Result<AgentGymScore, String> = score_agent_gym_frame(&session.last_frame);
+    let (
+        record_status,
+        final_player,
+        final_distance,
+        progress,
+        score_1000,
+        task_success,
+        scoring_error,
+    ) = match scored {
+        Ok(score) => (
+            "COMPLETE".to_owned(),
+            Some(score.player),
+            Some(score.final_distance),
+            Some(score.progress),
+            Some(score.score_1000),
+            score.success,
+            None,
+        ),
+        Err(error) => (
+            "SCORING_ERROR".to_owned(),
+            None,
+            None,
+            None,
+            None,
+            false,
+            Some(error),
+        ),
+    };
+
+    let receipt = ModelGameplayBenchmarkReceipt {
+        schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.to_owned(),
+        record_status,
+        benchmark_id: AGENT_GYM_ID.to_owned(),
+        benchmark_run_id: run.run_id,
+        provider: run.provider,
+        model: run.model,
+        model_digest: run.model_digest,
+        model_qualification_sha256: run.model_qualification_sha256,
+        gym_source_sha256: AGENT_GYM_SOURCE_SHA256.to_owned(),
+        gym_rom_sha256: AGENT_GYM_ROM_SHA256.to_owned(),
+        core_sha256: run.core_sha256,
+        core_name: session.core.identity().library_name.clone(),
+        core_version: session.core.identity().library_version.clone(),
+        autodrive_receipt_sha256: sha256_file(&autodrive.receipt_path)?,
+        autodrive_run_id: autodrive.receipt.run_id,
+        policy: autodrive.receipt.policy.clone(),
+        stop_reason: autodrive.receipt.stop_reason,
+        started_frame: run.started_frame,
+        ended_frame: autodrive.receipt.ended_frame,
+        start_player: run.start_player,
+        final_player,
+        target: AGENT_GYM_TARGET,
+        initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+        final_distance,
+        progress,
+        score_1000,
+        task_success,
+        turns_issued: autodrive.receipt.turns_issued,
+        turns_completed: autodrive.receipt.turns_completed,
+        total_actions: autodrive.receipt.total_actions,
+        final_frame_sha256: autodrive.receipt.final_frame_sha256.clone(),
+        scoring_error,
+    };
+
+    let receipt_path = session
+        .paths
+        .model_benchmark_dir
+        .join(format!("run-{:06}.json", run.run_id));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize model gameplay benchmark receipt: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+
+    let export = ModelBenchmarkExport {
+        receipt_path,
+        receipt,
+    };
+    session.last_model_benchmark = Some(export.clone());
+    session.model_benchmark = None;
+    Ok(Some(model_benchmark_artifact(&export)))
+}
+
 fn finish_autodrive(
     session: &mut EmulatorSession,
     reason: AutodriveStopReason,
@@ -1557,6 +1742,7 @@ fn finish_autodrive(
         receipt,
     };
     session.last_autodrive = Some(export.clone());
+    let _ = finish_model_benchmark(session, &export)?;
     Ok(autodrive_artifact(&export))
 }
 
@@ -1581,11 +1767,19 @@ fn autodrive_pre_turn_guard(session: &mut EmulatorSession) -> Result<(), String>
 fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String> {
     let current_frame = session.core.frame_count();
     let driver_idle = session.pending_agent_turn.is_none() && session.agent_inbox.is_empty();
+    let benchmark_success = session.model_benchmark.is_some()
+        && score_agent_gym_frame(&session.last_frame)
+            .map(|score| score.success)
+            .unwrap_or(false);
     let reason = session.autodrive.as_mut().and_then(|status| {
         if !status.active {
             return None;
         }
         status.current_frame = current_frame;
+
+        if benchmark_success {
+            return Some(AutodriveStopReason::TaskSuccess);
+        }
 
         if status.frame_span() >= status.policy.max_emulated_frames {
             return Some(AutodriveStopReason::FrameBudget);
@@ -1613,23 +1807,14 @@ fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String
     Ok(())
 }
 
-#[tauri::command]
-fn start_autodrive(
-    app: AppHandle,
-    state: State<'_, EmulatorState>,
+fn start_autodrive_inner(
+    app: &AppHandle,
+    session: &mut EmulatorSession,
     provider: String,
     model: String,
     model_digest: String,
     policy: AutodrivePolicy,
-) -> Result<AutodriveStatus, String> {
-    let mut session = state
-        .session
-        .lock()
-        .map_err(|_| "emulator session lock poisoned".to_owned())?;
-    let session = session
-        .as_mut()
-        .ok_or_else(|| "no emulator session is running".to_owned())?;
-
+) -> Result<(AutodriveStatus, OllamaQualificationArtifact), String> {
     if session.recording.is_some() {
         return Err("autonomous driving is disabled during replay recording".into());
     }
@@ -1652,7 +1837,7 @@ fn start_autodrive(
 
     let provider = provider.trim().to_ascii_lowercase();
     if provider != "ollama" {
-        return Err("Rung 9 autonomous mode currently supports the ollama provider".into());
+        return Err("autonomous mode currently supports the ollama provider".into());
     }
     let model = model.trim().to_owned();
     if model.is_empty() {
@@ -1662,7 +1847,7 @@ fn start_autodrive(
     if model_digest.is_empty() {
         return Err("autonomous driving requires a qualified model digest".into());
     }
-    let artifact = load_ollama_qualification(&app, &model_digest)?
+    let artifact = load_ollama_qualification(app, &model_digest)?
         .ok_or_else(|| "AUTO DRIVE requires a qualification receipt for this model digest".to_owned())?;
     if !qualification_receipt_passes(&artifact.receipt, &model, &model_digest) {
         return Err("AUTO DRIVE qualification receipt does not match the selected model digest".into());
@@ -1689,7 +1874,180 @@ fn start_autodrive(
 
     session.next_autodrive_run_id = session.next_autodrive_run_id.saturating_add(1);
     session.autodrive = Some(status.clone());
-    Ok(status)
+    Ok((status, artifact))
+}
+
+#[tauri::command]
+fn start_autodrive(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<AutodriveStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    start_autodrive_inner(&app, session, provider, model, model_digest, policy)
+        .map(|(status, _)| status)
+}
+
+#[tauri::command]
+fn start_model_gameplay_benchmark(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    provider: String,
+    model: String,
+    model_digest: String,
+    policy: AutodrivePolicy,
+) -> Result<ModelBenchmarkStart, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.game_key != AGENT_GYM_ROM_SHA256 {
+        return Err(format!(
+            "model gameplay benchmark requires the frozen Phi-Agent Gym ROM {}",
+            AGENT_GYM_ROM_SHA256
+        ));
+    }
+    if session
+        .model_benchmark
+        .as_ref()
+        .is_some()
+        || session
+            .autodrive
+            .as_ref()
+            .is_some_and(|status| status.active)
+    {
+        return Err("a benchmark or autonomous run is already active".into());
+    }
+    if session.recording.is_some() {
+        return Err("model benchmark is disabled during replay recording".into());
+    }
+    if session.profile.fast_forward != 1 {
+        return Err("model benchmark requires 1x game speed".into());
+    }
+    if session.authority.mode != ControlMode::PhiBot {
+        return Err("model benchmark requires PHI-BOT handoff mode".into());
+    }
+
+    policy.validate()?;
+    let model = model.trim().to_owned();
+    let model_digest = model_digest.trim().to_owned();
+    let qualification = load_ollama_qualification(&app, &model_digest)?
+        .ok_or_else(|| "model benchmark requires a qualification receipt for this digest".to_owned())?;
+    if !qualification_receipt_passes(&qualification.receipt, &model, &model_digest) {
+        return Err("model benchmark qualification does not match the selected model digest".into());
+    }
+    let qualification_sha256 = sha256_file(Path::new(&qualification.receipt_path))?;
+
+    session.pending_agent_turn = None;
+    session.agent_inbox.clear();
+    session.core.restore_input_mask(0);
+    session
+        .core
+        .reset()
+        .map_err(|error| format!("reset Phi-Agent Gym: {error:?}"))?;
+    session.last_frame = FrameBuffer::default();
+    session.rewind.clear();
+    session.next_rewind_frame = 0;
+
+    let mut warmup_audio = AudioBuffer::default();
+    for _ in 0..AGENT_GYM_WARMUP_FRAMES {
+        session
+            .core
+            .step_frame(&[], &mut session.last_frame, &mut warmup_audio)
+            .map_err(|error| format!("warm Phi-Agent Gym: {error:?}"))?;
+    }
+
+    let start_score = score_agent_gym_frame(&session.last_frame)?;
+    if start_score.player != AGENT_GYM_START
+        || start_score.final_distance != AGENT_GYM_INITIAL_DISTANCE
+    {
+        return Err(format!(
+            "Phi-Agent Gym start geometry drifted: player=({}, {}) distance={}",
+            start_score.player.x, start_score.player.y, start_score.final_distance
+        ));
+    }
+
+    let agent_id = session
+        .authority
+        .agent_grant
+        .as_ref()
+        .map(|grant| grant.agent_id.clone())
+        .ok_or_else(|| "model benchmark requires an active Phi-Bot grant".to_owned())?;
+
+    let mut grant = AgentGrant::game_boy(agent_id, 1);
+    grant.allowed_buttons = ["UP", "DOWN", "LEFT", "RIGHT"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    grant.expires_at_frame = Some(
+        session
+            .core
+            .frame_count()
+            .saturating_add(policy.max_emulated_frames)
+            .saturating_add(600),
+    );
+    session.authority.set_mode(ControlMode::PhiBot, Some(grant))?;
+
+    let core_sha256 = sha256_file(session.core.core_path())?;
+    let benchmark_run_id = session.next_model_benchmark_run_id;
+    let (autodrive, _) = start_autodrive_inner(
+        &app,
+        session,
+        provider.clone(),
+        model.clone(),
+        model_digest.clone(),
+        policy,
+    )?;
+
+    session.next_model_benchmark_run_id =
+        session.next_model_benchmark_run_id.saturating_add(1);
+    session.model_benchmark = Some(ModelBenchmarkRun {
+        run_id: benchmark_run_id,
+        autodrive_run_id: autodrive.run_id,
+        provider: provider.trim().to_ascii_lowercase(),
+        model,
+        model_digest,
+        model_qualification_sha256: qualification_sha256,
+        core_sha256,
+        started_frame: session.core.frame_count(),
+        start_player: start_score.player,
+    });
+
+    Ok(ModelBenchmarkStart {
+        benchmark_run_id,
+        autodrive,
+    })
+}
+
+#[tauri::command]
+fn last_model_gameplay_benchmark(
+    state: State<'_, EmulatorState>,
+) -> Result<Option<ModelBenchmarkArtifact>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(session
+        .last_model_benchmark
+        .as_ref()
+        .map(model_benchmark_artifact))
 }
 
 #[tauri::command]
@@ -2454,6 +2812,8 @@ pub fn run() {
             phi_bot_observation,
             driver_status,
             start_autodrive,
+            start_model_gameplay_benchmark,
+            last_model_gameplay_benchmark,
             autodrive_status,
             stop_autodrive,
             fail_autodrive_provider,
@@ -2568,5 +2928,50 @@ mod tests {
             "vision-model",
             "digest-b"
         ));
+    }
+
+    #[test]
+    fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
+        let receipt = ModelGameplayBenchmarkReceipt {
+            schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            benchmark_id: AGENT_GYM_ID.into(),
+            benchmark_run_id: 7,
+            provider: "ollama".into(),
+            model: "vision-model".into(),
+            model_digest: "digest-a".into(),
+            model_qualification_sha256: "q".repeat(64),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            autodrive_receipt_sha256: "a".repeat(64),
+            autodrive_run_id: 8,
+            policy: AutodrivePolicy::default(),
+            stop_reason: AutodriveStopReason::TaskSuccess,
+            started_frame: 120,
+            ended_frame: 240,
+            start_player: AGENT_GYM_START,
+            final_player: Some(AGENT_GYM_TARGET),
+            target: AGENT_GYM_TARGET,
+            initial_distance: AGENT_GYM_INITIAL_DISTANCE,
+            final_distance: Some(0),
+            progress: Some(AGENT_GYM_INITIAL_DISTANCE),
+            score_1000: Some(1000),
+            task_success: true,
+            turns_issued: 4,
+            turns_completed: 4,
+            total_actions: 8,
+            final_frame_sha256: "f".repeat(64),
+            scoring_error: None,
+        };
+
+        let json = serde_json::to_value(&receipt).expect("serialize receipt");
+        assert_eq!(json["schema"], MODEL_GAMEPLAY_BENCHMARK_SCHEMA);
+        assert_eq!(json["modelDigest"], "digest-a");
+        assert_eq!(json["score1000"], 1000);
+        assert_eq!(json["taskSuccess"], true);
+        assert_eq!(json["stopReason"], "task-success");
     }
 }

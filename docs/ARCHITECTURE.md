@@ -328,3 +328,52 @@ with:
 
 The qualification receipt binds source, assembled ROM, and SameBoy hashes so
 future model-specific benchmark receipts can reference a frozen environment.
+
+
+## Model Gameplay Benchmark
+
+Rung 12 binds the Rung 10 model identity and Rung 11 frozen environment into one
+scored execution receipt.
+
+```text
+qualified Ollama digest
+        |
+        +--> qualification receipt SHA-256
+        |
+        v
+exact Phi-Agent Gym ROM
+        |
+        v
+native reset + frozen warmup
+        |
+        v
+D-pad-only governed Autodrive
+        |
+        v
+rendered framebuffer
+        |
+        +--> shared pixel scorer
+        |
+        v
+model gameplay benchmark receipt
+```
+
+Benchmark start is a native operation, not a UI convention. Native PhiCade
+requires the exact frozen gym ROM SHA-256, exact qualified model digest, PHI-BOT
+handoff, 1× speed, idle driver state, and valid Autodrive policy.
+
+The same `score_agent_gym_frame` implementation is used by CI qualification and
+live benchmark finalization.
+
+The benchmark grant is reduced to UP/DOWN/LEFT/RIGHT.
+
+The model receives the visible task objective but no coordinates, memory, state,
+or scoring internals.
+
+When the pixel scorer observes task success, native Autodrive stops immediately
+with `task-success`. Every other governed Autodrive stop also finalizes a model
+benchmark receipt.
+
+A model benchmark receipt hashes both the model qualification receipt and the
+underlying Autodrive receipt, binding capability evidence to gameplay execution
+without treating either artifact as self-authenticating folklore.

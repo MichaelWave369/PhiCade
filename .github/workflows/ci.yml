@@ -30,7 +30,7 @@ jobs:
       - run: cargo test -p phicade-runtime -p phicade-libretro --all-targets
 
   native:
-    name: tauri / cargo check + Ollama adapter/model qualification tests
+    name: tauri / cargo check + native governance/model benchmark tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,7 +49,7 @@ jobs:
             librsvg2-dev
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
-      - run: cargo test --manifest-path src-tauri/Cargo.toml --lib providers::ollama::tests
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
   sameboy:
     name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Agent Gym qualification

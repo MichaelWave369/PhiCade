@@ -5,6 +5,7 @@
 
 pub mod action_bus;
 pub mod authority;
+pub mod agent_gym;
 pub mod autodrive;
 pub mod core;
 pub mod driver;
@@ -16,6 +17,12 @@ pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
 };
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
+pub use agent_gym::{
+    agent_gym_distance, agent_gym_score_1000, agent_gym_success, locate_agent_gym_player,
+    score_agent_gym_frame, AgentGymScore, PixelPoint, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE, AGENT_GYM_ROM_SHA256,
+    AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_SUCCESS_DISTANCE,
+    AGENT_GYM_TARGET, AGENT_GYM_WARMUP_FRAMES,
+};
 pub use autodrive::{
     AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,
     AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
