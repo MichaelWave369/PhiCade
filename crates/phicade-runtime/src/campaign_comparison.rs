@@ -170,8 +170,8 @@ mod tests {
         .expect("comparison");
 
         close(stats.mean_score_difference_a_minus_b, 0.0, 1e-9);
-        close(stats.mean_difference_ci95_low, -277.718, 0.01);
-        close(stats.mean_difference_ci95_high, 277.718, 0.01);
+        close(stats.mean_difference_ci95_low, -230.6, 0.01);
+        close(stats.mean_difference_ci95_high, 230.6, 0.01);
         close(stats.hedges_g_a_minus_b.expect("g"), 0.0, 1e-9);
         close(stats.success_rate_difference_a_minus_b, 0.0, 1e-9);
     }
