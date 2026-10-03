@@ -2,12 +2,14 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
     compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
-    AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt, AutodriveStatus,
-    AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
-    ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    AGENT_TURN_REQUEST_SCHEMA, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
-    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
+    AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
+    ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
+    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256,
+    AGENT_GYM_START, AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
+    AUTODRIVE_STATUS_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    score_agent_gym_frame,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -31,6 +33,7 @@ const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
 const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
 const REPLAY_CHECKPOINT_INTERVAL_FRAMES: u64 = 60;
 const STATE_MAGIC: &[u8] = b"PHICADE_STATE_V1\0";
+const MODEL_GAMEPLAY_BENCHMARK_SCHEMA: &str = "phicade.model-gameplay-benchmark.v1";
 
 #[derive(Default)]
 struct EmulatorState {
@@ -50,6 +53,7 @@ struct SessionPaths {
     screenshot_dir: PathBuf,
     replay_dir: PathBuf,
     autodrive_dir: PathBuf,
+    model_benchmark_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -71,6 +75,76 @@ struct ReplayExport {
 struct AutodriveExport {
     receipt_path: PathBuf,
     receipt: AutodriveReceipt,
+}
+
+#[derive(Debug, Clone)]
+struct ModelBenchmarkRun {
+    run_id: u64,
+    autodrive_run_id: u64,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    started_frame: u64,
+    start_player: PixelPoint,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelGameplayBenchmarkReceipt {
+    schema: String,
+    record_status: String,
+    benchmark_id: String,
+    benchmark_run_id: u64,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    gym_source_sha256: String,
+    gym_rom_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    autodrive_receipt_sha256: String,
+    autodrive_run_id: u64,
+    policy: AutodrivePolicy,
+    stop_reason: AutodriveStopReason,
+    started_frame: u64,
+    ended_frame: u64,
+    start_player: PixelPoint,
+    final_player: Option<PixelPoint>,
+    target: PixelPoint,
+    initial_distance: i32,
+    final_distance: Option<i32>,
+    progress: Option<i32>,
+    score_1000: Option<u16>,
+    task_success: bool,
+    turns_issued: u16,
+    turns_completed: u16,
+    total_actions: u32,
+    final_frame_sha256: String,
+    scoring_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct ModelBenchmarkExport {
+    receipt_path: PathBuf,
+    receipt: ModelGameplayBenchmarkReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelBenchmarkArtifact {
+    receipt_path: String,
+    receipt: ModelGameplayBenchmarkReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ModelBenchmarkStart {
+    benchmark_run_id: u64,
+    autodrive: AutodriveStatus,
 }
 
 struct EmulatorSession {
@@ -95,6 +169,9 @@ struct EmulatorSession {
     autodrive: Option<AutodriveStatus>,
     last_autodrive: Option<AutodriveExport>,
     next_autodrive_run_id: u64,
+    model_benchmark: Option<ModelBenchmarkRun>,
+    last_model_benchmark: Option<ModelBenchmarkExport>,
+    next_model_benchmark_run_id: u64,
 }
 
 impl Drop for EmulatorSession {
