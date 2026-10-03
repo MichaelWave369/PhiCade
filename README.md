@@ -5,11 +5,13 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 19
+## Current status — Rung 20
 
-PhiCade now supports explicit, immutable benchmark-suite versioning. Suite v1
-remains frozen at two tasks, while Suite v2 reuses those exact tasks and adds a
-third obstacle-navigation task without rewriting historical evidence.
+PhiCade now supports governed, bounded agent working memory. Every agent turn
+binds the rendered framebuffer and the exact current memory SHA-256, while the
+native runtime alone decides whether a proposed memory replacement is accepted.
+Autodrive freezes memory limits into its policy and receipts seal the full memory
+provenance for the run.
 
 Benchmark suites:
 
@@ -28,7 +30,11 @@ Current evidence stack includes:
 - bounded Autodrive
 - native adaptive observation cadence
 - action-aware settle + empty-turn backoff
-- cadence evidence in Autodrive receipts
+- governed UTF-8 agent working-memory capsules
+- framebuffer + memory hash-bound Agent Driver Protocol v2
+- memory limits frozen into Autodrive policy v1
+- memory revision/update/refusal evidence in Autodrive receipts
+- migration-safe legacy cadence policy deserialization
 - digest-bound model qualification
 - exact-digest gameplay receipts
 - repeated task-local benchmark campaigns
@@ -51,6 +57,25 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Governed agent working memory
+
+Agent Driver Protocol v2 carries an explicit memory capsule with every turn.
+
+- the model receives only the current rendered framebuffer plus the explicit capsule,
+- the response must echo the exact pending memory SHA-256,
+- memory updates replace the capsule rather than append hidden history,
+- native PhiCade enforces total and per-turn byte budgets,
+- Autodrive starts from an empty capsule,
+- autonomous-run receipts seal initial/final hashes, final content, revision count,
+  updates, bytes written, and refused memory proposals,
+- old policy JSON without cadence fields deserializes to legacy cadence semantics
+  instead of inheriting current defaults.
+
+The default autonomous policy allows a 4096-byte capsule and a 1024-byte
+replacement proposal per turn.
+
+See `docs/GOVERNED_AGENT_MEMORY.md`.
 
 ## Adaptive observation cadence
 
@@ -182,6 +207,7 @@ trial-tamper refusal.
 
 See:
 
+- `docs/GOVERNED_AGENT_MEMORY.md`
 - `docs/ADAPTIVE_OBSERVATION_CADENCE.md`
 - `docs/BENCHMARK_SUITE_V1.md`
 - `docs/BENCHMARK_SUITE_V2.md`
