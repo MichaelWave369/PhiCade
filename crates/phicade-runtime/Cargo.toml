@@ -1,0 +1,8 @@
+[package]
+name = "phicade-runtime"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Core-neutral runtime contracts for PhiCade"
+
+[dependencies]
