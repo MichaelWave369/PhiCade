@@ -165,7 +165,7 @@ fn response_schema(request: &AgentTurnRequest) -> Value {
                         },
                         "button": {
                             "type": "string",
-                            "enum": request.observation.allowed_buttons
+                            "enum": request.observation.allowed_buttons.clone()
                         },
                         "pressed": { "type": "boolean" }
                     },
@@ -376,5 +376,51 @@ mod tests {
             schema["properties"]["actions"]["items"]["properties"]["delayFrames"]["maximum"],
             8
         );
+    }
+
+    fn mock_server(body: &'static str) -> String {
+        use std::{
+            io::{Read, Write},
+            net::TcpListener,
+            thread,
+        };
+
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind mock Ollama");
+        let address = listener.local_addr().expect("mock address");
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept mock request");
+            let mut buffer = [0u8; 65_536];
+            let _ = stream.read(&mut buffer);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).expect("write mock response");
+        });
+        format!("http://{}", address)
+    }
+
+    #[test]
+    fn lists_models_from_local_ollama_shape() {
+        let base = mock_server(
+            r#"{"models":[{"name":"gemma4","model":"gemma4","size":9608350245,"digest":"abc"}]}"#,
+        );
+        let models = tauri::async_runtime::block_on(list_models(&base)).expect("list models");
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].name, "gemma4");
+    }
+
+    #[test]
+    fn converts_structured_chat_reply_into_agent_turn_response() {
+        let base = mock_server(
+            r#"{"model":"gemma4","message":{"content":"{\"actions\":[{\"delayFrames\":0,\"button\":\"A\",\"pressed\":true},{\"delayFrames\":2,\"button\":\"A\",\"pressed\":false}]}"},"done":true,"total_duration":123000000,"eval_count":7}"#,
+        );
+        let result = tauri::async_runtime::block_on(complete_turn(request(), &base, "gemma4"))
+            .expect("complete turn");
+        assert_eq!(result.provider, "ollama");
+        assert_eq!(result.response.actions.len(), 2);
+        assert_eq!(result.response.turn_id, 9);
+        assert_eq!(result.response.observation_sha256, "a".repeat(64));
     }
 }
