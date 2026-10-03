@@ -111,44 +111,41 @@ fn run_oracle(
     video: &mut FrameBuffer,
     audio: &mut AudioBuffer,
 ) -> Result<(), String> {
-    let first = task.oracle[0];
-    let second = task.oracle[1];
-    validate_oracle_leg(first)?;
-    validate_oracle_leg(second)?;
+    if task.oracle.is_empty() {
+        return Err(format!("task {} has no oracle legs", task.id));
+    }
+    for leg in task.oracle {
+        validate_oracle_leg(*leg)?;
+    }
 
     let mut sequence = 0u64;
+    let mut active_button: Option<&str> = None;
 
-    let first_press = button_event(sequence, core.frame_count(), first.button, true);
-    sequence += 1;
-    core.step_frame(&[first_press], video, audio)
-        .map_err(|error| format!("gym oracle {} press: {error:?}", first.button))?;
+    for leg in task.oracle {
+        let frame = core.frame_count();
+        let mut events = Vec::new();
+        if let Some(previous) = active_button {
+            events.push(button_event(sequence, frame, previous, false));
+            sequence += 1;
+        }
+        events.push(button_event(sequence, frame, leg.button, true));
+        sequence += 1;
 
-    for _ in 1..first.frames {
-        core.step_frame(&[], video, audio)
-            .map_err(|error| format!("gym oracle {} hold: {error:?}", first.button))?;
+        core.step_frame(&events, video, audio)
+            .map_err(|error| format!("gym oracle {} press/switch: {error:?}", leg.button))?;
+
+        for _ in 1..leg.frames {
+            core.step_frame(&[], video, audio)
+                .map_err(|error| format!("gym oracle {} hold: {error:?}", leg.button))?;
+        }
+        active_button = Some(leg.button);
     }
 
-    let frame = core.frame_count();
-    let first_release = button_event(sequence, frame, first.button, false);
-    sequence += 1;
-    let second_press = button_event(sequence, frame, second.button, true);
-    sequence += 1;
-    core.step_frame(&[first_release, second_press], video, audio)
-        .map_err(|error| {
-            format!(
-                "gym oracle switch {} -> {}: {error:?}",
-                first.button, second.button
-            )
-        })?;
-
-    for _ in 1..second.frames {
-        core.step_frame(&[], video, audio)
-            .map_err(|error| format!("gym oracle {} hold: {error:?}", second.button))?;
+    if let Some(button) = active_button {
+        let release = button_event(sequence, core.frame_count(), button, false);
+        core.step_frame(&[release], video, audio)
+            .map_err(|error| format!("gym oracle {} release: {error:?}", button))?;
     }
-
-    let second_release = button_event(sequence, core.frame_count(), second.button, false);
-    core.step_frame(&[second_release], video, audio)
-        .map_err(|error| format!("gym oracle {} release: {error:?}", second.button))?;
 
     for _ in 0..SETTLE_FRAMES {
         core.step_frame(&[], video, audio)
@@ -226,9 +223,10 @@ fn run() -> Result<(), String> {
         .map_err(|error| format!("freeze benchmark start state: {error:?}"))?;
     let frozen_mask = core.input_mask_snapshot();
 
-    let run_frames = task.oracle[0]
-        .frames
-        .saturating_add(task.oracle[1].frames)
+    let run_frames = task
+        .oracle
+        .iter()
+        .fold(0u64, |total, leg| total.saturating_add(leg.frames))
         .saturating_add(SETTLE_FRAMES)
         .saturating_add(1);
     run_no_input(&mut core, run_frames, &mut video, &mut audio)?;
@@ -269,12 +267,16 @@ fn run() -> Result<(), String> {
         && registry_hashes_match)
     {
         return Err(format!(
-            "task {} qualification failed: no_input={} oracle={} deterministic={} registry={} start={start_player:?} final={oracle_final_player:?} distance={oracle_final_distance}",
+            "task {} qualification failed: no_input={} oracle={} deterministic={} registry={} start={start_player:?} final={oracle_final_player:?} distance={oracle_final_distance} observed_rom={} expected_rom={} observed_source={} expected_source={}",
             task.id,
             no_input_control_pass,
             oracle_control_pass,
             deterministic_replay_pass,
             registry_hashes_match,
+            observed_rom_sha256,
+            task.rom_sha256,
+            observed_source_sha256,
+            task.source_sha256,
         ));
     }
 
