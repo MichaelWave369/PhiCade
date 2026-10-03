@@ -58,4 +58,7 @@ provenance, because filenames have never once lied to a human being, obviously.
 The desktop app still requires an explicitly selected SameBoy libretro binary.
 At load time PhiCade verifies the core-reported identity before allowing a GB/GBC
 session. Gamepad changes are normalized into `ActionEnvelope` events before the
-core can observe them. The core never polls browser/controller APIs directly.
+core can observe them. The core never polls browser/controller APIs directly. SameBoy's
+libretro callback exposes its native high-rate audio stream (2,097,152 Hz in the frozen
+qualification); the native host resamples rates above the Web Audio nominal range to
+48 kHz before PCM crosses the Tauri IPC boundary.
