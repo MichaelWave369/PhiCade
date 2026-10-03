@@ -52,7 +52,7 @@
   "generator": {
     "screen": [
       72,
-      80
+      72
     ],
     "installButton": "A",
     "requiresStage2Acceptance": true
@@ -88,6 +88,7 @@
       "A",
       "LEFT",
       "WAIT",
+      "UP",
       "A",
       "WAIT",
       "UP",
@@ -105,9 +106,10 @@
       1,
       28,
       2,
+      4,
       1,
       2,
-      12,
+      8,
       1,
       2,
       16
