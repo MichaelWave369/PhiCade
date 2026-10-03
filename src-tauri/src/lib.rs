@@ -1,8 +1,9 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, AudioBuffer, EmulatorCore, FrameBuffer, GameImage, SystemCommand,
-    SystemId,
+    ActionEnvelope, ActionKind, ActionSource, AudioBuffer, EmulatorCore, FrameBuffer, GameImage,
+    ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification, ReplayVerificationResult,
+    SystemCommand, SystemId, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -18,6 +19,7 @@ use tauri::{AppHandle, Manager, State};
 const MAX_LIBRARY_ENTRIES: usize = 4096;
 const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
 const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
+const REPLAY_CHECKPOINT_INTERVAL_FRAMES: u64 = 60;
 const STATE_MAGIC: &[u8] = b"PHICADE_STATE_V1\0";
 
 #[derive(Default)]
@@ -36,7 +38,22 @@ struct SessionPaths {
     save_ram: PathBuf,
     state_dir: PathBuf,
     screenshot_dir: PathBuf,
+    replay_dir: PathBuf,
     profile: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct ReplayRecording {
+    ledger: ReplayLedger,
+    next_checkpoint_frame: u64,
+}
+
+#[derive(Debug, Clone)]
+struct ReplayExport {
+    replay_path: PathBuf,
+    receipt_path: PathBuf,
+    replay_sha256: String,
+    receipt: ReplayReceipt,
 }
 
 struct EmulatorSession {
@@ -49,6 +66,8 @@ struct EmulatorSession {
     next_rewind_frame: u64,
     last_sram_flush_frame: u64,
     last_frame: FrameBuffer,
+    recording: Option<ReplayRecording>,
+    last_replay: Option<ReplayExport>,
 }
 
 impl Drop for EmulatorSession {
@@ -146,6 +165,29 @@ struct FramePacket {
     shutdown_requested: bool,
     rewind_snapshots: usize,
     fast_forward: u8,
+    replay_recording: bool,
+    replay_actions: usize,
+    replay_checkpoints: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReplayStatus {
+    recording: bool,
+    action_count: usize,
+    checkpoint_count: usize,
+    last_replay_path: Option<String>,
+    last_receipt_path: Option<String>,
+    last_replay_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReplayArtifact {
+    replay_path: String,
+    receipt_path: String,
+    replay_sha256: String,
+    receipt: ReplayReceipt,
 }
 
 fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -279,7 +321,11 @@ fn app_runtime_dirs(app: &AppHandle) -> Result<(PathBuf, PathBuf, PathBuf), Stri
 fn sha256_file(path: &Path) -> Result<String, String> {
     let bytes = fs::read(path)
         .map_err(|error| format!("cannot hash {}: {error}", path.display()))?;
-    Ok(hex::encode(Sha256::digest(bytes)))
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_bytes(bytes: &[u8]) -> String {
+    hex::encode(Sha256::digest(bytes))
 }
 
 fn sanitize_component(value: &str) -> String {
@@ -314,6 +360,7 @@ fn session_paths(
     let state_dir = root.join("states").join(game_key).join(core_namespace);
     let screenshot_dir = root.join("screenshots").join(game_key);
     let profile_dir = root.join("profiles");
+    let replay_dir = root.join("replays").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -321,11 +368,14 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", screenshot_dir.display()))?;
     fs::create_dir_all(&profile_dir)
         .map_err(|error| format!("cannot create {}: {error}", profile_dir.display()))?;
+    fs::create_dir_all(&replay_dir)
+        .map_err(|error| format!("cannot create {}: {error}", replay_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
         state_dir,
         screenshot_dir,
+        replay_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -612,6 +662,8 @@ fn start_emulation(
         next_rewind_frame: 0,
         last_sram_flush_frame: 0,
         last_frame: FrameBuffer::default(),
+        recording: None,
+        last_replay: None,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
