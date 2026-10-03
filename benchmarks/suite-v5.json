@@ -107,8 +107,8 @@
       "id": "key-gate-left-v1",
       "title": "Key Gate: Left",
       "source": "benchmarks/agent-gym-key-gate-left/main.asm",
-      "sourceSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "romSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sourceSha256": "d9fcf741c4c5b78faa7276b61829321950384ada58a69f5ab07ed53fe982fa5c",
+      "romSha256": "904492aa3be9ebfca1f02ff220417eb94ee3f12332dfa4e2263e20c4009094db",
       "oracle": [
         "LEFT",
         "A",
@@ -123,8 +123,8 @@
       "id": "key-gate-right-v1",
       "title": "Key Gate: Right",
       "source": "benchmarks/agent-gym-key-gate-right/main.asm",
-      "sourceSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "romSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sourceSha256": "e22c6d8f9b42105a5c6d4cb706631736c9cc61738ea8e94a8162c7761435961c",
+      "romSha256": "72553ffab515b83e9548b454e85491246b6260474bdddb8d3011c0be1b631442",
       "oracle": [
         "RIGHT",
         "A",
