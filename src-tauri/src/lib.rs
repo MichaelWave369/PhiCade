@@ -591,6 +591,7 @@ fn session_paths(
     let profile_dir = root.join("profiles");
     let replay_dir = root.join("replays").join(game_key);
     let autodrive_dir = root.join("autodrive").join(game_key);
+    let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -602,6 +603,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", replay_dir.display()))?;
     fs::create_dir_all(&autodrive_dir)
         .map_err(|error| format!("cannot create {}: {error}", autodrive_dir.display()))?;
+    fs::create_dir_all(&model_benchmark_dir)
+        .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -609,6 +612,7 @@ fn session_paths(
         screenshot_dir,
         replay_dir,
         autodrive_dir,
+        model_benchmark_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1336,6 +1340,9 @@ fn start_emulation(
         autodrive: None,
         last_autodrive: None,
         next_autodrive_run_id: 1,
+        model_benchmark: None,
+        last_model_benchmark: None,
+        next_model_benchmark_run_id: 1,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
