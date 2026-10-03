@@ -5,13 +5,13 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 25
+## Current status — Rung 26
 
-PhiCade now has a balanced conditional-branch benchmark. Both branch modules
-are present in both variants, while a visible selector determines which module
-is valid. Choosing the wrong branch enters an irreversible fail state; choosing
-the matching branch converges into a shared generator → gate → target chain.
-Suite v7 preserves every Suite v6 task and adds TRIANGLE/SQUARE selector variants.
+PhiCade now has a two-level factorial branch benchmark. Stage 1 requires a
+TRIANGLE/SQUARE family choice. Only a correct first commitment reveals an
+independent CIRCLE/CROSS Stage 2 choice. Wrong commitment at either depth is
+irreversible; two correct choices converge onto one shared generator → gate →
+target chain. Suite v8 preserves every Suite v7 task and adds all four 2×2 variants.
 
 Benchmark suites:
 
@@ -22,6 +22,7 @@ Benchmark suites:
 - **Suite v5** — the exact v4 tasks + **Key Gate: Left** + **Key Gate: Right**
 - **Suite v6** — the exact v5 tasks + **Power Chain: Left** + **Power Chain: Right**
 - **Suite v7** — the exact v6 tasks + **Branch Selector: Triangle** + **Branch Selector: Square**
+- **Suite v8** — the exact v7 tasks + the four **Nested Branch** 2×2 factorial variants
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -34,6 +35,8 @@ Benchmark suites:
   occur in order before the target becomes reachable
 - **Branch Selector pair** — both branch objects are present, a visible selector
   chooses the valid branch, and a wrong commitment irreversibly dead-ends
+- **Nested Branch quartet** — Stage 2 remains hidden until Stage 1 succeeds;
+  four factorial variants prevent the second answer from being inferred from the first
 
 Current evidence stack includes:
 
@@ -72,6 +75,12 @@ Current evidence stack includes:
 - failed-state and accepted-state framebuffer convergence controls
 - shared generator → gate → target continuation after correct branch
 - Benchmark Suite v7 with exact 13-task membership
+- four-way TRIANGLE/SQUARE × CIRCLE/CROSS nested-branch factorial
+- future Stage 2 condition hidden before Stage 1 commitment
+- Stage 1 history erased before Stage 2 comparison
+- irreversible failure controls at both decision depths
+- four-way accepted/powered/open-gate convergence controls
+- Benchmark Suite v8 with exact 17-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -97,6 +106,21 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Nested branch-graph benchmark
+
+Suite v8 adds four source-first Game Boy tasks covering the full
+TRIANGLE/SQUARE × CIRCLE/CROSS factorial.
+
+Stage 2 is not visible before Stage 1 succeeds. After the first correct
+commitment, the first selector is erased and a new independent CIRCLE/CROSS
+selector is revealed. Wrong commitment at either stage is terminal.
+
+The joint qualifier proves delayed information revelation, cross-history
+Stage 2 convergence, failure convergence at both depths, and final four-way
+world convergence.
+
+See `docs/NESTED_BRANCH_GRAPH_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V8.md`.
 
 ## Conditional branch-selector benchmark
 
@@ -262,7 +286,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select **Suite v1**, **Suite v2**, **Suite v3**, **Suite v4**, **Suite v5**, or **Suite v6**,
+2. select the desired frozen suite version, including **Suite v8**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -328,13 +352,16 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all thirteen registered benchmark ROMs from source,
-jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, and
-Branch Selector pairs, tests prior-suite preservation, Suite v7
-11/13 → 12/13 → 13/13 coverage, digest splitting, and trial-tamper refusal.
+CI assembles and qualifies all seventeen registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, Branch
+Selector, and Nested Branch Graph controls, tests prior-suite preservation,
+Suite v8 13/17 → 14/17 → 15/17 → 16/17 → 17/17 coverage, digest splitting, and
+trial-tamper refusal.
 
 See:
 
+- `docs/NESTED_BRANCH_GRAPH_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V8.md`
 - `docs/CONDITIONAL_BRANCH_SELECTOR_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V7.md`
 - `docs/ORDERED_POWER_CHAIN_BENCHMARK.md`
