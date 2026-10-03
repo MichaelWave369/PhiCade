@@ -99,8 +99,8 @@ fn validate_oracle_leg(leg: OracleLeg) -> Result<(), String> {
     if leg.frames == 0 {
         return Err(format!("oracle leg {} has zero frames", leg.button));
     }
-    if !matches!(leg.button, "UP" | "DOWN" | "LEFT" | "RIGHT") {
-        return Err(format!("oracle uses unsupported button {}", leg.button));
+    if !matches!(leg.button, "UP" | "DOWN" | "LEFT" | "RIGHT" | "A" | "WAIT") {
+        return Err(format!("oracle uses unsupported leg {}", leg.button));
     }
     Ok(())
 }
@@ -128,17 +128,22 @@ fn run_oracle(
             events.push(button_event(sequence, frame, previous, false));
             sequence += 1;
         }
-        events.push(button_event(sequence, frame, leg.button, true));
-        sequence += 1;
+
+        if leg.button != "WAIT" {
+            events.push(button_event(sequence, frame, leg.button, true));
+            sequence += 1;
+            active_button = Some(leg.button);
+        } else {
+            active_button = None;
+        }
 
         core.step_frame(&events, video, audio)
-            .map_err(|error| format!("gym oracle {} press/switch: {error:?}", leg.button))?;
+            .map_err(|error| format!("gym oracle {} start: {error:?}", leg.button))?;
 
         for _ in 1..leg.frames {
             core.step_frame(&[], video, audio)
                 .map_err(|error| format!("gym oracle {} hold: {error:?}", leg.button))?;
         }
-        active_button = Some(leg.button);
     }
 
     if let Some(button) = active_button {
