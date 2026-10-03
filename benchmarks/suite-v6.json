@@ -139,8 +139,8 @@
       "id": "power-chain-left-v1",
       "title": "Power Chain: Left",
       "source": "benchmarks/agent-gym-power-chain-left/main.asm",
-      "sourceSha256": "2222222222222222222222222222222222222222222222222222222222222222",
-      "romSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "sourceSha256": "59a619dc42500e8ee1488474869252df41533d58159da247e0df2793222b4afe",
+      "romSha256": "fd84eb10474a0834817101b99a5efc8b233d9b13a4c8d6d784c9394320636e40",
       "oracle": [
         "LEFT",
         "A",
@@ -159,8 +159,8 @@
       "id": "power-chain-right-v1",
       "title": "Power Chain: Right",
       "source": "benchmarks/agent-gym-power-chain-right/main.asm",
-      "sourceSha256": "4444444444444444444444444444444444444444444444444444444444444444",
-      "romSha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "sourceSha256": "687f150dbf82bb634c8975362d02b967f1aa26299ac36380bbfa0eb99d4e68eb",
+      "romSha256": "33026212377de8c08dec00dbc7d6bc4852902c093d87624916bfcc3bc69e9b9f",
       "oracle": [
         "RIGHT",
         "A",
