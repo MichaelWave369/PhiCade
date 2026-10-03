@@ -191,8 +191,8 @@ fn run() -> Result<(), String> {
         consecutive_empty_turns: 0,
         next_observation_frame: started_frame,
         last_observation_frame: None,
-        total_cadence_wait_frames: 0,
-        max_cadence_wait_frames: 0,
+        total_scheduled_cadence_wait_frames: 0,
+        max_scheduled_cadence_wait_frames: 0,
         policy: policy_config,
         stop_reason: None,
     };
@@ -329,8 +329,8 @@ fn run() -> Result<(), String> {
     cadence_probe.current_frame = cadence_probe.started_frame;
     cadence_probe.next_observation_frame = cadence_probe.started_frame;
     cadence_probe.last_observation_frame = None;
-    cadence_probe.total_cadence_wait_frames = 0;
-    cadence_probe.max_cadence_wait_frames = 0;
+    cadence_probe.total_scheduled_cadence_wait_frames = 0;
+    cadence_probe.max_scheduled_cadence_wait_frames = 0;
     cadence_probe.note_turn_completed_with_delay(0, 0, cadence_probe.started_frame);
     let cadence_gate_probe_pass =
         !cadence_probe.observation_ready(cadence_probe.started_frame + 7)
