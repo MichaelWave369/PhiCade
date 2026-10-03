@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 pub const BENCHMARK_SUITE_V1_ID: &str = "phicade-agent-gym-suite-v1";
 pub const BENCHMARK_SUITE_V2_ID: &str = "phicade-agent-gym-suite-v2";
+pub const BENCHMARK_SUITE_V3_ID: &str = "phicade-agent-gym-suite-v3";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -21,6 +22,18 @@ pub const AGENT_GYM_WALL_ROM_SHA256: &str =
     "c8bfbe95b368635370a61abf004d0efd4135b96c8fa9e4fb510582e25534c4f8";
 pub const AGENT_GYM_WALL_SOURCE_SHA256: &str =
     "02fc444e7ffc6f9de819f7462685448268b41a641592332918f972e17fd0fc96";
+
+pub const AGENT_GYM_TEMPORAL_LEFT_ID: &str = "temporal-cue-left-v1";
+pub const AGENT_GYM_TEMPORAL_LEFT_ROM_SHA256: &str =
+    "da16bdda571bd2f3d5581097e1643ce7496ae3ea586f3b1756330a2b3fc171f5";
+pub const AGENT_GYM_TEMPORAL_LEFT_SOURCE_SHA256: &str =
+    "450ecadadb3ed51e1e613e4edd06007880309c4841fbae313bb45f0a75932a4c";
+
+pub const AGENT_GYM_TEMPORAL_RIGHT_ID: &str = "temporal-cue-right-v1";
+pub const AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256: &str =
+    "eefb364a47b68267138d35b402d2d6f5de1d70940318cac947fb400d6e210337";
+pub const AGENT_GYM_TEMPORAL_RIGHT_SOURCE_SHA256: &str =
+    "8c814246cb6948d50d5242ef2e01369c90a5965cb2151da5b9e4f27fff5e282f";
 
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
@@ -41,6 +54,16 @@ pub const AGENT_GYM_WALL_START_Y: i32 = 24;
 pub const AGENT_GYM_WALL_TARGET_X: i32 = 136;
 pub const AGENT_GYM_WALL_TARGET_Y: i32 = 24;
 pub const AGENT_GYM_WALL_INITIAL_DISTANCE: i32 = 120;
+
+pub const AGENT_GYM_TEMPORAL_START_X: i32 = 72;
+pub const AGENT_GYM_TEMPORAL_START_Y: i32 = 96;
+pub const AGENT_GYM_TEMPORAL_LEFT_TARGET_X: i32 = 24;
+pub const AGENT_GYM_TEMPORAL_RIGHT_TARGET_X: i32 = 120;
+pub const AGENT_GYM_TEMPORAL_TARGET_Y: i32 = 96;
+pub const AGENT_GYM_TEMPORAL_INITIAL_DISTANCE: i32 = 48;
+
+pub static AGENT_GYM_DPAD_BUTTONS: [&str; 4] = ["UP", "DOWN", "LEFT", "RIGHT"];
+pub static AGENT_GYM_TEMPORAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +92,7 @@ pub struct BenchmarkTaskSpec {
     pub initial_distance: i32,
     pub success_distance: i32,
     pub warmup_frames: u64,
+    pub allowed_buttons: &'static [&'static str],
     pub prompt: &'static str,
     pub oracle: &'static [OracleLeg],
 }
@@ -111,6 +135,21 @@ pub const AGENT_GYM_WALL_TARGET: PixelPoint = PixelPoint {
     y: AGENT_GYM_WALL_TARGET_Y,
 };
 
+pub const AGENT_GYM_TEMPORAL_START: PixelPoint = PixelPoint {
+    x: AGENT_GYM_TEMPORAL_START_X,
+    y: AGENT_GYM_TEMPORAL_START_Y,
+};
+
+pub const AGENT_GYM_TEMPORAL_LEFT_TARGET: PixelPoint = PixelPoint {
+    x: AGENT_GYM_TEMPORAL_LEFT_TARGET_X,
+    y: AGENT_GYM_TEMPORAL_TARGET_Y,
+};
+
+pub const AGENT_GYM_TEMPORAL_RIGHT_TARGET: PixelPoint = PixelPoint {
+    x: AGENT_GYM_TEMPORAL_RIGHT_TARGET_X,
+    y: AGENT_GYM_TEMPORAL_TARGET_Y,
+};
+
 pub static AGENT_GYM_ORACLE: [OracleLeg; 2] = [
     OracleLeg {
         button: "RIGHT",
@@ -148,6 +187,36 @@ pub static AGENT_GYM_WALL_ORACLE: [OracleLeg; 3] = [
     },
 ];
 
+pub static AGENT_GYM_TEMPORAL_LEFT_ORACLE: [OracleLeg; 3] = [
+    OracleLeg {
+        button: "A",
+        frames: 1,
+    },
+    OracleLeg {
+        button: "WAIT",
+        frames: 101,
+    },
+    OracleLeg {
+        button: "LEFT",
+        frames: 24,
+    },
+];
+
+pub static AGENT_GYM_TEMPORAL_RIGHT_ORACLE: [OracleLeg; 3] = [
+    OracleLeg {
+        button: "A",
+        frames: 1,
+    },
+    OracleLeg {
+        button: "WAIT",
+        frames: 101,
+    },
+    OracleLeg {
+        button: "RIGHT",
+        frames: 24,
+    },
+];
+
 pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     suite_id: BENCHMARK_SUITE_V1_ID,
     id: AGENT_GYM_ID,
@@ -159,6 +228,7 @@ pub const AGENT_GYM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     initial_distance: AGENT_GYM_INITIAL_DISTANCE,
     success_distance: AGENT_GYM_SUCCESS_DISTANCE,
     warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_DPAD_BUTTONS,
     prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad.",
     oracle: &AGENT_GYM_ORACLE,
 };
@@ -174,6 +244,7 @@ pub const AGENT_GYM_MIRROR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     initial_distance: AGENT_GYM_INITIAL_DISTANCE,
     success_distance: AGENT_GYM_SUCCESS_DISTANCE,
     warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_DPAD_BUTTONS,
     prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad.",
     oracle: &AGENT_GYM_MIRROR_ORACLE,
 };
@@ -189,18 +260,64 @@ pub const AGENT_GYM_WALL_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     initial_distance: AGENT_GYM_WALL_INITIAL_DISTANCE,
     success_distance: AGENT_GYM_SUCCESS_DISTANCE,
     warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_DPAD_BUTTONS,
     prompt: "Benchmark task: move the solid square block onto the visible X target using the D-pad. Navigate around visible obstacles.",
     oracle: &AGENT_GYM_WALL_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 3] =
-    [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK, AGENT_GYM_WALL_TASK];
+pub const AGENT_GYM_TEMPORAL_LEFT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V3_ID,
+    id: AGENT_GYM_TEMPORAL_LEFT_ID,
+    title: "Temporal Cue: Left",
+    rom_sha256: AGENT_GYM_TEMPORAL_LEFT_ROM_SHA256,
+    source_sha256: AGENT_GYM_TEMPORAL_LEFT_SOURCE_SHA256,
+    start: AGENT_GYM_TEMPORAL_START,
+    target: AGENT_GYM_TEMPORAL_LEFT_TARGET,
+    initial_distance: AGENT_GYM_TEMPORAL_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_TEMPORAL_BUTTONS,
+    prompt: "Benchmark task: memorize the visible arrow cue, press A to dismiss it, wait for the choice chamber to unlock, then move the solid block through the side indicated by the earlier cue. The choice screen intentionally does not repeat the cue.",
+    oracle: &AGENT_GYM_TEMPORAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_TEMPORAL_RIGHT_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V3_ID,
+    id: AGENT_GYM_TEMPORAL_RIGHT_ID,
+    title: "Temporal Cue: Right",
+    rom_sha256: AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256,
+    source_sha256: AGENT_GYM_TEMPORAL_RIGHT_SOURCE_SHA256,
+    start: AGENT_GYM_TEMPORAL_START,
+    target: AGENT_GYM_TEMPORAL_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_TEMPORAL_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_TEMPORAL_BUTTONS,
+    prompt: "Benchmark task: memorize the visible arrow cue, press A to dismiss it, wait for the choice chamber to unlock, then move the solid block through the side indicated by the earlier cue. The choice screen intentionally does not repeat the cue.",
+    oracle: &AGENT_GYM_TEMPORAL_RIGHT_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 5] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
     [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK];
 
 pub static BENCHMARK_SUITE_V2_TASKS: [BenchmarkTaskSpec; 3] =
     [AGENT_GYM_TASK, AGENT_GYM_MIRROR_TASK, AGENT_GYM_WALL_TASK];
+
+pub static BENCHMARK_SUITE_V3_TASKS: [BenchmarkTaskSpec; 5] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+];
 
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     id: BENCHMARK_SUITE_V1_ID,
@@ -216,8 +333,15 @@ pub static BENCHMARK_SUITE_V2: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V2_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 2] =
-    [&BENCHMARK_SUITE_V1, &BENCHMARK_SUITE_V2];
+pub static BENCHMARK_SUITE_V3: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V3_ID,
+    title: "Phi-Agent Gym Suite v3",
+    version: 3,
+    tasks: &BENCHMARK_SUITE_V3_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 3] =
+    [&BENCHMARK_SUITE_V1, &BENCHMARK_SUITE_V2, &BENCHMARK_SUITE_V3];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
     &BENCHMARK_SUITES
@@ -233,6 +357,10 @@ pub fn benchmark_suite_v1_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v2_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V2_TASKS
+}
+
+pub fn benchmark_suite_v3_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V3_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -410,15 +538,45 @@ mod tests {
     }
 
     #[test]
+    fn suite_v3_preserves_v2_and_adds_balanced_temporal_cues() {
+        let tasks = benchmark_suite_v3_tasks();
+        assert_eq!(tasks.len(), 5);
+        assert_eq!(tasks[0].id, AGENT_GYM_ID);
+        assert_eq!(tasks[1].id, AGENT_GYM_MIRROR_ID);
+        assert_eq!(tasks[2].id, AGENT_GYM_WALL_ID);
+        assert_eq!(tasks[3].id, AGENT_GYM_TEMPORAL_LEFT_ID);
+        assert_eq!(tasks[4].id, AGENT_GYM_TEMPORAL_RIGHT_ID);
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V3_ID).unwrap().version, 3);
+        assert_eq!(
+            AGENT_GYM_TEMPORAL_LEFT_TASK.prompt,
+            AGENT_GYM_TEMPORAL_RIGHT_TASK.prompt
+        );
+        assert_eq!(
+            AGENT_GYM_TEMPORAL_LEFT_TASK.allowed_buttons,
+            AGENT_GYM_TEMPORAL_RIGHT_TASK.allowed_buttons
+        );
+        assert_ne!(
+            AGENT_GYM_TEMPORAL_LEFT_TASK.target,
+            AGENT_GYM_TEMPORAL_RIGHT_TASK.target
+        );
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
         let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 2);
+        assert_eq!(memberships.len(), 3);
         assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
         assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
+        assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 1);
+        assert_eq!(wall_memberships.len(), 2);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
+        assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
+
+        let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
+        assert_eq!(temporal_memberships.len(), 1);
+        assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
     }
 
     #[test]
@@ -442,6 +600,21 @@ mod tests {
         assert_eq!(AGENT_GYM_WALL_SOURCE_SHA256.len(), 64);
         assert_eq!(AGENT_GYM_WALL_ROM_SHA256.len(), 64);
         assert_eq!(AGENT_GYM_WALL_TASK.oracle.len(), 3);
+    }
+
+    #[test]
+    fn registry_resolves_temporal_tasks_by_id() {
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_TEMPORAL_LEFT_ID).map(|task| task.id),
+            Some(AGENT_GYM_TEMPORAL_LEFT_ID)
+        );
+        assert_eq!(
+            benchmark_task_by_id(AGENT_GYM_TEMPORAL_RIGHT_ID).map(|task| task.id),
+            Some(AGENT_GYM_TEMPORAL_RIGHT_ID)
+        );
+        assert_eq!(AGENT_GYM_TEMPORAL_LEFT_TASK.oracle[0].button, "A");
+        assert_eq!(AGENT_GYM_TEMPORAL_LEFT_TASK.oracle[1].button, "WAIT");
+        assert_eq!(AGENT_GYM_TEMPORAL_RIGHT_TASK.oracle[2].button, "RIGHT");
     }
 
     #[test]

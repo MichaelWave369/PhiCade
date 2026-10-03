@@ -46,6 +46,7 @@ export interface BenchmarkTaskInfo {
   initialDistance: number;
   successDistance: number;
   warmupFrames: number;
+  allowedButtons: string[];
 }
 
 export interface SessionInfo {

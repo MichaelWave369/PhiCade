@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["MEMORY", "GOVERNED", "The model may propose a bounded UTF-8 working-memory replacement; only the native runtime can accept it."],
-  ["HASH", "TURN-BOUND", "Every agent response echoes the exact pending memory SHA-256 alongside the framebuffer hash."],
-  ["LIMITS", "POLICY", "Autodrive freezes total capsule and per-turn update byte budgets as comparison-relevant policy."],
-  ["EVIDENCE", "RECEIPTED", "Run receipts seal initial/final memory hashes, final content, revision count, bytes written, and refusals."],
+  ["CUE", "VISIBLE", "The temporal pair begins with opposite LEFT/RIGHT arrow evidence rendered into the framebuffer."],
+  ["SEPARATE", "FORCED", "A dismisses the cue, a 90-frame lockout follows, and carried direction cannot cross the boundary."],
+  ["CHOICE", "PIXEL-IDENTICAL", "Both ROMs later present the same two-door framebuffer while requiring opposite correct actions."],
+  ["MEMORY", "GOVERNED", "The explicit hash-bound capsule is the intended cross-turn state channel; native authority still owns acceptance."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1777,6 +1777,7 @@ export function App() {
             <div><dt>BENCH TASK</dt><dd>{session?.benchmarkTask ? session.benchmarkTask.title.toUpperCase() : "NONE"}</dd></div>
             <div><dt>TASK ID</dt><dd>{session?.benchmarkTask?.id ?? "----"}</dd></div>
             <div><dt>SUITES</dt><dd>{session?.benchmarkTask?.suiteIds.join(" + ") ?? "----"}</dd></div>
+            <div><dt>TASK CONTROLS</dt><dd>{session?.benchmarkTask?.allowedButtons.join(" + ") ?? "----"}</dd></div>
             <div><dt>BENCH RUN</dt><dd>{benchmarkRunning ? `#${benchmarkRunId} ACTIVE` : lastModelBenchmark ? `#${lastModelBenchmark.receipt.benchmarkRunId}` : "NONE"}</dd></div>
             <div><dt>BENCH SCORE</dt><dd>{lastModelBenchmark?.receipt.score1000 === null || lastModelBenchmark?.receipt.score1000 === undefined ? "----" : `${lastModelBenchmark.receipt.score1000}/1000`}</dd></div>
             <div><dt>BENCH OUTCOME</dt><dd>{lastModelBenchmark ? lastModelBenchmark.receipt.taskSuccess ? "TARGET REACHED" : lastModelBenchmark.receipt.recordStatus : "UNRUN"}</dd></div>
@@ -1843,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>ONE MODEL COHORT // ALL REGISTERED TASKS // REVERIFY EVERY CAMPAIGN + TRIAL // MACRO TASK SCORE // NO CROSS-TASK SHORTCUTS</footer>
+      <footer>SEE CUE // WRITE MEMORY // LOSE CUE // IDENTICAL LATER PIXELS // CHOOSE AGAIN // RECEIPT EVERYTHING</footer>
     </main>
   );
 }

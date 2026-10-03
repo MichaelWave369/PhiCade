@@ -9,7 +9,7 @@ use phicade_runtime::{
     GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SuiteTaskAggregateInput, SystemCommand,
-    SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suites,
+    SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suites,
     benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
     compare_benchmark_suites,
     compare_campaign_samples, score_benchmark_task_frame,
@@ -19,6 +19,7 @@ use phicade_runtime::{
     AGENT_GYM_START, AGENT_GYM_TARGET, AUTODRIVE_RECEIPT_SCHEMA,
     AUTODRIVE_STATUS_SCHEMA, BENCHMARK_CAMPAIGN_SCHEMA, BENCHMARK_SUITE_COMPARISON_SCHEMA,
     BENCHMARK_SUITE_REPORT_SCHEMA, BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID,
+    BENCHMARK_SUITE_V3_ID,
     CAMPAIGN_COMPARISON_SCHEMA,
     PHIBOT_OBSERVATION_SCHEMA,
     REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
@@ -639,6 +640,7 @@ struct BenchmarkTaskInfo {
     initial_distance: i32,
     success_distance: i32,
     warmup_frames: u64,
+    allowed_buttons: Vec<String>,
 }
 
 fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
@@ -657,6 +659,7 @@ fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
         initial_distance: task.initial_distance,
         success_distance: task.success_distance,
         warmup_frames: task.warmup_frames,
+        allowed_buttons: task.allowed_buttons.iter().map(|button| (*button).to_owned()).collect(),
     }
 }
 
@@ -2633,9 +2636,10 @@ fn start_model_gameplay_benchmark_inner(
         .ok_or_else(|| "model benchmark requires an active Phi-Bot grant".to_owned())?;
 
     let mut grant = AgentGrant::game_boy(agent_id, 1);
-    grant.allowed_buttons = ["UP", "DOWN", "LEFT", "RIGHT"]
-        .into_iter()
-        .map(str::to_owned)
+    grant.allowed_buttons = task
+        .allowed_buttons
+        .iter()
+        .map(|button| (*button).to_owned())
         .collect();
     grant.expires_at_frame = Some(
         session
@@ -5307,6 +5311,88 @@ mod tests {
         .expect("complete v2 candidate");
         assert!(v2_complete_candidate.ready);
         assert_eq!(v2_complete_candidate.covered_tasks, 3);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn suite_v3_requires_both_temporal_cues_without_mutating_v2_coverage() {
+        let root = comparison_test_dir("suite-v3-membership");
+        let campaign_root = root.join("campaigns");
+        let model_root = root.join("models");
+        fs::create_dir_all(&campaign_root).expect("create campaign root");
+        fs::create_dir_all(&model_root).expect("create model root");
+
+        let v3 = benchmark_suite_by_id(BENCHMARK_SUITE_V3_ID).expect("v3 registry");
+        assert_eq!(v3.tasks.len(), 5);
+
+        for task in &v3.tasks[..3] {
+            write_suite_test_campaign(&campaign_root, &model_root, task, 1, "digest-suite");
+        }
+
+        let v2_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V2_ID,
+        )
+        .expect("scan complete v2 suite");
+        let (v2_id, v2_evidence) = v2_cohorts.iter().next().expect("v2 cohort");
+        let v2_candidate = suite_report_candidate(BENCHMARK_SUITE_V2_ID, v2_id, v2_evidence)
+            .expect("v2 candidate");
+        assert!(v2_candidate.ready);
+        assert_eq!(v2_candidate.covered_tasks, 3);
+
+        let v3_cohorts = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V3_ID,
+        )
+        .expect("scan incomplete v3 suite");
+        let (v3_id, v3_evidence) = v3_cohorts.iter().next().expect("v3 cohort");
+        let v3_candidate = suite_report_candidate(BENCHMARK_SUITE_V3_ID, v3_id, v3_evidence)
+            .expect("v3 candidate");
+        assert!(!v3_candidate.ready);
+        assert_eq!(v3_candidate.covered_tasks, 3);
+        assert_eq!(v3_candidate.suite_task_count, 5);
+
+        write_suite_test_campaign(
+            &campaign_root,
+            &model_root,
+            &benchmark_suite_v3_tasks()[3],
+            1,
+            "digest-suite",
+        );
+        let one_cue = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V3_ID,
+        )
+        .expect("scan one-cue v3 suite");
+        let (one_id, one_evidence) = one_cue.iter().next().expect("one-cue cohort");
+        let one_candidate = suite_report_candidate(BENCHMARK_SUITE_V3_ID, one_id, one_evidence)
+            .expect("one-cue candidate");
+        assert!(!one_candidate.ready);
+        assert_eq!(one_candidate.covered_tasks, 4);
+
+        write_suite_test_campaign(
+            &campaign_root,
+            &model_root,
+            &benchmark_suite_v3_tasks()[4],
+            1,
+            "digest-suite",
+        );
+        let complete = scan_benchmark_suite_cohorts_from_roots(
+            &campaign_root,
+            &model_root,
+            BENCHMARK_SUITE_V3_ID,
+        )
+        .expect("scan complete v3 suite");
+        let (complete_id, complete_evidence) = complete.iter().next().expect("complete v3 cohort");
+        let complete_candidate =
+            suite_report_candidate(BENCHMARK_SUITE_V3_ID, complete_id, complete_evidence)
+                .expect("complete v3 candidate");
+        assert!(complete_candidate.ready);
+        assert_eq!(complete_candidate.covered_tasks, 5);
 
         let _ = fs::remove_dir_all(root);
     }
