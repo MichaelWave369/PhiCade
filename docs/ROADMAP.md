@@ -265,7 +265,7 @@
 - [x] v2 READY at 3/3 while v3 remains INCOMPLETE at 3/5
 - [x] v3 remains INCOMPLETE at 4/5
 - [x] v3 READY only at 5/5
-- [ ] Freeze canonical temporal source + ROM SHA-256 after behavioral qualification
+- [x] Freeze canonical temporal source + ROM SHA-256 after behavioral qualification
 
 ## Later
 
