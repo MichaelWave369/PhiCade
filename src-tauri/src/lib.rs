@@ -2627,13 +2627,11 @@ fn load_benchmark_campaign_receipt(
 }
 
 fn verify_campaign_trial_receipts(
-    session: &EmulatorSession,
+    model_benchmark_dir: &Path,
     campaign: &BenchmarkCampaignReceipt,
 ) -> Result<(), String> {
     for trial in &campaign.trials {
-        let path = session
-            .paths
-            .model_benchmark_dir
+        let path = model_benchmark_dir
             .join(format!("run-{:06}.json", trial.benchmark_run_id));
         if !path.exists() {
             return Err(format!(
@@ -2695,7 +2693,7 @@ fn validate_campaign_for_comparison(
             campaign.campaign_id
         ));
     }
-    verify_campaign_trial_receipts(session, campaign)
+    verify_campaign_trial_receipts(&session.paths.model_benchmark_dir, campaign)
 }
 
 fn validate_campaign_compatibility(
