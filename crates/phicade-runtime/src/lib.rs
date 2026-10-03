@@ -9,6 +9,7 @@ pub mod agent_gym;
 pub mod autodrive;
 pub mod benchmark_campaign;
 pub mod campaign_comparison;
+pub mod suite_report;
 pub mod core;
 pub mod driver;
 pub mod library;
@@ -42,6 +43,10 @@ pub use benchmark_campaign::{
 pub use campaign_comparison::{
     compare_campaign_samples, CampaignComparisonStats, CampaignSampleSummary,
     CAMPAIGN_COMPARISON_SCHEMA,
+};
+pub use suite_report::{
+    summarize_benchmark_suite, BenchmarkSuiteAggregateStats, SuiteTaskAggregateInput,
+    BENCHMARK_SUITE_REPORT_SCHEMA,
 };
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use driver::{

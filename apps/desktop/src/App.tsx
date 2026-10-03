@@ -18,6 +18,7 @@ import {
   completeOllamaTurn,
   compareBenchmarkCampaigns,
   continueBenchmarkCampaign,
+  buildBenchmarkSuiteReport,
   failAutodriveProvider,
   flushGameSave,
   getAuthorityStatus,
@@ -30,6 +31,7 @@ import {
   getOllamaQualificationStatus,
   issueAgentTurn,
   listBenchmarkCampaignReceipts,
+  listBenchmarkSuiteReportCandidates,
   listOllamaModels,
   qualifyOllamaModel,
   loadSettings,
@@ -60,6 +62,8 @@ import {
   type BenchmarkCampaignStatus,
   type CampaignComparisonArtifact,
   type CampaignListEntry,
+  type BenchmarkSuiteReportArtifact,
+  type BenchmarkSuiteReportCandidate,
   type ControlMode,
   type FramePacket,
   type GameProfile,
@@ -75,10 +79,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["SUITE", "TWO-TASK", "Suite v1 freezes the original diagonal task plus Mirror Dash with reversed start/target geometry."],
-  ["REGISTRY", "HASH-BOUND", "Native benchmark identity comes from exact ROM SHA-256, never filename or display title."],
-  ["QUALIFICATION", "DUAL", "Both source-first ROMs must pass no-input, oracle, exact replay, and source/ROM hash controls."],
-  ["RUNTIME", "GENERIC", "Benchmark start, scoring, task-success, campaigns, prompts, and UI resolve the active task from one registry."],
+  ["COHORT", "CROSS-TASK", "Suite cohorts group COMPLETE campaigns by exact model, qualification, core, policy, and trial-count pins."],
+  ["COVERAGE", "ALL TASKS", "A suite report is READY only when every registered Suite v1 task has one verified campaign."],
+  ["AGGREGATE", "MACRO", "Task means receive equal weight while overall success rate uses every observed trial."],
+  ["PROVENANCE", "WALKED", "Every suite build re-verifies campaign receipts and their underlying trial hashes before aggregation."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -140,6 +144,10 @@ export function App() {
   const [comparisonBId, setComparisonBId] = useState<number | null>(null);
   const [lastComparison, setLastComparison] = useState<CampaignComparisonArtifact | null>(null);
   const [comparisonBusy, setComparisonBusy] = useState(false);
+  const [suiteCandidates, setSuiteCandidates] = useState<BenchmarkSuiteReportCandidate[]>([]);
+  const [selectedSuiteCohortId, setSelectedSuiteCohortId] = useState<string | null>(null);
+  const [lastSuiteReport, setLastSuiteReport] = useState<BenchmarkSuiteReportArtifact | null>(null);
+  const [suiteReportBusy, setSuiteReportBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -575,6 +583,47 @@ export function App() {
     }
   };
 
+  const refreshSuiteReportCandidates = async () => {
+    try {
+      const candidates = await listBenchmarkSuiteReportCandidates();
+      setSuiteCandidates(candidates);
+      const ready = candidates.filter((candidate) => candidate.ready);
+      setSelectedSuiteCohortId((current) => {
+        if (current && ready.some((candidate) => candidate.cohortId === current)) {
+          return current;
+        }
+        const selectedDigest = modelQualification?.details.digest;
+        const sameModel = selectedDigest
+          ? ready.find((candidate) => candidate.modelDigest === selectedDigest)
+          : null;
+        return sameModel?.cohortId ?? ready[0]?.cohortId ?? null;
+      });
+    } catch (error) {
+      setNotice(`SUITE REPORT LEDGER ERROR // ${String(error)}`);
+    }
+  };
+
+  const buildSelectedSuiteReport = async () => {
+    if (!selectedSuiteCohortId) {
+      setNotice("SUITE REPORT REQUIRES A READY 2/2 COHORT");
+      return;
+    }
+    setSuiteReportBusy(true);
+    try {
+      const artifact = await buildBenchmarkSuiteReport(selectedSuiteCohortId);
+      setLastSuiteReport(artifact);
+      const stats = artifact.receipt.stats;
+      setNotice(
+        `SUITE REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
+      );
+      await refreshSuiteReportCandidates();
+    } catch (error) {
+      setLastSuiteReport(null);
+      setNotice(`SUITE REPORT REFUSED // ${String(error)}`);
+    } finally {
+      setSuiteReportBusy(false);
+    }
+  };
   const refreshComparisonCampaigns = async () => {
     try {
       const entries = await listBenchmarkCampaignReceipts();
@@ -734,6 +783,7 @@ export function App() {
       setLastCampaign(artifact);
       setCampaignStatus(await getBenchmarkCampaignStatus());
       await refreshComparisonCampaigns();
+      await refreshSuiteReportCandidates();
       setAutodrive(await getAutodriveStatus());
       setBenchmarkRunning(false);
       setBenchmarkRunId(null);
@@ -856,6 +906,7 @@ export function App() {
             setLastCampaign(summary);
             setBenchmarkRunId(null);
             await refreshComparisonCampaigns();
+            await refreshSuiteReportCandidates();
             const stats = summary.receipt.stats;
             setNotice(
               `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.observedTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
@@ -1036,6 +1087,10 @@ export function App() {
       setComparisonAId(null);
       setComparisonBId(null);
       setLastComparison(null);
+      setSuiteCandidates([]);
+      setSelectedSuiteCohortId(null);
+      setLastSuiteReport(null);
+      setSuiteReportBusy(false);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -1049,14 +1104,24 @@ export function App() {
       setProfile(info.profile);
       setRunning(true);
       runningRef.current = true;
-      const priorCampaigns = await listBenchmarkCampaignReceipts();
+      const [priorCampaigns, priorSuiteCandidates] = await Promise.all([
+        listBenchmarkCampaignReceipts(),
+        listBenchmarkSuiteReportCandidates(),
+      ]);
       setCampaignLedger(priorCampaigns);
+      setSuiteCandidates(priorSuiteCandidates);
+      const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
+      const selectedDigest = modelQualification?.details.digest;
+      const matchingSuiteCandidate = selectedDigest
+        ? readySuiteCandidates.find((candidate) => candidate.modelDigest === selectedDigest)
+        : null;
+      setSelectedSuiteCohortId(matchingSuiteCandidate?.cohortId ?? readySuiteCandidates[0]?.cohortId ?? null);
       const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
       if (completeCampaigns.length >= 2) {
         setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
         setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
       }
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS`);
+      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY`);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
@@ -1092,6 +1157,10 @@ export function App() {
       setComparisonBId(null);
       setLastComparison(null);
       setComparisonBusy(false);
+      setSuiteCandidates([]);
+      setSelectedSuiteCohortId(null);
+      setLastSuiteReport(null);
+      setSuiteReportBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -1120,6 +1189,7 @@ export function App() {
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
           <span><i className={`lamp ${campaignStatus?.active ? "lamp-amber" : lastCampaign ? "lamp-green" : "lamp-green"}`} /> CAMPAIGN {campaignStatus?.active ? `${campaignStatus.completedTrials}/${campaignStatus.totalTrials}` : lastCampaign ? `#${lastCampaign.receipt.campaignId}` : "STANDBY"}</span>
           <span><i className={`lamp ${comparisonBusy ? "lamp-amber" : lastComparison ? "lamp-green" : "lamp-green"}`} /> COMPARE {comparisonBusy ? "VERIFYING" : lastComparison ? `#${lastComparison.receipt.comparisonId}` : "STANDBY"}</span>
+          <span><i className={`lamp ${suiteReportBusy ? "lamp-amber" : lastSuiteReport ? "lamp-green" : "lamp-green"}`} /> SUITE {suiteReportBusy ? "VERIFYING" : lastSuiteReport ? `#${lastSuiteReport.receipt.reportId}` : suiteCandidates.some((candidate) => candidate.ready) ? "READY" : "INCOMPLETE"}</span>
         </div>
       </header>
 
@@ -1179,7 +1249,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 15 // COMPARISON LAB ONLINE</small>
+                  <small>RUNG 16 // SUITE REPORTS ONLINE</small>
                 </div>
               )}
             </div>
@@ -1348,6 +1418,45 @@ export function App() {
                 : `${campaignLedger.length} CAMPAIGN RECEIPTS // A−B, WELCH CI95, HEDGES g`}
             </small>
           </div>
+          <div className="suite-strip">
+            <span>SUITE REPORT</span>
+            <select
+              value={selectedSuiteCohortId ?? ""}
+              onChange={(event) => {
+                setSelectedSuiteCohortId(event.target.value || null);
+                setLastSuiteReport(null);
+              }}
+              disabled={suiteCandidates.length === 0 || suiteReportBusy || autodrive?.active}
+              aria-label="Benchmark Suite cohort"
+            >
+              <option value="">SELECT COHORT</option>
+              {suiteCandidates.map((candidate) => (
+                <option key={candidate.cohortId} value={candidate.cohortId}>
+                  {`${candidate.model} ${candidate.modelDigest.slice(0, 8)}… // ${candidate.coveredTasks}/${candidate.suiteTaskCount} TASKS // ${candidate.trialsPerTask}× // ${candidate.ready ? "READY" : "INCOMPLETE"}`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void buildSelectedSuiteReport()}
+              disabled={
+                suiteReportBusy
+                || !selectedSuiteCohortId
+                || !suiteCandidates.some((candidate) => candidate.cohortId === selectedSuiteCohortId && candidate.ready)
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {suiteReportBusy ? "VERIFYING..." : "BUILD REPORT"}
+            </button>
+            <button onClick={() => void refreshSuiteReportCandidates()} disabled={suiteReportBusy || autodrive?.active}>
+              REFRESH
+            </button>
+            <small>
+              {lastSuiteReport
+                ? `#${lastSuiteReport.receipt.reportId} // MACRO μ ${lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // σTASK ${lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1)}`
+                : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ALL REGISTERED TASKS REQUIRED`}
+            </small>
+          </div>
           <div className="replay-strip">
             <span>REPLAY LEDGER</span>
             <button
@@ -1408,7 +1517,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 15</div>
+          <div className="panel-title">RUNTIME // RUNG 16</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1455,6 +1564,13 @@ export function App() {
             <div><dt>CI95 HIGH</dt><dd>{lastComparison ? lastComparison.receipt.stats.meanDifferenceCi95High.toFixed(1) : "----"}</dd></div>
             <div><dt>HEDGES g</dt><dd>{lastComparison?.receipt.stats.hedgesGAMinusB === null || lastComparison?.receipt.stats.hedgesGAMinusB === undefined ? "----" : lastComparison.receipt.stats.hedgesGAMinusB.toFixed(2)}</dd></div>
             <div><dt>Δ SUCCESS</dt><dd>{lastComparison ? `${(lastComparison.receipt.stats.successRateDifferenceAMinusB * 100).toFixed(1)}pp` : "----"}</dd></div>
+            <div><dt>SUITE COHORTS</dt><dd>{`${suiteCandidates.filter((candidate) => candidate.ready).length}/${suiteCandidates.length}`}</dd></div>
+            <div><dt>SUITE REPORT</dt><dd>{lastSuiteReport ? `#${lastSuiteReport.receipt.reportId}` : "NONE"}</dd></div>
+            <div><dt>SUITE TASKS</dt><dd>{lastSuiteReport ? `${lastSuiteReport.receipt.stats.taskCount}` : "----"}</dd></div>
+            <div><dt>MACRO MEAN</dt><dd>{lastSuiteReport ? lastSuiteReport.receipt.stats.macroMeanScore1000.toFixed(1) : "----"}</dd></div>
+            <div><dt>SUITE SUCCESS</dt><dd>{lastSuiteReport ? `${(lastSuiteReport.receipt.stats.overallSuccessRate * 100).toFixed(1)}%` : "----"}</dd></div>
+            <div><dt>TASK μ MIN/MAX</dt><dd>{lastSuiteReport ? `${lastSuiteReport.receipt.stats.minTaskMeanScore1000.toFixed(1)} / ${lastSuiteReport.receipt.stats.maxTaskMeanScore1000.toFixed(1)}` : "----"}</dd></div>
+            <div><dt>TASK μ σ</dt><dd>{lastSuiteReport ? lastSuiteReport.receipt.stats.populationStddevTaskMeanScore1000.toFixed(1) : "----"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -1496,7 +1612,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>ONE SUITE // TWO FROZEN WORLDS // EXACT HASH IDENTITY // ONE GOVERNED BENCHMARK PATH // NO TASK-SPECIFIC BACKDOORS</footer>
+      <footer>ONE MODEL COHORT // ALL REGISTERED TASKS // REVERIFY EVERY CAMPAIGN + TRIAL // MACRO TASK SCORE // NO CROSS-TASK SHORTCUTS</footer>
     </main>
   );
 }
