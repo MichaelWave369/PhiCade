@@ -25,9 +25,9 @@ pub const AGENT_GYM_WALL_SOURCE_SHA256: &str =
 
 pub const AGENT_GYM_TEMPORAL_LEFT_ID: &str = "temporal-cue-left-v1";
 pub const AGENT_GYM_TEMPORAL_LEFT_ROM_SHA256: &str =
-    "0000000000000000000000000000000000000000000000000000000000000000";
+    "da16bdda571bd2f3d5581097e1643ce7496ae3ea586f3b1756330a2b3fc171f5";
 pub const AGENT_GYM_TEMPORAL_LEFT_SOURCE_SHA256: &str =
-    "2222222222222222222222222222222222222222222222222222222222222222";
+    "450ecadadb3ed51e1e613e4edd06007880309c4841fbae313bb45f0a75932a4c";
 
 pub const AGENT_GYM_TEMPORAL_RIGHT_ID: &str = "temporal-cue-right-v1";
 pub const AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256: &str =
@@ -194,7 +194,7 @@ pub static AGENT_GYM_TEMPORAL_LEFT_ORACLE: [OracleLeg; 3] = [
     },
     OracleLeg {
         button: "WAIT",
-        frames: 100,
+        frames: 101,
     },
     OracleLeg {
         button: "LEFT",
@@ -209,7 +209,7 @@ pub static AGENT_GYM_TEMPORAL_RIGHT_ORACLE: [OracleLeg; 3] = [
     },
     OracleLeg {
         button: "WAIT",
-        frames: 100,
+        frames: 101,
     },
     OracleLeg {
         button: "RIGHT",
