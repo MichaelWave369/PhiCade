@@ -2922,6 +2922,263 @@ fn campaign_list_entry(
     })
 }
 
+fn suite_cohort_id(identity: &SuiteCohortIdentity) -> Result<String, String> {
+    let bytes = serde_json::to_vec(identity)
+        .map_err(|error| format!("serialize suite cohort identity: {error}"))?;
+    Ok(sha256_bytes(&bytes))
+}
+
+fn scan_benchmark_suite_cohorts(
+    session: &EmulatorSession,
+) -> Result<std::collections::BTreeMap<String, SuiteCohortEvidence>, String> {
+    let mut cohorts = std::collections::BTreeMap::new();
+
+    for task in benchmark_suite_v1_tasks() {
+        let campaign_dir = session.paths.benchmark_campaign_root.join(task.rom_sha256);
+        let model_benchmark_dir = session.paths.model_benchmark_root.join(task.rom_sha256);
+        if !campaign_dir.exists() {
+            continue;
+        }
+
+        for entry in fs::read_dir(&campaign_dir)
+            .map_err(|error| format!("cannot list {}: {error}", campaign_dir.display()))?
+        {
+            let entry =
+                entry.map_err(|error| format!("cannot read campaign directory entry: {error}"))?;
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                continue;
+            }
+
+            let bytes = fs::read(&path)
+                .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+            let receipt = serde_json::from_slice::<BenchmarkCampaignReceipt>(&bytes)
+                .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+
+            if receipt.schema != BENCHMARK_CAMPAIGN_SCHEMA {
+                return Err(format!(
+                    "unsupported campaign schema in {}: {}",
+                    path.display(),
+                    receipt.schema
+                ));
+            }
+            if receipt.benchmark_id != task.id
+                || receipt.gym_source_sha256 != task.source_sha256
+                || receipt.gym_rom_sha256 != task.rom_sha256
+            {
+                return Err(format!(
+                    "campaign {} does not match benchmark registry task {}",
+                    path.display(),
+                    task.id
+                ));
+            }
+
+            validate_campaign_for_comparison(&model_benchmark_dir, &receipt)?;
+
+            let identity = SuiteCohortIdentity {
+                provider: receipt.provider.clone(),
+                model: receipt.model.clone(),
+                model_digest: receipt.model_digest.clone(),
+                model_qualification_sha256: receipt.model_qualification_sha256.clone(),
+                core_sha256: receipt.core_sha256.clone(),
+                core_name: receipt.core_name.clone(),
+                core_version: receipt.core_version.clone(),
+                policy: receipt.policy.clone(),
+                total_trials: receipt.total_trials,
+            };
+            let cohort_id = suite_cohort_id(&identity)?;
+            let cohort = cohorts
+                .entry(cohort_id)
+                .or_insert_with(|| SuiteCohortEvidence {
+                    identity,
+                    tasks: std::collections::BTreeMap::new(),
+                });
+
+            let replace = cohort
+                .tasks
+                .get(task.id)
+                .map(|(_, existing)| receipt.campaign_id > existing.campaign_id)
+                .unwrap_or(true);
+            if replace {
+                cohort
+                    .tasks
+                    .insert(task.id.to_owned(), (path, receipt));
+            }
+        }
+    }
+
+    Ok(cohorts)
+}
+
+fn suite_report_candidate(
+    cohort_id: &str,
+    evidence: &SuiteCohortEvidence,
+) -> Result<BenchmarkSuiteReportCandidate, String> {
+    let mut tasks = Vec::new();
+    for task in benchmark_suite_v1_tasks() {
+        let Some((_, campaign)) = evidence.tasks.get(task.id) else {
+            continue;
+        };
+        let mean_score_1000 = campaign
+            .stats
+            .mean_score_1000
+            .ok_or_else(|| format!("campaign {} has no mean score", campaign.campaign_id))?;
+        tasks.push(SuiteCandidateTask {
+            task_id: task.id.into(),
+            task_title: task.title.into(),
+            campaign_id: campaign.campaign_id,
+            mean_score_1000,
+            success_rate: campaign.stats.success_rate,
+        });
+    }
+
+    let suite_task_count =
+        u16::try_from(benchmark_suite_v1_tasks().len()).unwrap_or(u16::MAX);
+    let covered_tasks = u16::try_from(tasks.len()).unwrap_or(u16::MAX);
+
+    Ok(BenchmarkSuiteReportCandidate {
+        cohort_id: cohort_id.to_owned(),
+        provider: evidence.identity.provider.clone(),
+        model: evidence.identity.model.clone(),
+        model_digest: evidence.identity.model_digest.clone(),
+        trials_per_task: evidence.identity.total_trials,
+        covered_tasks,
+        suite_task_count,
+        ready: covered_tasks == suite_task_count,
+        tasks,
+    })
+}
+
+fn build_suite_report_from_cohort(
+    session: &mut EmulatorSession,
+    cohort_id: &str,
+) -> Result<BenchmarkSuiteReportArtifact, String> {
+    let cohorts = scan_benchmark_suite_cohorts(session)?;
+    let evidence = cohorts
+        .get(cohort_id)
+        .ok_or_else(|| "suite cohort no longer exists".to_owned())?;
+
+    if evidence.tasks.len() != benchmark_suite_v1_tasks().len() {
+        return Err(format!(
+            "suite cohort covers {}/{} tasks",
+            evidence.tasks.len(),
+            benchmark_suite_v1_tasks().len()
+        ));
+    }
+
+    let mut task_refs = Vec::new();
+    let mut aggregate_inputs = Vec::new();
+
+    for task in benchmark_suite_v1_tasks() {
+        let (campaign_path, campaign) = evidence
+            .tasks
+            .get(task.id)
+            .ok_or_else(|| format!("suite cohort is missing task {}", task.id))?;
+
+        let model_benchmark_dir = session.paths.model_benchmark_root.join(task.rom_sha256);
+        validate_campaign_for_comparison(&model_benchmark_dir, campaign)?;
+
+        if campaign.benchmark_id != task.id
+            || campaign.gym_source_sha256 != task.source_sha256
+            || campaign.gym_rom_sha256 != task.rom_sha256
+        {
+            return Err(format!("suite campaign {} drifted from registry", campaign.campaign_id));
+        }
+
+        let mean_score_1000 = campaign
+            .stats
+            .mean_score_1000
+            .ok_or_else(|| format!("campaign {} has no mean score", campaign.campaign_id))?;
+
+        aggregate_inputs.push(SuiteTaskAggregateInput {
+            task_id: task.id.into(),
+            mean_score_1000,
+            observed_trials: campaign.stats.observed_trials,
+            successful_trials: campaign.stats.successful_trials,
+        });
+
+        task_refs.push(SuiteTaskCampaignRef {
+            task_id: task.id.into(),
+            task_title: task.title.into(),
+            campaign_id: campaign.campaign_id,
+            campaign_receipt_sha256: sha256_file(campaign_path)?,
+            source_sha256: task.source_sha256.into(),
+            rom_sha256: task.rom_sha256.into(),
+            stats: campaign.stats.clone(),
+        });
+    }
+
+    let stats = summarize_benchmark_suite(&aggregate_inputs)?;
+    let report_id = session.next_suite_report_id;
+    let identity = &evidence.identity;
+    let receipt = BenchmarkSuiteReportReceipt {
+        schema: BENCHMARK_SUITE_REPORT_SCHEMA.into(),
+        record_status: "COMPLETE".into(),
+        report_id,
+        suite_id: BENCHMARK_SUITE_V1_ID.into(),
+        cohort_id: cohort_id.to_owned(),
+        provider: identity.provider.clone(),
+        model: identity.model.clone(),
+        model_digest: identity.model_digest.clone(),
+        model_qualification_sha256: identity.model_qualification_sha256.clone(),
+        core_sha256: identity.core_sha256.clone(),
+        core_name: identity.core_name.clone(),
+        core_version: identity.core_version.clone(),
+        policy: identity.policy.clone(),
+        trials_per_task: identity.total_trials,
+        tasks: task_refs,
+        stats,
+    };
+
+    let receipt_path = session
+        .paths
+        .suite_report_dir
+        .join(format!("suite-report-{report_id:06}.json"));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize Benchmark Suite report: {error}"))?;
+    write_atomic(&receipt_path, &json)?;
+    session.next_suite_report_id = session.next_suite_report_id.saturating_add(1);
+
+    Ok(BenchmarkSuiteReportArtifact {
+        receipt_path: receipt_path.to_string_lossy().to_string(),
+        receipt,
+    })
+}
+
+#[tauri::command]
+fn list_benchmark_suite_report_candidates(
+    state: State<'_, EmulatorState>,
+) -> Result<Vec<BenchmarkSuiteReportCandidate>, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let cohorts = scan_benchmark_suite_cohorts(session)?;
+    cohorts
+        .iter()
+        .map(|(cohort_id, evidence)| suite_report_candidate(cohort_id, evidence))
+        .collect()
+}
+
+#[tauri::command]
+fn build_benchmark_suite_report(
+    state: State<'_, EmulatorState>,
+    cohort_id: String,
+) -> Result<BenchmarkSuiteReportArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    build_suite_report_from_cohort(session, cohort_id.trim())
+}
+
 #[tauri::command]
 fn list_benchmark_campaign_receipts(
     state: State<'_, EmulatorState>,
