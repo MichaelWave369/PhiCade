@@ -123,8 +123,8 @@ model response
 
 - `nextObservationFrame`
 - `lastObservationFrame`
-- `totalCadenceWaitFrames`
-- `maxCadenceWaitFrames`
+- `totalScheduledCadenceWaitFrames`
+- `maxScheduledCadenceWaitFrames`
 
 The desktop displays:
 
@@ -138,8 +138,8 @@ The desktop displays:
 
 `phicade.autodrive-receipt.v2` records:
 
-- total cadence wait frames
-- maximum cadence wait frames
+- total scheduled cadence wait frames
+- maximum scheduled cadence wait frames
 - last observation frame
 - complete cadence policy
 
