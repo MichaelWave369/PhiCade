@@ -16,8 +16,11 @@ Benchmark suites:
 
 - **Suite v1** — Move the Block to the X + Mirror Dash
 - **Suite v2** — the exact v1 tasks + **Wall Detour**
+- **Suite v3** — the exact v2 tasks + **Temporal Cue: Left** + **Temporal Cue: Right**
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
+- **Temporal Cue pair** — opposite initial cues lead to an identical later
+  decision screen that requires opposite correct choices
 
 Current evidence stack includes:
 
@@ -156,7 +159,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select **Suite v1** or **Suite v2**,
+2. select **Suite v1**, **Suite v2**, or **Suite v3**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -222,9 +225,9 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all three registered benchmark ROMs from source and
-tests Suite v1 preservation, Suite v2 2/3 → 3/3 coverage, digest splitting, and
-trial-tamper refusal.
+CI assembles and qualifies all five registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue pair, tests Suite v1/v2 preservation,
+Suite v3 3/5 → 4/5 → 5/5 coverage, digest splitting, and trial-tamper refusal.
 
 See:
 
