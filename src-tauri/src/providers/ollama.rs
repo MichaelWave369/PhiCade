@@ -2,6 +2,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_runtime::{
     benchmark_task_by_rom_sha256, ActionKind, AgentTurnAction, AgentTurnRequest,
     AgentTurnResponse, AGENT_GYM_MIRROR_ROM_SHA256, AGENT_GYM_ROM_SHA256,
+    AGENT_GYM_TEMPORAL_LEFT_ROM_SHA256, AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256,
     AGENT_TURN_RESPONSE_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
@@ -671,6 +672,23 @@ mod tests {
         ] {
             assert!(!prompt.contains(leaked), "prompt leaked benchmark coordinate: {leaked}");
         }
+    }
+
+    #[test]
+    fn temporal_cue_pair_uses_identical_non_leaking_instruction() {
+        let mut left = request();
+        left.observation.game_sha256 = AGENT_GYM_TEMPORAL_LEFT_ROM_SHA256.into();
+        left.observation.allowed_buttons = vec!["A".into(), "LEFT".into(), "RIGHT".into()];
+        let mut right = left.clone();
+        right.observation.game_sha256 = AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256.into();
+
+        let left_prompt = system_prompt(&left);
+        let right_prompt = system_prompt(&right);
+        assert_eq!(left_prompt, right_prompt);
+        assert!(left_prompt.contains("memorize the visible arrow cue"));
+        assert!(left_prompt.contains("choice screen intentionally does not repeat the cue"));
+        assert!(!left_prompt.contains("Temporal Cue: Left"));
+        assert!(!right_prompt.contains("Temporal Cue: Right"));
     }
 
     #[test]
