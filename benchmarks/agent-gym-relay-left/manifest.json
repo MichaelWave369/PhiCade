@@ -1,0 +1,51 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "relay-rooms-left-v1",
+  "title": "Relay Rooms: Left",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": ["A", "UP", "DOWN", "LEFT", "RIGHT"],
+  "movementPixelsPerFrame": 2,
+  "rooms": [
+    {
+      "id": "briefing",
+      "playerStartScreen": [72, 24],
+      "visibleCue": "LEFT",
+      "exitAction": "A"
+    },
+    {
+      "id": "corridor",
+      "playerStartScreen": [16, 24],
+      "wallScreenX": [72, 79],
+      "wallScreenY": [0, 95],
+      "gapStartsScreenY": 96,
+      "exitScreen": [136, 24]
+    },
+    {
+      "id": "terminal",
+      "playerStartScreen": [72, 112],
+      "leftTerminalScreen": [24, 112],
+      "rightTerminalScreen": [120, 112],
+      "correctTerminal": "LEFT",
+      "terminalsVisuallyIdentical": true,
+      "neutralArmRequired": true
+    }
+  ],
+  "score": {
+    "metric": "manhattan-distance-progress-to-correct-terminal",
+    "startScreen": [72, 24],
+    "targetScreen": [24, 112],
+    "initialDistancePixels": 136,
+    "range": [0, 1000],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": ["A", "WAIT", "DOWN", "RIGHT", "UP", "WAIT", "LEFT"],
+    "oracleFrames": [1, 2, 40, 60, 40, 2, 24],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}

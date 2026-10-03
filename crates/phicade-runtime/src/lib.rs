@@ -23,7 +23,7 @@ pub use action_bus::{
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
 pub use agent_gym::{
     agent_gym_distance, agent_gym_score_1000, agent_gym_success, benchmark_suite_by_id,
-    benchmark_suite_v1_tasks, benchmark_suite_v2_tasks, benchmark_suite_v3_tasks, benchmark_suites,
+    benchmark_suite_v1_tasks, benchmark_suite_v2_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suites,
     benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
     benchmark_task_distance, benchmark_task_success, locate_agent_gym_player,
     score_agent_gym_frame, score_benchmark_task_frame, AgentGymScore, BenchmarkSuiteSpec,
@@ -42,7 +42,15 @@ pub use agent_gym::{
     AGENT_GYM_TEMPORAL_RIGHT_ROM_SHA256, AGENT_GYM_TEMPORAL_RIGHT_SOURCE_SHA256,
     AGENT_GYM_TEMPORAL_RIGHT_TARGET, AGENT_GYM_TEMPORAL_RIGHT_TASK,
     AGENT_GYM_TEMPORAL_START, AGENT_GYM_TEMPORAL_INITIAL_DISTANCE,
-    BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID, BENCHMARK_SUITE_V3_ID, BENCHMARK_TASKS,
+    AGENT_GYM_RELAY_LEFT_ID, AGENT_GYM_RELAY_LEFT_ORACLE,
+    AGENT_GYM_RELAY_LEFT_ROM_SHA256, AGENT_GYM_RELAY_LEFT_SOURCE_SHA256,
+    AGENT_GYM_RELAY_LEFT_TARGET, AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_ID, AGENT_GYM_RELAY_RIGHT_ORACLE,
+    AGENT_GYM_RELAY_RIGHT_ROM_SHA256, AGENT_GYM_RELAY_RIGHT_SOURCE_SHA256,
+    AGENT_GYM_RELAY_RIGHT_TARGET, AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_RELAY_START, AGENT_GYM_RELAY_INITIAL_DISTANCE,
+    BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID, BENCHMARK_SUITE_V3_ID,
+    BENCHMARK_SUITE_V4_ID, BENCHMARK_TASKS,
 };
 pub use autodrive::{
     AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,

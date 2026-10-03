@@ -5,22 +5,26 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 21
+## Current status — Rung 22
 
-PhiCade now has a balanced temporal-cue benchmark pair that tests whether
-earlier visible evidence can affect a later choice after that evidence disappears
-from the framebuffer. Suite v3 preserves every Suite v2 task and adds opposite
-LEFT/RIGHT cue variants with an identical later decision screen.
+PhiCade now has a balanced three-room relay benchmark that tests whether
+earlier visible evidence can survive an intervening navigation task and room
+transitions before it becomes relevant again. Suite v4 preserves every Suite v3
+task and adds opposite LEFT/RIGHT relay objectives with identical corridor and
+terminal scenes.
 
 Benchmark suites:
 
 - **Suite v1** — Move the Block to the X + Mirror Dash
 - **Suite v2** — the exact v1 tasks + **Wall Detour**
 - **Suite v3** — the exact v2 tasks + **Temporal Cue: Left** + **Temporal Cue: Right**
+- **Suite v4** — the exact v3 tasks + **Relay Rooms: Left** + **Relay Rooms: Right**
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
   decision screen that requires opposite correct choices
+- **Relay Rooms pair** — opposite briefing cues survive a shared wall-detour
+  corridor before an identical terminal scene requires the remembered side
 
 Current evidence stack includes:
 
@@ -39,6 +43,10 @@ Current evidence stack includes:
 - task-scoped benchmark control grants
 - carry-through refusal + neutral re-arm qualification
 - Benchmark Suite v3 with exact 5-task membership
+- balanced three-room Relay Rooms LEFT/RIGHT objective probes
+- identical post-briefing corridor + terminal scenes across relay variants
+- direct-route negative control + wrong-terminal negative control
+- Benchmark Suite v4 with exact 7-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -64,6 +72,24 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Multi-room relay objective benchmark
+
+Suite v4 adds two source-first Game Boy tasks:
+
+- `relay-rooms-left-v1`
+- `relay-rooms-right-v1`
+
+Each starts in a briefing room with a visible LEFT/RIGHT cue. A removes the cue,
+then both variants enter the same wall-detour corridor. After navigating
+DOWN → RIGHT → UP, both reach the same terminal scene, where the remembered
+briefing side determines the correct final choice.
+
+The joint qualifier freezes corridor and terminal states, proves a direct RIGHT
+shortcut is blocked, verifies the wrong final terminal fails, and verifies the
+remembered terminal succeeds.
+
+See `docs/MULTI_ROOM_RELAY_BENCHMARK.md` and `docs/BENCHMARK_SUITE_V4.md`.
 
 ## Temporal Cue memory benchmark
 
@@ -159,7 +185,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select **Suite v1**, **Suite v2**, or **Suite v3**,
+2. select **Suite v1**, **Suite v2**, **Suite v3**, or **Suite v4**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -225,12 +251,15 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all five registered benchmark ROMs from source,
-jointly qualifies the Temporal Cue pair, tests Suite v1/v2 preservation,
-Suite v3 3/5 → 4/5 → 5/5 coverage, digest splitting, and trial-tamper refusal.
+CI assembles and qualifies all seven registered benchmark ROMs from source,
+jointly qualifies the Temporal Cue and Relay Rooms pairs, tests prior-suite
+preservation, Suite v4 5/7 → 6/7 → 7/7 coverage, digest splitting, and
+trial-tamper refusal.
 
 See:
 
+- `docs/MULTI_ROOM_RELAY_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V4.md`
 - `docs/TEMPORAL_CUE_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V3.md`
 - `docs/GOVERNED_AGENT_MEMORY.md`
