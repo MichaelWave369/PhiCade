@@ -296,7 +296,6 @@ ReadMove:
     ld a, [wPlayerX]
     cp GENERATOR_X
     jr z, .up
-
 .leftBounds:
     ld a, [wPlayerX]
     cp 10
