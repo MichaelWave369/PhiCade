@@ -3471,7 +3471,86 @@ mod tests {
     }
 
     #[test]
-    fn model_gameplay_receipt_serializes_score_and_digest_evidence() {
+    #[test]
+    fn campaign_trial_count_is_bounded() {
+        assert!(validate_campaign_trial_count(2).is_err());
+        assert!(validate_campaign_trial_count(3).is_ok());
+        assert!(validate_campaign_trial_count(20).is_ok());
+        assert!(validate_campaign_trial_count(21).is_err());
+    }
+
+    #[test]
+    fn campaign_receipt_serializes_trial_hashes_and_stats() {
+        let stats = summarize_benchmark_trials(&[
+            BenchmarkTrialOutcome {
+                score_1000: Some(1000),
+                task_success: true,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: Some(500),
+                task_success: false,
+            },
+            BenchmarkTrialOutcome {
+                score_1000: None,
+                task_success: false,
+            },
+        ]);
+        let receipt = BenchmarkCampaignReceipt {
+            schema: BENCHMARK_CAMPAIGN_SCHEMA.into(),
+            record_status: "COMPLETE".into(),
+            campaign_id: 3,
+            benchmark_id: AGENT_GYM_ID.into(),
+            provider: "ollama".into(),
+            model: "vision-model".into(),
+            model_digest: "digest-a".into(),
+            model_qualification_sha256: "q".repeat(64),
+            gym_source_sha256: AGENT_GYM_SOURCE_SHA256.into(),
+            gym_rom_sha256: AGENT_GYM_ROM_SHA256.into(),
+            core_sha256: "c".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            total_trials: 3,
+            completed_trials: 3,
+            trials: vec![
+                CampaignTrialEvidence {
+                    benchmark_run_id: 1,
+                    receipt_sha256: "a".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(1000),
+                    task_success: true,
+                    stop_reason: AutodriveStopReason::TaskSuccess,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 2,
+                    receipt_sha256: "b".repeat(64),
+                    record_status: "COMPLETE".into(),
+                    score_1000: Some(500),
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::TurnBudget,
+                },
+                CampaignTrialEvidence {
+                    benchmark_run_id: 3,
+                    receipt_sha256: "d".repeat(64),
+                    record_status: "SCORING_ERROR".into(),
+                    score_1000: None,
+                    task_success: false,
+                    stop_reason: AutodriveStopReason::ProviderFailure,
+                },
+            ],
+            stats,
+        };
+
+        let json = serde_json::to_value(&receipt).expect("serialize campaign receipt");
+        assert_eq!(json["schema"], BENCHMARK_CAMPAIGN_SCHEMA);
+        assert_eq!(json["trials"][0]["receiptSha256"], "a".repeat(64));
+        assert_eq!(json["stats"]["scoredTrials"], 2);
+        assert_eq!(json["stats"]["scoringErrorTrials"], 1);
+        assert_eq!(json["stats"]["meanScore1000"], 750.0);
+    }
+
+    #[test]
+_gameplay_receipt_serializes_score_and_digest_evidence() {
         let receipt = ModelGameplayBenchmarkReceipt {
             schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.into(),
             record_status: "COMPLETE".into(),
