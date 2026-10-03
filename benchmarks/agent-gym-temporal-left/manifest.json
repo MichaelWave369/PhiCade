@@ -34,7 +34,7 @@
   },
   "controlsQualification": {
     "oracle": ["A", "WAIT", "LEFT"],
-    "oracleFrames": [1, 100, 24],
+    "oracleFrames": [1, 101, 24],
     "noInputExpectedProgress": 0,
     "oracleMinimumScore": 980,
     "deterministicReplayRequired": true
