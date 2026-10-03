@@ -174,7 +174,7 @@ impl AuthorityPolicy {
         }
 
         match &envelope.source {
-            ActionSource::Human { seat } => self.authorize_human(*seat),
+            ActionSource::Human { seat } => self.authorize_human(*seat, &envelope.action),
             ActionSource::PhiBot { agent_id, seat } => {
                 self.authorize_agent(agent_id, *seat, &envelope.action, frame, agent_counts)
             }
@@ -185,12 +185,16 @@ impl AuthorityPolicy {
         }
     }
 
-    fn authorize_human(&self, seat: u8) -> AuthorityDecision {
+    fn authorize_human(&self, seat: u8, action: &ActionKind) -> AuthorityDecision {
         if seat == 0 || seat > self.playable_ports {
             return AuthorityDecision::reject(format!(
                 "human seat {seat} is outside {} playable port(s)",
                 self.playable_ports
             ));
+        }
+
+        if seat == 1 && matches!(action, ActionKind::System { .. }) {
+            return AuthorityDecision::accept("human operator system authority");
         }
 
         let accepted = match self.mode {
