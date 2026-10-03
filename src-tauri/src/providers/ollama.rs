@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_runtime::{
     ActionKind, AgentTurnAction, AgentTurnRequest, AgentTurnResponse,
-    AGENT_TURN_RESPONSE_SCHEMA,
+    AGENT_GYM_ROM_SHA256, AGENT_TURN_RESPONSE_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -242,6 +242,12 @@ fn response_schema(request: &AgentTurnRequest) -> Value {
 }
 
 fn system_prompt(request: &AgentTurnRequest) -> String {
+    let task = if request.observation.game_sha256 == AGENT_GYM_ROM_SHA256 {
+        " Benchmark task: move the solid square block onto the visible X target using the D-pad."
+    } else {
+        ""
+    };
+
     format!(
         concat!(
             "You are the gameplay policy for PhiCade turn {turn}. ",
@@ -251,12 +257,13 @@ fn system_prompt(request: &AgentTurnRequest) -> String {
             "Maximum actions: {max_actions}. Maximum delayFrames: {max_delay}. ",
             "Use short press/release pairs when acting. ",
             "If uncertain, return an empty actions array. ",
-            "The runtime, not you, owns authority and timing."
+            "The runtime, not you, owns authority and timing.{task}"
         ),
         turn = request.turn_id,
         buttons = request.observation.allowed_buttons.join(", "),
         max_actions = request.max_actions,
         max_delay = request.max_delay_frames,
+        task = task,
     )
 }
 
