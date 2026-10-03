@@ -576,6 +576,53 @@ export function App() {
     }
   };
 
+  const refreshComparisonCampaigns = async () => {
+    try {
+      const entries = await listBenchmarkCampaignReceipts();
+      setCampaignLedger(entries);
+      const complete = entries.filter((entry) => entry.recordStatus === "COMPLETE");
+      if (complete.length >= 2) {
+        const newest = complete[complete.length - 1];
+        const previous = complete[complete.length - 2];
+        setComparisonAId((current) =>
+          current !== null && complete.some((entry) => entry.campaignId === current)
+            ? current
+            : previous.campaignId,
+        );
+        setComparisonBId((current) =>
+          current !== null && complete.some((entry) => entry.campaignId === current)
+            ? current
+            : newest.campaignId,
+        );
+      } else {
+        setComparisonAId(complete[0]?.campaignId ?? null);
+        setComparisonBId(null);
+      }
+    } catch (error) {
+      setNotice(`COMPARISON LEDGER ERROR // ${String(error)}`);
+    }
+  };
+
+  const runCampaignComparison = async () => {
+    if (comparisonAId === null || comparisonBId === null) {
+      setNotice("COMPARISON REQUIRES TWO CAMPAIGNS");
+      return;
+    }
+    setComparisonBusy(true);
+    try {
+      const artifact = await compareBenchmarkCampaigns(comparisonAId, comparisonBId);
+      setLastComparison(artifact);
+      const stats = artifact.receipt.stats;
+      setNotice(
+        `COMPARISON #${artifact.receipt.comparisonId} // ΔMEAN A−B ${stats.meanScoreDifferenceAMinusB.toFixed(1)} // 95% CI [${stats.meanDifferenceCi95Low.toFixed(1)}, ${stats.meanDifferenceCi95High.toFixed(1)}]`,
+      );
+    } catch (error) {
+      setLastComparison(null);
+      setNotice(`COMPARISON REFUSED // ${String(error)}`);
+    } finally {
+      setComparisonBusy(false);
+    }
+  };
   const beginModelBenchmark = async () => {
     if (!settings.ollamaModel) {
       setNotice("SELECT A LOCAL OLLAMA MODEL FIRST");
