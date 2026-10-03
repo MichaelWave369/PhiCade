@@ -683,6 +683,7 @@ fn session_paths(
     let replay_dir = root.join("replays").join(game_key);
     let autodrive_dir = root.join("autodrive").join(game_key);
     let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
+    let benchmark_campaign_dir = root.join("benchmark-campaigns").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -696,6 +697,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", autodrive_dir.display()))?;
     fs::create_dir_all(&model_benchmark_dir)
         .map_err(|error| format!("cannot create {}: {error}", model_benchmark_dir.display()))?;
+    fs::create_dir_all(&benchmark_campaign_dir)
+        .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -704,6 +707,7 @@ fn session_paths(
         replay_dir,
         autodrive_dir,
         model_benchmark_dir,
+        benchmark_campaign_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1434,6 +1438,9 @@ fn start_emulation(
         model_benchmark: None,
         last_model_benchmark: None,
         next_model_benchmark_run_id: 1,
+        benchmark_campaign: None,
+        last_benchmark_campaign: None,
+        next_benchmark_campaign_id: 1,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
