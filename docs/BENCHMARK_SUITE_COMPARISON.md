@@ -6,9 +6,9 @@ Rung 17 adds the explicit comparison layer above Benchmark Suite Reports.
 
 A Suite Comparison answers a narrow question:
 
-> Given two complete Suite v1 reports produced under the same emulator core,
-> Autodrive policy, task registry, and trials-per-task configuration, what
-> differences are present between report A and report B?
+> Given two complete reports from the same explicit suite version, produced under
+> the same emulator core, Autodrive policy, task population, and trials-per-task
+> configuration, what differences are present between report A and report B?
 
 PhiCade does not turn those differences into a winner label.
 
@@ -22,7 +22,7 @@ point of this layer.
 
 They must still agree on:
 
-- suite ID,
+- exact suite ID and therefore exact task population,
 - SameBoy binary SHA-256,
 - SameBoy identity/version,
 - exact Autodrive policy,
@@ -80,9 +80,15 @@ A completed comparison is stored as:
 
 `phicade.benchmark-suite-comparison.v1`
 
-under:
+under a suite-scoped namespace:
+
+`suite-comparisons/<suite-id>/comparison-000001.json`
+
+For example:
 
 `suite-comparisons/phicade-agent-gym-suite-v1/comparison-000001.json`
+
+`suite-comparisons/phicade-agent-gym-suite-v2/comparison-000001.json`
 
 The receipt binds:
 
@@ -100,9 +106,12 @@ Comparison IDs persist across sessions.
 
 ## Desktop
 
-The **SUITE COMPARE** lane lists existing complete Suite Reports.
+The **SUITE COMPARE** lane lists complete reports only from the currently selected
+suite version.
 
-Select report A and report B, then press **COMPARE SUITES**.
+Select the suite, choose report A and report B, then press **COMPARE SUITES**.
+Cross-version comparisons are refused rather than silently aligning different task
+populations.
 
 Native validation remains authoritative. A report can appear in the selector and
 still be refused if its underlying evidence has been altered since creation.
