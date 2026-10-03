@@ -30,7 +30,7 @@ jobs:
       - run: cargo test -p phicade-runtime -p phicade-libretro --all-targets
 
   native:
-    name: tauri / cargo check + native governance/Suite Report tests
+    name: tauri / cargo check + native governance/Suite Comparison tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
