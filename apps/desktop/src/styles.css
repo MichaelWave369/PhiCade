@@ -532,3 +532,61 @@ footer {
   }
 }
 
+/* Rung 6: Phi-Bot seat */
+.agent-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #35513f;
+  background: #071008;
+}
+
+.agent-strip > span {
+  color: var(--green);
+  font-size: 9px;
+  letter-spacing: .12em;
+  margin-right: 4px;
+}
+
+.agent-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--muted);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.agent-strip button:hover:not(:disabled),
+.agent-strip button.active {
+  color: var(--ink);
+  border-color: var(--green);
+  background: #0c1710;
+  box-shadow: inset 0 0 14px rgba(108, 255, 145, .06);
+}
+
+.agent-strip > small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+.authority-reason {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 560px) {
+  .agent-strip > small {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
