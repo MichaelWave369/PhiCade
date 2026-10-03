@@ -38,4 +38,12 @@ cargo run -p phicade-libretro --bin qualify -- \
   --frames 240 \
   --receipt "$ROOT/artifacts/sameboy-qualification.json"
 
-printf '==> receipt: %s\n' "$ROOT/artifacts/sameboy-qualification.json"
+printf '==> running Replay Ledger exact/divergence qualification\n'
+cargo run -p phicade-libretro --bin replay_qualify -- \
+  --core "$CORE" \
+  --rom "$WORK/dmg-acid2.gb" \
+  --receipt "$ROOT/artifacts/replay-qualification.json"
+
+printf '==> receipts:\n'
+printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
