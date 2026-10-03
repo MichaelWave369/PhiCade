@@ -275,7 +275,7 @@ export interface CampaignTrialEvidence {
 }
 
 export interface BenchmarkCampaignStats {
-  totalTrials: number;
+  observedTrials: number;
   scoredTrials: number;
   scoringErrorTrials: number;
   successfulTrials: number;
