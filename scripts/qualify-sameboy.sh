@@ -68,8 +68,24 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$WALL_OBJ" "$WALL_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$WALL_ROM" "$WALL_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIWALLGYM" "$WALL_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task D / Temporal Cue LEFT\n'
+TEMP_LEFT_SRC="$ROOT/benchmarks/agent-gym-temporal-left/main.asm"
+TEMP_LEFT_OBJ="$WORK/phi-agent-gym-temporal-left.o"
+TEMP_LEFT_ROM="$WORK/phi-agent-gym-temporal-left.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$TEMP_LEFT_OBJ" "$TEMP_LEFT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$TEMP_LEFT_ROM" "$TEMP_LEFT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHITEMPLEFT" "$TEMP_LEFT_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task E / Temporal Cue RIGHT\n'
+TEMP_RIGHT_SRC="$ROOT/benchmarks/agent-gym-temporal-right/main.asm"
+TEMP_RIGHT_OBJ="$WORK/phi-agent-gym-temporal-right.o"
+TEMP_RIGHT_ROM="$WORK/phi-agent-gym-temporal-right.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$TEMP_RIGHT_OBJ" "$TEMP_RIGHT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$TEMP_RIGHT_ROM" "$TEMP_RIGHT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHITEMPRIGHT" "$TEMP_RIGHT_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -127,6 +143,29 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "wall-detour-v1" \
   --receipt "$ROOT/artifacts/agent-gym-wall-detour-qualification.json"
 
+printf '==> running Phi-Agent Gym task D / Temporal Cue LEFT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$TEMP_LEFT_ROM" \
+  --source "$TEMP_LEFT_SRC" \
+  --task "temporal-cue-left-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-temporal-left-qualification.json"
+
+printf '==> running Phi-Agent Gym task E / Temporal Cue RIGHT qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$TEMP_RIGHT_ROM" \
+  --source "$TEMP_RIGHT_SRC" \
+  --task "temporal-cue-right-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-temporal-right-qualification.json"
+
+printf '==> running Temporal Cue pair memory-boundary qualification\n'
+cargo run -p phicade-libretro --bin temporal_cue_qualify -- \
+  --core "$CORE" \
+  --left-rom "$TEMP_LEFT_ROM" \
+  --right-rom "$TEMP_RIGHT_ROM" \
+  --receipt "$ROOT/artifacts/temporal-cue-pair-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -136,3 +175,6 @@ printf '    %s\n' "$ROOT/artifacts/autodrive-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-mirror-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-wall-detour-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-temporal-left-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-temporal-right-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/temporal-cue-pair-qualification.json"
