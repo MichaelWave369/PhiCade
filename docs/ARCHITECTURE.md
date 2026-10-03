@@ -212,3 +212,51 @@ failure cancels the pending turn before emulation resumes.
 Provider adapters are not trusted authorities. They translate an observation-bound
 request into a proposed AgentTurnResponse. Existing turn validation and gameplay
 authority remain downstream and unchanged.
+
+
+## Governed Autodrive
+
+Rung 9 composes the existing provider, driver, authority, and core seams into a
+bounded repeated-turn runtime.
+
+```text
+AutodrivePolicy
+      |
+      v
+AgentTurnRequest
+      |
+      v
+provider THINK PAUSE
+      |
+      v
+AgentTurnResponse
+      |
+      v
+native driver inbox
+      |
+      v
+AuthorityPolicy
+      |
+      v
+core
+      |
+      +--> queue drained?
+              |
+              +--> yes: next bounded turn
+```
+
+The UI may orchestrate when to ask for the next provider turn, but it does not own
+the run budget. Turn, action, empty-turn, and emulated-frame limits are evaluated
+by shared/native runtime state.
+
+Every autonomous stop path clears pending driver requests, queued agent actions,
+and the frontend input mask. The run writes a stop-reason receipt before returning
+to an idle state.
+
+HUMAN takeover remains outside the model-action path and stays available during
+provider inference. The UI cancels THINK PAUSE immediately; any late provider
+response then fails because the pending turn/grant has already been revoked.
+
+Autodrive is currently PHI-BOT handoff only. CO-OP autonomous inference is
+deliberately deferred because THINK PAUSE would freeze the human partner while the
+model reasons.
