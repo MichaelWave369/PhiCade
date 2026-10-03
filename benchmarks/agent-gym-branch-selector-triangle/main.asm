@@ -166,11 +166,11 @@ ReadAction:
     cpl
     and $0F
     bit 0, a
-    jr z, .done
+    jp z, .done
 
     ld a, [wFailed]
     and a
-    jr nz, .done
+    jp nz, .done
 
     ld a, [wPowerOn]
     and a
@@ -182,7 +182,7 @@ ReadAction:
 
     ld a, [wPlayerY]
     cp MODULE_Y
-    jr nz, .done
+    jp nz, .done
 
     ld a, [wPlayerX]
     cp MODULE_LEFT_X
