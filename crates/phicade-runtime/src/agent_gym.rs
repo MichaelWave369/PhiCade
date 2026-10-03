@@ -351,23 +351,29 @@ pub static AGENT_GYM_KEY_GATE_RIGHT_ORACLE: [OracleLeg; 6] = [
     OracleLeg { button: "UP", frames: 32 },
 ];
 
-pub static AGENT_GYM_POWER_CHAIN_LEFT_ORACLE: [OracleLeg; 7] = [
+pub static AGENT_GYM_POWER_CHAIN_LEFT_ORACLE: [OracleLeg; 10] = [
     OracleLeg { button: "LEFT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "RIGHT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 20 },
     OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 32 },
 ];
 
-pub static AGENT_GYM_POWER_CHAIN_RIGHT_ORACLE: [OracleLeg; 7] = [
+pub static AGENT_GYM_POWER_CHAIN_RIGHT_ORACLE: [OracleLeg; 10] = [
     OracleLeg { button: "RIGHT", frames: 28 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "LEFT", frames: 28 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 20 },
     OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 2 },
     OracleLeg { button: "UP", frames: 32 },
 ];
 
@@ -932,8 +938,8 @@ mod tests {
         assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V6_ID).unwrap().version, 6);
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.prompt, AGENT_GYM_POWER_CHAIN_RIGHT_TASK.prompt);
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.target, AGENT_GYM_POWER_CHAIN_RIGHT_TASK.target);
-        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle.len(), 7);
-        assert_eq!(AGENT_GYM_POWER_CHAIN_RIGHT_TASK.oracle.len(), 7);
+        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle.len(), 10);
+        assert_eq!(AGENT_GYM_POWER_CHAIN_RIGHT_TASK.oracle.len(), 10);
     }
 
     #[test]
@@ -1059,7 +1065,8 @@ mod tests {
         );
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[1].button, "A");
         assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[3].button, "A");
-        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[5].button, "A");
+        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[4].button, "A");
+        assert_eq!(AGENT_GYM_POWER_CHAIN_LEFT_TASK.oracle[7].button, "A");
     }
 
     #[test]
