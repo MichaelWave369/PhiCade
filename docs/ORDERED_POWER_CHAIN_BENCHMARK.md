@@ -90,17 +90,21 @@ The valid path is:
 
 LEFT variant:
 
-`LEFT 28 → A → RIGHT 28 → A → UP 20 → A → UP 32`
+`LEFT 28 → A → RIGHT 28 → WAIT 2 → A → WAIT 2 → UP 20 → A → WAIT 2 → UP 32`
 
 RIGHT variant:
 
-`RIGHT 28 → A → LEFT 28 → A → UP 20 → A → UP 32`
+`RIGHT 28 → A → LEFT 28 → WAIT 2 → A → WAIT 2 → UP 20 → A → WAIT 2 → UP 32`
 
 The three A presses mean:
 
 1. acquire fuse,
 2. install fuse / power generator,
 3. open powered gate.
+
+The explicit WAIT legs freeze short settle windows between causal handoffs so the
+generic oracle observes the same deterministic cadence already exercised by the
+joint pair qualifier.
 
 ## Pair convergence
 
