@@ -1277,6 +1277,7 @@ fn set_control_mode(
     session.authority.set_mode(mode, grant)?;
     session.pending_agent_turn = None;
     session.agent_inbox.clear();
+    session.core.restore_input_mask(0);
     session.last_authority_reason = Some(format!(
         "operator set control mode to {}",
         control_mode_label(mode)
@@ -1462,6 +1463,33 @@ fn step_emulation(
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
     let authority_frame = session.core.frame_count();
+
+    let grant_expired = session
+        .authority
+        .agent_grant
+        .as_ref()
+        .and_then(|grant| grant.expires_at_frame)
+        .is_some_and(|expires| authority_frame > expires);
+
+    if grant_expired {
+        session.authority.set_mode(ControlMode::Human, None)?;
+        session.pending_agent_turn = None;
+        session.agent_inbox.clear();
+        session.core.restore_input_mask(0);
+        session.last_authority_reason =
+            Some("Phi-Bot grant expired; control returned to HUMAN".to_owned());
+    }
+
+    if session
+        .pending_agent_turn
+        .as_ref()
+        .is_some_and(|request| authority_frame > request.valid_until_frame)
+    {
+        session.pending_agent_turn = None;
+        session.last_authority_reason =
+            Some("agent driver turn expired before response".to_owned());
+    }
+
     let mut incoming_actions = actions;
 
     while session
