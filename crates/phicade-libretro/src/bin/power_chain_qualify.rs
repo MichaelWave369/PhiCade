@@ -214,7 +214,7 @@ fn gate_probe(
     let player = locate_agent_gym_player(video)?;
     Ok((
         player,
-        player == GATE_STOP && !benchmark_task_success(task, player),
+        player.y == GATE_STOP.y && !benchmark_task_success(task, player),
     ))
 }
 
