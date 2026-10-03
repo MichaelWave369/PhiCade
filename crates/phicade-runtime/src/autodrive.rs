@@ -117,8 +117,8 @@ pub struct AutodriveStatus {
     pub consecutive_empty_turns: u8,
     pub next_observation_frame: u64,
     pub last_observation_frame: Option<u64>,
-    pub total_cadence_wait_frames: u64,
-    pub max_cadence_wait_frames: u16,
+    pub total_scheduled_cadence_wait_frames: u64,
+    pub max_scheduled_cadence_wait_frames: u16,
     pub policy: AutodrivePolicy,
     pub stop_reason: Option<AutodriveStopReason>,
 }
@@ -207,9 +207,9 @@ impl AutodriveStatus {
             self.consecutive_empty_turns,
         );
         self.next_observation_frame = completed_frame.saturating_add(u64::from(wait));
-        self.total_cadence_wait_frames =
-            self.total_cadence_wait_frames.saturating_add(u64::from(wait));
-        self.max_cadence_wait_frames = self.max_cadence_wait_frames.max(wait);
+        self.total_scheduled_cadence_wait_frames =
+            self.total_scheduled_cadence_wait_frames.saturating_add(u64::from(wait));
+        self.max_scheduled_cadence_wait_frames = self.max_scheduled_cadence_wait_frames.max(wait);
         wait
     }
 
@@ -241,9 +241,9 @@ pub struct AutodriveReceipt {
     pub turns_completed: u16,
     pub total_actions: u32,
     #[serde(default)]
-    pub total_cadence_wait_frames: u64,
+    pub total_scheduled_cadence_wait_frames: u64,
     #[serde(default)]
-    pub max_cadence_wait_frames: u16,
+    pub max_scheduled_cadence_wait_frames: u16,
     #[serde(default)]
     pub last_observation_frame: Option<u64>,
     pub stop_reason: AutodriveStopReason,
@@ -285,8 +285,8 @@ mod tests {
             consecutive_empty_turns: 0,
             next_observation_frame: 100,
             last_observation_frame: None,
-            total_cadence_wait_frames: 0,
-            max_cadence_wait_frames: 0,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
             policy: AutodrivePolicy {
                 max_turns: 2,
                 ..AutodrivePolicy::default()
@@ -318,8 +318,8 @@ mod tests {
             consecutive_empty_turns: 0,
             next_observation_frame: 100,
             last_observation_frame: None,
-            total_cadence_wait_frames: 0,
-            max_cadence_wait_frames: 0,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
             policy: AutodrivePolicy {
                 max_consecutive_empty_turns: 2,
                 ..AutodrivePolicy::default()
@@ -351,8 +351,8 @@ mod tests {
             consecutive_empty_turns: 0,
             next_observation_frame: 100,
             last_observation_frame: None,
-            total_cadence_wait_frames: 0,
-            max_cadence_wait_frames: 0,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
             policy: AutodrivePolicy {
                 max_total_actions: 4,
                 ..AutodrivePolicy::default()
@@ -401,8 +401,8 @@ mod tests {
             consecutive_empty_turns: 0,
             next_observation_frame: 100,
             last_observation_frame: Some(100),
-            total_cadence_wait_frames: 0,
-            max_cadence_wait_frames: 0,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
             policy: AutodrivePolicy::default(),
             stop_reason: None,
         };
@@ -412,8 +412,8 @@ mod tests {
         assert_eq!(status.next_observation_frame, 108);
         assert!(!status.observation_ready(107));
         assert!(status.observation_ready(108));
-        assert_eq!(status.total_cadence_wait_frames, 7);
-        assert_eq!(status.max_cadence_wait_frames, 7);
+        assert_eq!(status.total_scheduled_cadence_wait_frames, 7);
+        assert_eq!(status.max_scheduled_cadence_wait_frames, 7);
     }
 
     #[test]
@@ -432,8 +432,8 @@ mod tests {
             consecutive_empty_turns: 0,
             next_observation_frame: 160,
             last_observation_frame: Some(150),
-            total_cadence_wait_frames: 0,
-            max_cadence_wait_frames: 0,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
             policy: AutodrivePolicy::default(),
             stop_reason: None,
         };
