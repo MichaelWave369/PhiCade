@@ -75,10 +75,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["COMPATIBILITY", "STRICT", "Comparison refuses partial, mismatched, scoring-error, or differently pinned campaigns."],
-  ["PROVENANCE", "REVERIFIED", "Every referenced trial receipt is re-hashed before comparison statistics are computed."],
-  ["UNCERTAINTY", "EXPLICIT", "Mean A−B uses a conservative Welch 95% confidence interval instead of a winner badge."],
-  ["EFFECT", "MEASURED", "Hedges’ g and success-rate delta complement raw score differences without collapsing evidence into one rank."],
+  ["SUITE", "TWO-TASK", "Suite v1 freezes the original diagonal task plus Mirror Dash with reversed start/target geometry."],
+  ["REGISTRY", "HASH-BOUND", "Native benchmark identity comes from exact ROM SHA-256, never filename or display title."],
+  ["QUALIFICATION", "DUAL", "Both source-first ROMs must pass no-input, oracle, exact replay, and source/ROM hash controls."],
+  ["RUNTIME", "GENERIC", "Benchmark start, scoring, task-success, campaigns, prompts, and UI resolve the active task from one registry."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1179,7 +1179,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 14 // COMPARISON LAB ONLINE</small>
+                  <small>RUNG 15 // COMPARISON LAB ONLINE</small>
                 </div>
               )}
             </div>
@@ -1408,7 +1408,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 14</div>
+          <div className="panel-title">RUNTIME // RUNG 15</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -1496,7 +1496,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>COMPARE ONLY MATCHED WORLDS // VERIFY EVERY TRIAL HASH // REPORT DELTA + UNCERTAINTY + EFFECT SIZE // NO MAGIC WINNER BADGE</footer>
+      <footer>ONE SUITE // TWO FROZEN WORLDS // EXACT HASH IDENTITY // ONE GOVERNED BENCHMARK PATH // NO TASK-SPECIFIC BACKDOORS</footer>
     </main>
   );
 }
