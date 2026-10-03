@@ -16,8 +16,11 @@ use std::{
 
 const WARMUP_FRAMES: u64 = 120;
 const SIDE_FRAMES: u64 = 28;
-const STAGE2_UP_FRAMES: u64 = 16;
-const GENERATOR_UP_FRAMES: u64 = 8;
+// hold_button performs a separate release step. SameBoy observes one final
+// movement tick on that release frame, so unbounded travel legs use one fewer
+// requested hold frame than the canonical Agent Gym oracle.
+const STAGE2_UP_FRAMES: u64 = 15;
+const GENERATOR_UP_FRAMES: u64 = 7;
 const GATE_UP_FRAMES: u64 = 4;
 const TARGET_UP_FRAMES: u64 = 16;
 const BLOCK_PROBE_FRAMES: u64 = 8;
