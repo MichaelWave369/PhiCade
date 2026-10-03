@@ -6,8 +6,9 @@ use phicade_runtime::{
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore,
     FrameBuffer, GameImage, PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger,
     ReplayReceipt, ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256,
-    AGENT_GYM_START, AGENT_GYM_TARGET, AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
+    AGENT_TURN_REQUEST_SCHEMA, AGENT_GYM_ID, AGENT_GYM_INITIAL_DISTANCE,
+    AGENT_GYM_ROM_SHA256, AGENT_GYM_SOURCE_SHA256, AGENT_GYM_START, AGENT_GYM_TARGET,
+    AGENT_GYM_WARMUP_FRAMES, AUTODRIVE_RECEIPT_SCHEMA,
     AUTODRIVE_STATUS_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
     score_agent_gym_frame,
 };
