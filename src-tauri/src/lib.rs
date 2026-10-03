@@ -2928,14 +2928,15 @@ fn suite_cohort_id(identity: &SuiteCohortIdentity) -> Result<String, String> {
     Ok(sha256_bytes(&bytes))
 }
 
-fn scan_benchmark_suite_cohorts(
-    session: &EmulatorSession,
+fn scan_benchmark_suite_cohorts_from_roots(
+    benchmark_campaign_root: &Path,
+    model_benchmark_root: &Path,
 ) -> Result<std::collections::BTreeMap<String, SuiteCohortEvidence>, String> {
     let mut cohorts = std::collections::BTreeMap::new();
 
     for task in benchmark_suite_v1_tasks() {
-        let campaign_dir = session.paths.benchmark_campaign_root.join(task.rom_sha256);
-        let model_benchmark_dir = session.paths.model_benchmark_root.join(task.rom_sha256);
+        let campaign_dir = benchmark_campaign_root.join(task.rom_sha256);
+        let model_benchmark_dir = model_benchmark_root.join(task.rom_sha256);
         if !campaign_dir.exists() {
             continue;
         }
@@ -3008,6 +3009,15 @@ fn scan_benchmark_suite_cohorts(
     }
 
     Ok(cohorts)
+}
+
+fn scan_benchmark_suite_cohorts(
+    session: &EmulatorSession,
+) -> Result<std::collections::BTreeMap<String, SuiteCohortEvidence>, String> {
+    scan_benchmark_suite_cohorts_from_roots(
+        &session.paths.benchmark_campaign_root,
+        &session.paths.model_benchmark_root,
+    )
 }
 
 fn suite_report_candidate(
