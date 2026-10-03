@@ -477,6 +477,76 @@ export interface BenchmarkSuiteReportCandidate {
   tasks: SuiteCandidateTask[];
 }
 
+export interface BenchmarkSuiteReportListEntry {
+  reportId: number;
+  suiteId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  coreSha256: string;
+  trialsPerTask: number;
+  taskCount: number;
+  macroMeanScore1000: number;
+  overallSuccessRate: number;
+  receiptSha256: string;
+}
+
+export interface SuiteTaskComparisonDelta {
+  taskId: string;
+  meanScoreDifferenceAMinusB: number;
+  successRateDifferenceAMinusB: number;
+}
+
+export interface BenchmarkSuiteComparisonStats {
+  taskCount: number;
+  macroMeanScoreDifferenceAMinusB: number;
+  overallSuccessRateDifferenceAMinusB: number;
+  minTaskMeanDifferenceAMinusB: number;
+  maxTaskMeanDifferenceAMinusB: number;
+  populationStddevTaskMeanDifference: number;
+  tasks: SuiteTaskComparisonDelta[];
+}
+
+export interface SuiteComparisonReportRef {
+  reportId: number;
+  receiptSha256: string;
+  cohortId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  stats: BenchmarkSuiteAggregateStats;
+}
+
+export interface SuiteTaskComparisonRef {
+  taskId: string;
+  taskTitle: string;
+  campaignAId: number;
+  campaignBId: number;
+  stats: CampaignComparisonStats;
+}
+
+export interface BenchmarkSuiteComparisonReceipt {
+  schema: string;
+  recordStatus: "COMPLETE";
+  comparisonId: number;
+  suiteId: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  policy: AutodrivePolicy;
+  trialsPerTask: number;
+  reportA: SuiteComparisonReportRef;
+  reportB: SuiteComparisonReportRef;
+  stats: BenchmarkSuiteComparisonStats;
+  tasks: SuiteTaskComparisonRef[];
+}
+
+export interface BenchmarkSuiteComparisonArtifact {
+  receiptPath: string;
+  receipt: BenchmarkSuiteComparisonReceipt;
+}
+
 export const defaultAutodrivePolicy: AutodrivePolicy = {
   maxTurns: 32,
   maxTotalActions: 128,
@@ -861,4 +931,18 @@ export async function buildBenchmarkSuiteReport(
   cohortId: string,
 ): Promise<BenchmarkSuiteReportArtifact> {
   return invoke<BenchmarkSuiteReportArtifact>("build_benchmark_suite_report", { cohortId });
+}
+
+export async function listBenchmarkSuiteReports(): Promise<BenchmarkSuiteReportListEntry[]> {
+  return invoke<BenchmarkSuiteReportListEntry[]>("list_benchmark_suite_reports");
+}
+
+export async function compareBenchmarkSuiteReports(
+  reportAId: number,
+  reportBId: number,
+): Promise<BenchmarkSuiteComparisonArtifact> {
+  return invoke<BenchmarkSuiteComparisonArtifact>("compare_benchmark_suite_reports", {
+    reportAId,
+    reportBId,
+  });
 }
