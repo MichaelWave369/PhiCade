@@ -5133,11 +5133,11 @@ mod tests {
         }
 
         let cohorts =
-            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root, BENCHMARK_SUITE_V1_ID)
                 .expect("scan suite cohorts");
         assert_eq!(cohorts.len(), 1);
         let (cohort_id, evidence) = cohorts.iter().next().expect("cohort");
-        let candidate = suite_report_candidate(cohort_id, evidence).expect("candidate");
+        let candidate = suite_report_candidate(BENCHMARK_SUITE_V1_ID, cohort_id, evidence).expect("candidate");
         assert!(candidate.ready);
         assert_eq!(usize::from(candidate.covered_tasks), benchmark_suite_v1_tasks().len());
         assert_eq!(candidate.tasks.len(), benchmark_suite_v1_tasks().len());
@@ -5157,11 +5157,11 @@ mod tests {
         write_suite_test_campaign(&campaign_root, &model_root, first, 1, "digest-suite");
 
         let cohorts =
-            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root, BENCHMARK_SUITE_V1_ID)
                 .expect("scan incomplete suite");
         assert_eq!(cohorts.len(), 1);
         let (cohort_id, evidence) = cohorts.iter().next().expect("cohort");
-        let candidate = suite_report_candidate(cohort_id, evidence).expect("candidate");
+        let candidate = suite_report_candidate(BENCHMARK_SUITE_V1_ID, cohort_id, evidence).expect("candidate");
         assert!(!candidate.ready);
         assert_eq!(candidate.covered_tasks, 1);
         assert_eq!(
@@ -5185,12 +5185,12 @@ mod tests {
         write_suite_test_campaign(&campaign_root, &model_root, &tasks[1], 1, "digest-b");
 
         let cohorts =
-            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root)
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root, BENCHMARK_SUITE_V1_ID)
                 .expect("scan split suite");
         assert_eq!(cohorts.len(), 2);
         assert!(cohorts
             .iter()
-            .all(|(id, evidence)| !suite_report_candidate(id, evidence).expect("candidate").ready));
+            .all(|(id, evidence)| !suite_report_candidate(BENCHMARK_SUITE_V1_ID, id, evidence).expect("candidate").ready));
 
         let _ = fs::remove_dir_all(root);
     }
@@ -5215,7 +5215,7 @@ mod tests {
         .expect("mutate suite trial");
 
         assert!(
-            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root).is_err()
+            scan_benchmark_suite_cohorts_from_roots(&campaign_root, &model_root, BENCHMARK_SUITE_V1_ID).is_err()
         );
 
         let _ = fs::remove_dir_all(root);
