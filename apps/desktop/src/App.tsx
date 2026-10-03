@@ -801,7 +801,7 @@ export function App() {
             setBenchmarkRunId(null);
             const stats = summary.receipt.stats;
             setNotice(
-              `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.totalTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
+              `CAMPAIGN COMPLETE // ${stats.successfulTrials}/${stats.observedTrials} SUCCESS // MEAN ${stats.meanScore1000?.toFixed(1) ?? "N/A"} // σ ${stats.populationStddevScore1000?.toFixed(1) ?? "N/A"}`,
             );
             return;
           }
