@@ -56,8 +56,15 @@ cargo run -p phicade-libretro --bin driver_qualify -- \
   --rom "$WORK/dmg-acid2.gb" \
   --receipt "$ROOT/artifacts/agent-driver-qualification.json"
 
+printf '==> running governed Autodrive qualification\n'
+cargo run -p phicade-libretro --bin autodrive_qualify -- \
+  --core "$CORE" \
+  --rom "$WORK/dmg-acid2.gb" \
+  --receipt "$ROOT/artifacts/autodrive-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/phibot-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-driver-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/autodrive-qualification.json"
