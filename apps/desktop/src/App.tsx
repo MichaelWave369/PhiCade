@@ -523,7 +523,7 @@ export function App() {
             <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>SAVE S{profile?.saveSlot ?? 0}</button>
             <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>LOAD S{profile?.saveSlot ?? 0}</button>
             <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording}>REWIND 2S</button>
-            <button onClick={() => queueSystem("reset")} disabled={!running}>RESET</button>
+            <button onClick={() => queueSystem("reset")} disabled={!running || replayRecording}>RESET</button>
             <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
             <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
           </div>
