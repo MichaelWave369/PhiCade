@@ -44,6 +44,13 @@ cargo run -p phicade-libretro --bin replay_qualify -- \
   --rom "$WORK/dmg-acid2.gb" \
   --receipt "$ROOT/artifacts/replay-qualification.json"
 
+printf '==> running Phi-Bot governed-seat qualification\n'
+cargo run -p phicade-libretro --bin phibot_qualify -- \
+  --core "$CORE" \
+  --rom "$WORK/dmg-acid2.gb" \
+  --receipt "$ROOT/artifacts/phibot-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/phibot-qualification.json"
