@@ -47,18 +47,30 @@ deliberately separate rungs.
 5. Replays record normalized Action Bus events, not host keyboard scan codes.
 6. Phi-Bot never gains extra emulator privileges merely because it is an AI seat.
 
-## Determinism direction
+## Determinism / Replay Ledger
 
-A replay receipt should eventually bind:
+Rung 5 now implements the first deterministic replay contract.
 
-- PhiCade version
-- core adapter ID and version
-- core binary hash
-- game image hash
-- firmware hash(es), when required
-- runtime configuration
-- initial state hash
-- frame-stamped normalized actions
-- periodic state hashes
+A replay binds:
 
-This makes "the bot beat the game" a testable claim instead of folklore.
+- core identity/version and binary SHA-256
+- game image SHA-256
+- initial serialized core state
+- initial frontend input mask
+- exact applied-frame normalized actions
+- periodic serialized-state SHA-256
+- periodic RGBA framebuffer SHA-256
+- periodic frontend input-mask state
+- final state/frame hashes
+
+The replay file is content-addressed by SHA-256 and paired with a verification
+receipt. Verification restores the replay start, reruns the action stream, compares
+checkpoints, reports the first observed divergent checkpoint, and restores the live
+session afterward.
+
+Firmware hashes remain a required extension when PhiCade qualifies cores that use
+external firmware. SameBoy's current qualified desktop configuration does not
+require proprietary BIOS distribution.
+
+This makes claims such as "a human/bot produced this run" testable rather than
+folklore.
