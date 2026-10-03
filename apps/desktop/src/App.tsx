@@ -354,6 +354,7 @@ export function App() {
         mode === "human" ? null : 3_600,
       );
       setAuthority(next);
+      gamepadRef.current = emptyGameBoyButtons();
       setLastObservation(null);
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
