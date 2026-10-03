@@ -717,7 +717,9 @@ fn run() -> Result<(), String> {
 
     if [(&n1, &v1), (&n2, &v2), (&n3, &v3)]
         .iter()
-        .any(|(name, version)| **name != core_name || **version != core_version)
+        .any(|(name, version)| {
+            name.as_str() != core_name.as_str() || version.as_str() != core_version.as_str()
+        })
     {
         return Err("nested-branch variants did not run under identical core identity".into());
     }
