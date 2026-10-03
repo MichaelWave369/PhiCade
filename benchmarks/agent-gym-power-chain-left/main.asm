@@ -245,10 +245,20 @@ ReadMove:
     bit 0, b
     jr z, .left
 
-    ; After acquiring the fuse, clamp return to the generator center.
     ld a, [wHasFuse]
     and a
-    jr z, .rightBounds
+    jr nz, .rightHasFuse
+    ld a, [wPowerOn]
+    and a
+    jr nz, .rightBounds
+    ld a, [wPlayerY]
+    cp FUSE_Y
+    jr nz, .rightBounds
+    ld a, [wPlayerX]
+    cp FUSE_RIGHT_X
+    jr z, .left
+    jr .rightBounds
+.rightHasFuse:
     ld a, [wPlayerY]
     cp FUSE_Y
     jr nz, .rightBounds
@@ -286,7 +296,6 @@ ReadMove:
     ld a, [wPlayerX]
     cp GENERATOR_X
     jr z, .up
-
 .leftBounds:
     ld a, [wPlayerX]
     cp 10
