@@ -17,7 +17,8 @@ use std::{
 const WARMUP_FRAMES: u64 = 120;
 const SIDE_FRAMES: u64 = 28;
 const STAGE2_UP_FRAMES: u64 = 16;
-const GATE_UP_FRAMES: u64 = 12;
+const GENERATOR_UP_FRAMES: u64 = 4;
+const GATE_UP_FRAMES: u64 = 8;
 const TARGET_UP_FRAMES: u64 = 16;
 const BLOCK_PROBE_FRAMES: u64 = 8;
 const SETTLE_FRAMES: u64 = 2;
@@ -49,6 +50,7 @@ struct VariantEvidence {
     failed_stage1_gate_player: PixelPoint,
     stage2_revealed_center_sha256: String,
     failed_stage2_center_sha256: String,
+    failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
     failed_stage2_gate_player: PixelPoint,
     accepted_stage2_center_sha256: String,
@@ -428,6 +430,24 @@ fn qualify_variant(
         ));
     }
     let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
+
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        GENERATOR_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "move failed stage2 to generator",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle at failed generator",
+    )?;
+    let failed_stage2_generator_before_sha256 = sha256_bytes(&video.rgba8);
     tap_a(
         &mut core,
         &mut sequence,
@@ -444,7 +464,7 @@ fn qualify_variant(
     )?;
     let failed_stage2_generator_sha256 = sha256_bytes(&video.rgba8);
     let wrong_stage2_generator_refused =
-        failed_stage2_generator_sha256 == failed_stage2_center_sha256;
+        failed_stage2_generator_sha256 == failed_stage2_generator_before_sha256;
 
     hold_button(
         &mut core,
@@ -536,6 +556,15 @@ fn qualify_variant(
     }
     let accepted_stage2_center_sha256 = sha256_bytes(&video.rgba8);
 
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        GENERATOR_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "move accepted stage2 to generator",
+    )?;
     tap_a(
         &mut core,
         &mut sequence,
@@ -599,6 +628,7 @@ fn qualify_variant(
             failed_stage1_gate_player,
             stage2_revealed_center_sha256,
             failed_stage2_center_sha256,
+            failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
             failed_stage2_gate_player,
             accepted_stage2_center_sha256,
