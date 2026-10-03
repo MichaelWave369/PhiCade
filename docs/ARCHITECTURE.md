@@ -260,3 +260,33 @@ response then fails because the pending turn/grant has already been revoked.
 Autodrive is currently PHI-BOT handoff only. CO-OP autonomous inference is
 deliberately deferred because THINK PAUSE would freeze the human partner while the
 model reasons.
+
+
+## Model Qualification Registry
+
+Rung 10 adds an evidence boundary between an installed provider model and
+autonomous runtime authority.
+
+```text
+/api/tags -> exact digest
+/api/show -> advertised capabilities
+synthetic vision probe -> measured vision + structured output
+        |
+        v
+digest-bound qualification receipt
+        |
+        v
+native AUTO DRIVE gate
+```
+
+The registry does not infer vision support from model names.
+
+The desktop may use an unqualified model for a one-shot OLLAMA TURN, but native
+Autodrive requires a PASS receipt for the exact current digest supplied at run
+start.
+
+Qualification receipts are local evidence artifacts and live under the PhiCade
+application-data namespace.
+
+A changed model digest invalidates prior qualification without mutating or
+deleting the historical receipt.
