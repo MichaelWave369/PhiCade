@@ -19,6 +19,62 @@ pub struct OllamaModel {
     pub digest: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OllamaModelDetails {
+    pub name: String,
+    pub digest: String,
+    pub capabilities: Vec<String>,
+    pub family: Option<String>,
+    pub parameter_size: Option<String>,
+    pub quantization_level: Option<String>,
+}
+
+impl OllamaModelDetails {
+    pub fn has_capability(&self, capability: &str) -> bool {
+        self.capabilities
+            .iter()
+            .any(|candidate| candidate.eq_ignore_ascii_case(capability))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct OllamaShowResponse {
+    #[serde(default)]
+    capabilities: Vec<String>,
+    #[serde(default)]
+    details: OllamaShowDetails,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct OllamaShowDetails {
+    #[serde(default)]
+    family: String,
+    #[serde(default)]
+    parameter_size: String,
+    #[serde(default)]
+    quantization_level: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OllamaQualificationReceipt {
+    pub schema: String,
+    pub result: String,
+    pub provider: String,
+    pub model: String,
+    pub digest: String,
+    pub capabilities: Vec<String>,
+    pub vision_advertised: bool,
+    pub structured_output_pass: bool,
+    pub vision_probe_pass: bool,
+    pub probe_expected: String,
+    pub probe_observed: Option<String>,
+    pub total_duration_ns: Option<u64>,
+    pub eval_count: Option<u64>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 struct OllamaTagsResponse {
     models: Vec<OllamaModel>,
@@ -54,6 +110,12 @@ struct OllamaButtonAction {
     delay_frames: u16,
     button: String,
     pressed: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OllamaVisionProbeDecision {
+    dominant_color: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -217,6 +279,191 @@ pub async fn list_models(base_url: &str) -> Result<Vec<OllamaModel>, String> {
         .models;
     models.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
     Ok(models)
+}
+
+
+async fn show_model(base_url: &str, model: &str) -> Result<OllamaShowResponse, String> {
+    let base = normalized_base_url(base_url)?;
+    let response = client()?
+        .post(format!("{base}/api/show"))
+        .json(&json!({ "model": model, "verbose": false }))
+        .send()
+        .await
+        .map_err(|error| format!("contact Ollama /api/show: {error}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(format!(
+            "Ollama /api/show returned HTTP {status}: {}",
+            text.chars().take(500).collect::<String>()
+        ));
+    }
+
+    response
+        .json::<OllamaShowResponse>()
+        .await
+        .map_err(|error| format!("parse Ollama model details: {error}"))
+}
+
+pub async fn inspect_model(
+    base_url: &str,
+    model: &str,
+) -> Result<OllamaModelDetails, String> {
+    let model = model.trim();
+    if model.is_empty() {
+        return Err("select an Ollama model before inspecting capabilities".into());
+    }
+
+    let models = list_models(base_url).await?;
+    let listed = models
+        .into_iter()
+        .find(|candidate| candidate.name == model || candidate.model == model)
+        .ok_or_else(|| format!("Ollama model {model} is not currently installed"))?;
+    let shown = show_model(base_url, model).await?;
+
+    Ok(OllamaModelDetails {
+        name: listed.name,
+        digest: listed.digest,
+        capabilities: shown.capabilities,
+        family: (!shown.details.family.is_empty()).then_some(shown.details.family),
+        parameter_size: (!shown.details.parameter_size.is_empty())
+            .then_some(shown.details.parameter_size),
+        quantization_level: (!shown.details.quantization_level.is_empty())
+            .then_some(shown.details.quantization_level),
+    })
+}
+
+fn solid_red_probe_png_base64() -> Result<String, String> {
+    const WIDTH: u32 = 64;
+    const HEIGHT: u32 = 64;
+    let mut rgba = Vec::with_capacity((WIDTH * HEIGHT * 4) as usize);
+    for _ in 0..(WIDTH * HEIGHT) {
+        rgba.extend_from_slice(&[255, 0, 0, 255]);
+    }
+
+    let mut bytes = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut bytes, WIDTH, HEIGHT);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder
+            .write_header()
+            .map_err(|error| format!("encode qualification PNG header: {error}"))?;
+        writer
+            .write_image_data(&rgba)
+            .map_err(|error| format!("encode qualification PNG: {error}"))?;
+    }
+
+    Ok(BASE64.encode(bytes))
+}
+
+pub async fn qualify_model(
+    base_url: &str,
+    model: &str,
+) -> Result<OllamaQualificationReceipt, String> {
+    let details = inspect_model(base_url, model).await?;
+    let vision_advertised = details.has_capability("vision");
+
+    let mut receipt = OllamaQualificationReceipt {
+        schema: "phicade.ollama-model-qualification.v1".into(),
+        result: "FAIL".into(),
+        provider: "ollama".into(),
+        model: details.name.clone(),
+        digest: details.digest.clone(),
+        capabilities: details.capabilities.clone(),
+        vision_advertised,
+        structured_output_pass: false,
+        vision_probe_pass: false,
+        probe_expected: "red".into(),
+        probe_observed: None,
+        total_duration_ns: None,
+        eval_count: None,
+        error: None,
+    };
+
+    if !vision_advertised {
+        receipt.error = Some("model does not advertise Ollama vision capability".into());
+        return Ok(receipt);
+    }
+
+    let base = normalized_base_url(base_url)?;
+    let image = solid_red_probe_png_base64()?;
+    let schema = json!({
+        "type": "object",
+        "properties": {
+            "dominantColor": {
+                "type": "string",
+                "enum": ["red", "blue"]
+            }
+        },
+        "required": ["dominantColor"],
+        "additionalProperties": false
+    });
+    let body = json!({
+        "model": model,
+        "stream": false,
+        "format": schema,
+        "options": { "temperature": 0 },
+        "messages": [{
+            "role": "user",
+            "content": "Inspect the supplied image pixels. Return dominantColor as red or blue based only on the image. Do not infer the answer from this text.",
+            "images": [image]
+        }]
+    });
+
+    let response = client()?
+        .post(format!("{base}/api/chat"))
+        .json(&body)
+        .send()
+        .await
+        .map_err(|error| format!("contact Ollama qualification /api/chat: {error}"))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        receipt.error = Some(format!(
+            "Ollama qualification /api/chat returned HTTP {status}: {}",
+            text.chars().take(500).collect::<String>()
+        ));
+        return Ok(receipt);
+    }
+
+    let chat = response
+        .json::<OllamaChatResponse>()
+        .await
+        .map_err(|error| format!("parse Ollama qualification chat response: {error}"))?;
+    receipt.total_duration_ns = chat.total_duration;
+    receipt.eval_count = chat.eval_count;
+
+    if !chat.done {
+        receipt.error = Some("Ollama qualification response was not complete".into());
+        return Ok(receipt);
+    }
+
+    match serde_json::from_str::<OllamaVisionProbeDecision>(&chat.message.content) {
+        Ok(decision) => {
+            receipt.structured_output_pass = true;
+            let observed = decision.dominant_color.trim().to_ascii_lowercase();
+            receipt.probe_observed = Some(observed.clone());
+            receipt.vision_probe_pass = observed == receipt.probe_expected;
+            if receipt.vision_probe_pass {
+                receipt.result = "PASS".into();
+            } else {
+                receipt.error = Some(format!(
+                    "vision probe expected {}, observed {observed}",
+                    receipt.probe_expected
+                ));
+            }
+        }
+        Err(error) => {
+            receipt.error = Some(format!(
+                "qualification structured output could not be parsed: {error}"
+            ));
+        }
+    }
+
+    Ok(receipt)
 }
 
 pub async fn complete_turn(
