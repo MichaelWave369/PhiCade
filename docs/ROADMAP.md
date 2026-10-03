@@ -195,9 +195,25 @@
 - [x] Desktop SUITE COMPARE evidence lane
 - [x] No winner/ranking field
 
+## Rung 18 — Adaptive Observation Cadence
+- [x] Native next-observation eligibility frame
+- [x] Minimum observation interval
+- [x] Action-delay-aware post-action settle
+- [x] Exponential consecutive-empty-turn backoff
+- [x] Hard maximum observation interval cap
+- [x] Native refusal of early autonomous observations
+- [x] Desktop waits on native cadence status
+- [x] Status exposes next/last observation frames
+- [x] Status records total + maximum cadence wait
+- [x] Autodrive receipt v2 freezes cadence evidence
+- [x] Cadence policy remains part of campaign/suite compatibility
+- [x] SameBoy cadence positive/control qualification
+- [x] Desktop cadence telemetry
+- [x] Existing THINK PAUSE semantics preserved
+
 ## Later
 
-Adaptive observation cadence, additional benchmark tasks, additional uncertainty
+Versioned benchmark suites, additional benchmark tasks, additional uncertainty
 methods, provider capability profiles beyond Ollama, cloud-provider adapters,
 metadata/cover art, additional systems, true multi-port versus play, netplay,
 spectator mode, achievements, tournaments, CommonLine rooms, and a shared Phi Game

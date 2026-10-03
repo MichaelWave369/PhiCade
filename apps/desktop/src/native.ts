@@ -174,6 +174,10 @@ export interface AutodrivePolicy {
   maxTotalActions: number;
   maxConsecutiveEmptyTurns: number;
   maxEmulatedFrames: number;
+  minObservationIntervalFrames: number;
+  postActionSettleFrames: number;
+  emptyTurnBackoffFrames: number;
+  maxObservationIntervalFrames: number;
 }
 
 export type AutodriveStopReason =
@@ -200,6 +204,10 @@ export interface AutodriveStatus {
   turnsCompleted: number;
   totalActions: number;
   consecutiveEmptyTurns: number;
+  nextObservationFrame: number;
+  lastObservationFrame: number | null;
+  totalScheduledCadenceWaitFrames: number;
+  maxScheduledCadenceWaitFrames: number;
   policy: AutodrivePolicy;
   stopReason: AutodriveStopReason | null;
 }
@@ -217,6 +225,9 @@ export interface AutodriveReceipt {
   turnsIssued: number;
   turnsCompleted: number;
   totalActions: number;
+  totalScheduledCadenceWaitFrames: number;
+  maxScheduledCadenceWaitFrames: number;
+  lastObservationFrame: number | null;
   stopReason: AutodriveStopReason;
   finalFrameSha256: string;
   policy: AutodrivePolicy;
@@ -552,6 +563,10 @@ export const defaultAutodrivePolicy: AutodrivePolicy = {
   maxTotalActions: 128,
   maxConsecutiveEmptyTurns: 4,
   maxEmulatedFrames: 3600,
+  minObservationIntervalFrames: 2,
+  postActionSettleFrames: 2,
+  emptyTurnBackoffFrames: 8,
+  maxObservationIntervalFrames: 60,
 };
 
 export interface OllamaModel {

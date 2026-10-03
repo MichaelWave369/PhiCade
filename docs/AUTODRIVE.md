@@ -42,8 +42,18 @@ The desktop starts with:
 - max total actions: 128
 - max consecutive empty turns: 4
 - max emulated frames: 3,600
+- minimum observation interval: 2 frames
+- post-action settle: 2 frames
+- empty-turn backoff: 8 frames
+- maximum observation interval: 60 frames
 
 The frame budget matches the default Phi-Bot grant lifetime.
+
+Rung 18 makes observation cadence native and adaptive. After an action-bearing turn,
+the next observation waits for the maximum accepted delay plus the post-action
+settle window. Consecutive empty turns back off exponentially, capped by the maximum
+observation interval. Native turn issuance refuses observations before the scheduled
+frame.
 
 All limits are validated natively. The UI cannot extend the run merely by
 continuing to request turns.
@@ -71,7 +81,8 @@ For each turn:
 6. native PhiCade charges the action budget,
 7. actions enter the scheduled driver inbox,
 8. emulation resumes,
-9. the next turn is not issued until that inbox is empty.
+9. the next turn is not issued until that inbox is empty,
+10. native cadence must also mark the current frame observation-eligible.
 
 This queue-aware barrier prevents a model from reasoning over a frame while its
 previous delayed press/release sequence is only half executed.
@@ -138,7 +149,7 @@ If the Ollama request fails while AUTO DRIVE is active:
 
 Schema:
 
-`phicade.autodrive-receipt.v1`
+`phicade.autodrive-receipt.v2`
 
 Receipts are stored under the ROM fingerprint namespace:
 
@@ -156,6 +167,9 @@ A receipt records:
 - start/end emulated frame
 - turns issued/completed
 - total accepted driver actions
+- total scheduled cadence wait frames
+- maximum scheduled cadence wait frames
+- last observation frame
 - stop reason
 - final framebuffer SHA-256
 - complete run policy
@@ -165,7 +179,7 @@ model played well.
 
 ## Qualification
 
-`phicade.autodrive-qualification.v1` runs against the frozen SameBoy core.
+`phicade.autodrive-qualification.v2` runs against the frozen SameBoy core.
 
 The positive control executes three deterministic Agent Driver turns with two
 actions each.
@@ -178,5 +192,9 @@ Additional controls prove:
 - action-budget stop detection
 - frame-budget stop detection
 - consecutive-empty-turn stop detection
+- delayed-action settle timing
+- 8 → 16 → 32 → 60 empty-turn backoff
+- hard maximum cadence cap
+- observation refusal before the eligible frame
 
 CI fails if the loop can run past those frozen policy boundaries.

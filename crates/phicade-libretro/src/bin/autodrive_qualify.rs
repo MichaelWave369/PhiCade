@@ -33,6 +33,9 @@ struct AutodriveQualificationReceipt {
     action_budget_probe_pass: bool,
     frame_budget_probe_pass: bool,
     empty_turn_probe_pass: bool,
+    action_settle_probe_pass: bool,
+    empty_backoff_probe_pass: bool,
+    cadence_gate_probe_pass: bool,
 }
 
 fn sha256_bytes(bytes: &[u8]) -> String {
@@ -167,6 +170,10 @@ fn run() -> Result<(), String> {
         max_total_actions: 6,
         max_consecutive_empty_turns: 2,
         max_emulated_frames: 300,
+        min_observation_interval_frames: 2,
+        post_action_settle_frames: 2,
+        empty_turn_backoff_frames: 8,
+        max_observation_interval_frames: 60,
     };
     policy_config.validate()?;
 
@@ -182,6 +189,10 @@ fn run() -> Result<(), String> {
         turns_completed: 0,
         total_actions: 0,
         consecutive_empty_turns: 0,
+        next_observation_frame: started_frame,
+        last_observation_frame: None,
+        total_scheduled_cadence_wait_frames: 0,
+        max_scheduled_cadence_wait_frames: 0,
         policy: policy_config,
         stop_reason: None,
     };
@@ -201,6 +212,15 @@ fn run() -> Result<(), String> {
             return Err(format!("run stopped too early before turn {}: {reason:?}", turn + 1));
         }
 
+        if !run_status.observation_ready(core.frame_count()) {
+            return Err(format!(
+                "cadence refused qualified turn {} at frame {} before {}",
+                turn + 1,
+                core.frame_count(),
+                run_status.next_observation_frame
+            ));
+        }
+
         let obs = observation(&core, &video, &game_sha256);
         obs.validate()?;
         let request = AgentTurnRequest {
@@ -212,7 +232,7 @@ fn run() -> Result<(), String> {
             valid_until_frame: obs.frame + 20,
         };
         request.validate()?;
-        run_status.note_turn_issued();
+        run_status.note_turn_issued_at(core.frame_count());
 
         let button = if turn % 2 == 0 { "A" } else { "RIGHT" };
         let response = AgentTurnResponse {
@@ -245,7 +265,7 @@ fn run() -> Result<(), String> {
         if !run_status.can_accept_actions(compiled.len()) {
             return Err("qualified turn unexpectedly exceeded action budget".into());
         }
-        run_status.note_turn_completed(compiled.len());
+        run_status.note_turn_completed_with_delay(compiled.len(), 2, apply_frame);
         run_actions(
             &mut core,
             &authority,
@@ -293,8 +313,37 @@ fn run() -> Result<(), String> {
     let empty_turn_probe_pass =
         empty_probe.post_turn_stop_reason() == Some(AutodriveStopReason::EmptyTurnLimit);
 
-    if !(action_budget_probe_pass && frame_budget_probe_pass && empty_turn_probe_pass) {
-        return Err("one or more autonomous stop probes failed".into());
+    let action_settle_probe_pass =
+        run_status.policy.cadence_wait_frames(2, 2, 0) == 4;
+    let empty_backoff_probe_pass =
+        run_status.policy.cadence_wait_frames(0, 0, 1) == 8
+            && run_status.policy.cadence_wait_frames(0, 0, 2) == 16
+            && run_status.policy.cadence_wait_frames(0, 0, 3) == 32
+            && run_status.policy.cadence_wait_frames(0, 0, 4) == 60;
+
+    let mut cadence_probe = run_status.clone();
+    cadence_probe.turns_issued = 0;
+    cadence_probe.turns_completed = 0;
+    cadence_probe.total_actions = 0;
+    cadence_probe.consecutive_empty_turns = 0;
+    cadence_probe.current_frame = cadence_probe.started_frame;
+    cadence_probe.next_observation_frame = cadence_probe.started_frame;
+    cadence_probe.last_observation_frame = None;
+    cadence_probe.total_scheduled_cadence_wait_frames = 0;
+    cadence_probe.max_scheduled_cadence_wait_frames = 0;
+    cadence_probe.note_turn_completed_with_delay(0, 0, cadence_probe.started_frame);
+    let cadence_gate_probe_pass =
+        !cadence_probe.observation_ready(cadence_probe.started_frame + 7)
+            && cadence_probe.observation_ready(cadence_probe.started_frame + 8);
+
+    if !(action_budget_probe_pass
+        && frame_budget_probe_pass
+        && empty_turn_probe_pass
+        && action_settle_probe_pass
+        && empty_backoff_probe_pass
+        && cadence_gate_probe_pass)
+    {
+        return Err("one or more autonomous stop/cadence probes failed".into());
     }
 
     let final_state = core
@@ -302,7 +351,7 @@ fn run() -> Result<(), String> {
         .map_err(|error| format!("serialize final state: {error:?}"))?;
 
     let receipt = AutodriveQualificationReceipt {
-        schema: "phicade.autodrive-qualification.v1",
+        schema: "phicade.autodrive-qualification.v2",
         result: "PASS",
         game_sha256,
         core_sha256: sha256_file(&core_path)?,
@@ -317,6 +366,9 @@ fn run() -> Result<(), String> {
         action_budget_probe_pass,
         frame_budget_probe_pass,
         empty_turn_probe_pass,
+        action_settle_probe_pass,
+        empty_backoff_probe_pass,
+        cadence_gate_probe_pass,
     };
 
     let json = serde_json::to_string_pretty(&receipt)
