@@ -1,11 +1,13 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::{CoreIdentity, LibretroCore};
 use phicade_runtime::{
-    compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnRequest,
-    AgentTurnResponse, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
+    compile_agent_turn, live_source_order, ActionEnvelope, ActionKind, ActionSource, AgentGrant,
+    AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt, AutodriveStatus,
+    AutodriveStopReason, AuthorityPolicy, AudioBuffer, ControlMode, EmulatorCore, FrameBuffer,
     GameImage, PhiBotObservation, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, SystemCommand, SystemId,
-    AGENT_TURN_REQUEST_SCHEMA, PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
+    AGENT_TURN_REQUEST_SCHEMA, AUTODRIVE_RECEIPT_SCHEMA, AUTODRIVE_STATUS_SCHEMA,
+    PHIBOT_OBSERVATION_SCHEMA, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -45,6 +47,7 @@ struct SessionPaths {
     state_dir: PathBuf,
     screenshot_dir: PathBuf,
     replay_dir: PathBuf,
+    autodrive_dir: PathBuf,
     profile: PathBuf,
 }
 
@@ -60,6 +63,12 @@ struct ReplayExport {
     receipt_path: PathBuf,
     replay_sha256: String,
     receipt: ReplayReceipt,
+}
+
+#[derive(Debug, Clone)]
+struct AutodriveExport {
+    receipt_path: PathBuf,
+    receipt: AutodriveReceipt,
 }
 
 struct EmulatorSession {
@@ -81,6 +90,9 @@ struct EmulatorSession {
     agent_inbox: VecDeque<ActionEnvelope>,
     next_driver_turn_id: u64,
     next_action_sequence: u64,
+    autodrive: Option<AutodriveStatus>,
+    last_autodrive: Option<AutodriveExport>,
+    next_autodrive_run_id: u64,
 }
 
 impl Drop for EmulatorSession {
@@ -190,6 +202,7 @@ struct FramePacket {
     last_authority_reason: Option<String>,
     driver_pending_turn_id: Option<u64>,
     driver_queued_actions: usize,
+    autodrive: Option<AutodriveStatus>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -212,6 +225,13 @@ struct DriverStatus {
     pending_turn_id: Option<u64>,
     queued_actions: usize,
     next_turn_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AutodriveArtifact {
+    receipt_path: String,
+    receipt: AutodriveReceipt,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -405,6 +425,7 @@ fn session_paths(
     let screenshot_dir = root.join("screenshots").join(game_key);
     let profile_dir = root.join("profiles");
     let replay_dir = root.join("replays").join(game_key);
+    let autodrive_dir = root.join("autodrive").join(game_key);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -414,12 +435,15 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", profile_dir.display()))?;
     fs::create_dir_all(&replay_dir)
         .map_err(|error| format!("cannot create {}: {error}", replay_dir.display()))?;
+    fs::create_dir_all(&autodrive_dir)
+        .map_err(|error| format!("cannot create {}: {error}", autodrive_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
         state_dir,
         screenshot_dir,
         replay_dir,
+        autodrive_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
@@ -1144,6 +1168,9 @@ fn start_emulation(
         agent_inbox: VecDeque::new(),
         next_driver_turn_id: 1,
         next_action_sequence: 0,
+        autodrive: None,
+        last_autodrive: None,
+        next_autodrive_run_id: 1,
     };
 
     push_rewind_snapshot(&mut emulator_session)?;
