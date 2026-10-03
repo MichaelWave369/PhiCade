@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["BRIEFING", "MEMORIZE", "A visible LEFT/RIGHT briefing cue is the only variant-specific evidence before the mission begins."],
-  ["CORRIDOR", "NAVIGATE", "Both variants enter the same wall-detour room; direct RIGHT is blocked and the route requires DOWN → RIGHT → UP."],
-  ["TERMINAL", "RECALL", "Both variants reach the same terminal scene, where the earlier briefing side determines the correct final choice."],
-  ["EVIDENCE", "PAIRED", "CI freezes room hashes, shortcut refusal, wrong-choice failure, correct-choice success, and exact source/ROM provenance."],
+  ["OBJECT", "VISIBLE", "A real key is rendered on one side; the opposite side is intentionally empty."],
+  ["PICKUP", "STATEFUL", "A on the actual key removes it from the world and creates explicit acquired-key state."],
+  ["GATE", "DEPENDENCY", "A at the central gate is refused without the key and removes the barrier only after valid acquisition."],
+  ["EVIDENCE", "PAIRED", "CI proves direct-gate refusal, fake-pickup refusal, state convergence, successful unlock, and frozen provenance."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>BRIEFING // REMEMBER // NAVIGATE ANOTHER ROOM // SAME TERMINAL // RECALL OBJECTIVE // RECEIPT EVERYTHING</footer>
+      <footer>SEE OBJECT // ACQUIRE STATE // TEST PREREQUISITE // MUTATE WORLD // PASS GATE // RECEIPT EVERYTHING</footer>
     </main>
   );
 }
