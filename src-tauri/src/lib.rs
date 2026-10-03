@@ -2802,6 +2802,8 @@ pub fn run() {
             phi_bot_observation,
             driver_status,
             start_autodrive,
+            start_model_gameplay_benchmark,
+            last_model_gameplay_benchmark,
             autodrive_status,
             stop_autodrive,
             fail_autodrive_provider,
