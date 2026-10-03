@@ -425,3 +425,57 @@ footer {
   .session-strip { grid-template-columns: 1fr 1fr; }
   .session-strip span { grid-column: 1 / -1; text-align: left; }
 }
+
+/* Rung 4: session machinery */
+.session-tools,
+.speed-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.session-tools button,
+.speed-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--muted);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.session-tools button:hover:not(:disabled),
+.speed-strip button:hover:not(:disabled),
+.speed-strip button.active {
+  color: var(--ink);
+  border-color: #4e765a;
+  background: #0c1710;
+}
+
+.speed-strip {
+  border-top: 1px dotted #1e2c23;
+  margin-top: 8px;
+}
+
+.speed-strip > span {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .1em;
+  margin-right: 4px;
+}
+
+.speed-strip > small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+@media (max-width: 560px) {
+  .speed-strip > small {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
