@@ -1156,6 +1156,11 @@ export function App() {
       setSelectedSuiteCohortId(null);
       setLastSuiteReport(null);
       setSuiteReportBusy(false);
+      setSuiteReportLedger([]);
+      setSuiteComparisonAId(null);
+      setSuiteComparisonBId(null);
+      setLastSuiteComparison(null);
+      setSuiteComparisonBusy(false);
 
       const info = await startEmulation(corePath, selectedGame.path);
       const [initialAuthority, initialDriver] = await Promise.all([
@@ -1169,12 +1174,21 @@ export function App() {
       setProfile(info.profile);
       setRunning(true);
       runningRef.current = true;
-      const [priorCampaigns, priorSuiteCandidates] = await Promise.all([
+      const [priorCampaigns, priorSuiteCandidates, priorSuiteReports] = await Promise.all([
         listBenchmarkCampaignReceipts(),
         listBenchmarkSuiteReportCandidates(),
+        listBenchmarkSuiteReports(),
       ]);
       setCampaignLedger(priorCampaigns);
       setSuiteCandidates(priorSuiteCandidates);
+      setSuiteReportLedger(priorSuiteReports);
+      if (priorSuiteReports.length >= 2) {
+        setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
+        setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
+      } else {
+        setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
+        setSuiteComparisonBId(null);
+      }
       const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
       const selectedDigest = modelQualification?.details.digest;
       const matchingSuiteCandidate = selectedDigest
@@ -1186,7 +1200,7 @@ export function App() {
         setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
         setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
       }
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY`);
+      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY // ${priorSuiteReports.length} SUITE REPORTS`);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
@@ -1226,6 +1240,11 @@ export function App() {
       setSelectedSuiteCohortId(null);
       setLastSuiteReport(null);
       setSuiteReportBusy(false);
+      setSuiteReportLedger([]);
+      setSuiteComparisonAId(null);
+      setSuiteComparisonBId(null);
+      setLastSuiteComparison(null);
+      setSuiteComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
@@ -1314,7 +1333,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 17 // SUITE REPORTS ONLINE</small>
+                  <small>RUNG 17 // SUITE COMPARISON LAB ONLINE</small>
                 </div>
               )}
             </div>
