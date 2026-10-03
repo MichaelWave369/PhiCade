@@ -658,7 +658,7 @@ fn validate_recording_actions(
     }
 
     for envelope in actions {
-        if let ActionKind::System { command, .. } = envelope.action {
+        if let ActionKind::System { command, .. } = &envelope.action {
             if matches!(
                 command,
                 SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
@@ -888,7 +888,7 @@ fn verify_replay_execution(
                 break;
             }
 
-            if let ActionKind::System { command, .. } = action.action {
+            if let ActionKind::System { command, .. } = &action.action {
                 if matches!(
                     command,
                     SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
@@ -1146,6 +1146,8 @@ fn step_emulation(
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
+    validate_recording_actions(session, &actions)?;
+    record_applied_actions(session, &actions)?;
     process_session_actions(session, &actions)?;
 
     let speed = session.profile.fast_forward.clamp(1, 4);
@@ -1172,6 +1174,8 @@ fn step_emulation(
                 frame + u64::from(session.profile.rewind_interval_frames);
         }
 
+        maybe_record_replay_checkpoint(session)?;
+
         if frame.saturating_sub(session.last_sram_flush_frame) >= SRAM_FLUSH_INTERVAL_FRAMES {
             flush_save_ram(session)?;
             session.last_sram_flush_frame = frame;
@@ -1194,6 +1198,18 @@ fn step_emulation(
         audio_bytes.extend_from_slice(&quantized.to_le_bytes());
     }
 
+    let replay_recording = session.recording.is_some();
+    let (replay_actions, replay_checkpoints) = session
+        .recording
+        .as_ref()
+        .map(|recording| {
+            (
+                recording.ledger.actions.len(),
+                recording.ledger.checkpoints.len(),
+            )
+        })
+        .unwrap_or((0, 0));
+
     Ok(FramePacket {
         frame: session.core.frame_count(),
         width: video.width,
@@ -1204,6 +1220,9 @@ fn step_emulation(
         shutdown_requested: session.core.shutdown_requested(),
         rewind_snapshots: session.rewind.len(),
         fast_forward: speed,
+        replay_recording,
+        replay_actions,
+        replay_checkpoints,
     })
 }
 
@@ -1221,6 +1240,10 @@ fn set_game_profile(
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
+    if session.recording.is_some() {
+        return Err("per-game profile changes are disabled during replay recording".into());
+    }
+
     persist_game_profile(&session.paths.profile, &profile)?;
     session.profile = profile.clone();
     let capacity = rewind_capacity(session);
@@ -1230,6 +1253,158 @@ fn set_game_profile(
     session.next_rewind_frame =
         session.core.frame_count() + u64::from(session.profile.rewind_interval_frames);
     Ok(profile)
+}
+
+
+#[tauri::command]
+fn replay_status(state: State<'_, EmulatorState>) -> Result<ReplayStatus, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+    Ok(replay_status_for(session))
+}
+
+#[tauri::command]
+fn start_replay_recording(state: State<'_, EmulatorState>) -> Result<ReplayStatus, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("replay recording is already active".into());
+    }
+    if session.profile.fast_forward != 1 {
+        return Err("replay recording requires the per-game profile to be at 1x".into());
+    }
+
+    let start_frame = session.core.frame_count();
+    let initial_state = session
+        .core
+        .serialize_state()
+        .map_err(|error| format!("serialize replay initial state: {error:?}"))?;
+    let initial_checkpoint = make_replay_checkpoint(session, &session.last_frame)?;
+    let core_sha256 = sha256_file(session.core.core_path())?;
+
+    session.recording = Some(ReplayRecording {
+        ledger: ReplayLedger {
+            schema: REPLAY_SCHEMA.to_owned(),
+            game_sha256: session.game_key.clone(),
+            core_name: session.core.identity().library_name.clone(),
+            core_version: session.core.identity().library_version.clone(),
+            core_sha256,
+            start_frame,
+            end_frame: start_frame,
+            initial_state_base64: BASE64.encode(initial_state),
+            initial_input_mask: session.core.input_mask_snapshot(),
+            actions: Vec::new(),
+            checkpoints: vec![initial_checkpoint.clone()],
+            final_state_sha256: initial_checkpoint.state_sha256,
+            final_frame_sha256: initial_checkpoint.frame_sha256,
+        },
+        next_checkpoint_frame: start_frame.saturating_add(REPLAY_CHECKPOINT_INTERVAL_FRAMES),
+    });
+
+    Ok(replay_status_for(session))
+}
+
+#[tauri::command]
+fn stop_replay_recording(state: State<'_, EmulatorState>) -> Result<ReplayArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let export = finalize_replay_recording(session)?;
+    Ok(artifact_view(&export))
+}
+
+#[tauri::command]
+fn verify_last_replay(state: State<'_, EmulatorState>) -> Result<ReplayArtifact, String> {
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_mut()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    if session.recording.is_some() {
+        return Err("stop replay recording before verification".into());
+    }
+
+    let mut export = session
+        .last_replay
+        .clone()
+        .ok_or_else(|| "no replay has been exported in this session".to_owned())?;
+    let replay_json = fs::read(&export.replay_path)
+        .map_err(|error| format!("cannot read {}: {error}", export.replay_path.display()))?;
+    let ledger: ReplayLedger = serde_json::from_slice(&replay_json)
+        .map_err(|error| format!("cannot parse replay ledger: {error}"))?;
+    let observed_replay_sha256 = sha256_bytes(&replay_json);
+
+    if observed_replay_sha256 != export.replay_sha256 {
+        return Err("exported replay hash no longer matches its content".into());
+    }
+
+    let backup_state = session
+        .core
+        .serialize_state()
+        .map_err(|error| format!("serialize live state before verification: {error:?}"))?;
+    let backup_frame = session.core.frame_count();
+    let backup_input_mask = session.core.input_mask_snapshot();
+    let backup_save_ram = session
+        .core
+        .read_save_ram()
+        .map_err(|error| format!("read live save RAM before verification: {error:?}"))?;
+    let backup_last_frame = session.last_frame.clone();
+    let backup_rewind = session.rewind.clone();
+    let backup_next_rewind_frame = session.next_rewind_frame;
+    let backup_last_sram_flush_frame = session.last_sram_flush_frame;
+
+    let verification = verify_replay_execution(session, &ledger);
+
+    let restore_result = session
+        .core
+        .restore_state(&backup_state, backup_frame)
+        .map_err(|error| format!("restore live state after verification: {error:?}"))
+        .and_then(|_| {
+            session.core.restore_input_mask(backup_input_mask);
+            session
+                .core
+                .write_save_ram(&backup_save_ram)
+                .map_err(|error| format!("restore live save RAM after verification: {error:?}"))
+        });
+
+    session.last_frame = backup_last_frame;
+    session.rewind = backup_rewind;
+    session.next_rewind_frame = backup_next_rewind_frame;
+    session.last_sram_flush_frame = backup_last_sram_flush_frame;
+
+    restore_result?;
+    let verification = verification?;
+
+    export.receipt = replay_receipt(
+        &ledger,
+        &export.replay_sha256,
+        Some(verification),
+    );
+    let receipt_json = serde_json::to_vec_pretty(&export.receipt)
+        .map_err(|error| format!("serialize verified replay receipt: {error}"))?;
+    write_atomic(&export.receipt_path, &receipt_json)?;
+
+    session.last_replay = Some(export.clone());
+    Ok(artifact_view(&export))
 }
 
 #[tauri::command]
@@ -1292,6 +1467,9 @@ fn stop_emulation(state: State<'_, EmulatorState>) -> Result<(), String> {
         .lock()
         .map_err(|_| "emulator session lock poisoned".to_owned())?;
     if let Some(active) = session.as_ref() {
+        if active.recording.is_some() {
+            return Err("stop replay recording before ejecting the game".into());
+        }
         flush_save_ram(active)?;
     }
     *session = None;
@@ -1320,6 +1498,10 @@ pub fn run() {
             start_emulation,
             step_emulation,
             set_game_profile,
+            replay_status,
+            start_replay_recording,
+            stop_replay_recording,
+            verify_last_replay,
             capture_screenshot,
             flush_game_save,
             stop_emulation,
