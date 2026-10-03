@@ -18,6 +18,20 @@ make -C "$WORK/rgbds" PREFIX="$WORK/rgbds-install" install
 printf '==> building SameBoy %s\n' "$SAMEBOY_REV"
 git clone https://github.com/LIJI32/SameBoy.git "$WORK/SameBoy"
 git -C "$WORK/SameBoy" checkout "$SAMEBOY_REV"
+
+# SameBoy's boot-ROM build invokes build/pb12 from nested parallel make jobs.
+# On GitHub-hosted runners that helper can be observed before its executable
+# mode is stable, producing a transient "Permission denied". Build it once
+# up front, make the executable mode explicit, then continue the normal
+# parallel libretro build.
+printf '==> prebuilding SameBoy pb12 boot-ROM helper\n'
+mkdir -p "$WORK/SameBoy/build"
+${CC:-cc} -std=c99 -Wall -Werror \
+  "$WORK/SameBoy/BootROMs/pb12.c" \
+  -o "$WORK/SameBoy/build/pb12"
+chmod 0755 "$WORK/SameBoy/build/pb12"
+test -x "$WORK/SameBoy/build/pb12"
+
 PATH="$WORK/rgbds-install/bin:$PATH" make -C "$WORK/SameBoy" -j2 CONF=release libretro
 
 CORE="$(find "$WORK/SameBoy" -type f -name 'sameboy_libretro.so' -print -quit)"
