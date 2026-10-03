@@ -14,6 +14,9 @@ import {
   captureScreenshot,
   flushGameSave,
   loadSettings,
+  startReplayRecording,
+  stopReplayRecording,
+  verifyLastReplay,
   saveSettings,
   scanRomDirectory,
   selectRomDirectory,
@@ -26,6 +29,7 @@ import {
   type AppSettings,
   type FramePacket,
   type GameProfile,
+  type ReplayArtifact,
   type RomEntry,
   type SessionInfo,
 } from "./native";
@@ -33,10 +37,10 @@ import {
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
 
 const milestones = [
-  ["BATTERY RAM", "PERSISTENT", "Save RAM is namespaced by local ROM SHA-256 and flushed automatically."],
-  ["STATE SLOTS", "GOVERNED", "Save/load requests enter through Action Bus system commands."],
-  ["REWIND", "LIVE", "Bounded core snapshots provide governed state rewind without input side channels."],
-  ["SESSION PROFILE", "PERSISTENT", "Per-game speed, rewind depth, interval, and state slot survive restarts."],
+  ["INPUT TAPE", "RECORDING", "Applied ActionEnvelope events are stamped to exact emulated frames."],
+  ["CHECKPOINTS", "HASHED", "Core state, framebuffer, and held-input mask are periodically fingerprinted."],
+  ["VERIFY", "REPLAY EXACT", "The host restores the initial snapshot and re-executes the recorded action stream."],
+  ["DIVERGENCE", "VISIBLE", "The first mismatching checkpoint is surfaced in an exportable receipt."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -70,6 +74,10 @@ export function App() {
   const [audioRate, setAudioRate] = useState(0);
   const [rewindSnapshots, setRewindSnapshots] = useState(0);
   const [profile, setProfile] = useState<GameProfile | null>(null);
+  const [replayRecording, setReplayRecording] = useState(false);
+  const [replayActions, setReplayActions] = useState(0);
+  const [replayCheckpoints, setReplayCheckpoints] = useState(0);
+  const [lastReplay, setLastReplay] = useState<ReplayArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -172,6 +180,9 @@ export function App() {
         playAudio(packet);
         setAudioRate((current) => current === packet.sampleRateHz ? current : packet.sampleRateHz);
         setRewindSnapshots((current) => current === packet.rewindSnapshots ? current : packet.rewindSnapshots);
+        setReplayRecording(packet.replayRecording);
+        setReplayActions(packet.replayActions);
+        setReplayCheckpoints(packet.replayCheckpoints);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -300,6 +311,47 @@ export function App() {
     }
   };
 
+  const beginReplayRecording = async () => {
+    try {
+      const status = await startReplayRecording();
+      setReplayRecording(status.recording);
+      setReplayActions(status.actionCount);
+      setReplayCheckpoints(status.checkpointCount);
+      setLastReplay(null);
+      setNotice("REPLAY LEDGER // RECORDING FROM EXACT CORE SNAPSHOT");
+    } catch (error) {
+      setNotice(`REPLAY START ERROR // ${String(error)}`);
+    }
+  };
+
+  const endReplayRecording = async () => {
+    try {
+      const artifact = await stopReplayRecording();
+      setReplayRecording(false);
+      setLastReplay(artifact);
+      setNotice(`REPLAY EXPORTED // ${artifact.replaySha256.slice(0, 16)}… // VERIFY READY`);
+    } catch (error) {
+      setNotice(`REPLAY STOP ERROR // ${String(error)}`);
+    }
+  };
+
+  const verifyReplay = async () => {
+    try {
+      const artifact = await verifyLastReplay();
+      setLastReplay(artifact);
+      const verification = artifact.receipt.verification;
+      if (verification?.result === "pass") {
+        setNotice(`REPLAY EXACT // ${verification.checkedCheckpoints} CHECKPOINTS VERIFIED`);
+      } else {
+        setNotice(
+          `REPLAY DIVERGED // FIRST OBSERVED FRAME ${verification?.firstDivergenceFrame ?? "UNKNOWN"}`,
+        );
+      }
+    } catch (error) {
+      setNotice(`REPLAY VERIFY ERROR // ${String(error)}`);
+    }
+  };
+
   const launchGame = async () => {
     if (!native) {
       setNotice("EMULATION REQUIRES THE TAURI DESKTOP SHELL");
@@ -330,6 +382,10 @@ export function App() {
       setFrameNumber(0);
       setAudioRate(0);
       setRewindSnapshots(0);
+      setReplayRecording(false);
+      setReplayActions(0);
+      setReplayCheckpoints(0);
+      setLastReplay(null);
 
       const info = await startEmulation(corePath, selectedGame.path);
       setSession(info);
@@ -350,6 +406,10 @@ export function App() {
       setSession(null);
       setProfile(null);
       setRewindSnapshots(0);
+      setReplayRecording(false);
+      setReplayActions(0);
+      setReplayCheckpoints(0);
+      setLastReplay(null);
       setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
@@ -368,6 +428,7 @@ export function App() {
           <span><i className={`lamp ${native ? "lamp-green" : "lamp-amber"}`} /> {native ? "TAURI NATIVE" : "WEB PREVIEW"}</span>
           <span><i className="lamp lamp-green" /> ACTION IPC READY</span>
           <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? "SAMEBOY RUNNING" : "CORE HOST STANDBY"}</span>
+          <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
         </div>
       </header>
 
@@ -427,7 +488,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 4 // SESSION MACHINERY ONLINE</small>
+                  <small>RUNG 5 // REPLAY LEDGER ONLINE</small>
                 </div>
               )}
             </div>
@@ -435,14 +496,33 @@ export function App() {
 
           <div className="session-strip">
             <button onClick={launchGame} disabled={running || !native}>LOAD / RUN</button>
-            <button onClick={stopGame} disabled={!running}>EJECT</button>
+            <button onClick={stopGame} disabled={!running || replayRecording}>EJECT</button>
             <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : "NO CORE LOADED"}</span>
           </div>
 
+          <div className="replay-strip">
+            <span>REPLAY LEDGER</span>
+            <button
+              className={replayRecording ? "recording" : ""}
+              onClick={replayRecording ? endReplayRecording : beginReplayRecording}
+              disabled={!running || (!replayRecording && profile?.fastForward !== 1)}
+            >
+              {replayRecording ? "STOP + EXPORT" : "REC"}
+            </button>
+            <button onClick={verifyReplay} disabled={!running || replayRecording || !lastReplay}>VERIFY LAST</button>
+            <small>
+              {lastReplay
+                ? `${lastReplay.receipt.verification?.result?.toUpperCase() ?? "UNVERIFIED"} // ${lastReplay.replaySha256.slice(0, 12)}…`
+                : replayRecording
+                  ? `${replayActions} ACTIONS / ${replayCheckpoints} CHECKPOINTS`
+                  : "NO EXPORTED REPLAY"}
+            </small>
+          </div>
+
           <div className="session-tools">
-            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running}>SAVE S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running}>LOAD S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("rewind", 2)} disabled={!running}>REWIND 2S</button>
+            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>SAVE S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording}>LOAD S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording}>REWIND 2S</button>
             <button onClick={() => queueSystem("reset")} disabled={!running}>RESET</button>
             <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
             <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
@@ -455,7 +535,7 @@ export function App() {
                 key={speed}
                 className={profile?.fastForward === speed ? "active" : ""}
                 onClick={() => updateFastForward(speed)}
-                disabled={!running}
+                disabled={!running || replayRecording}
               >
                 {speed}×
               </button>
@@ -480,7 +560,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 4</div>
+          <div className="panel-title">RUNTIME // RUNG 5</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
@@ -492,6 +572,10 @@ export function App() {
             <div><dt>REWIND</dt><dd>{rewindSnapshots.toString().padStart(6, "0")}</dd></div>
             <div><dt>STATE SLOT</dt><dd>S{profile?.saveSlot ?? 0}</dd></div>
             <div><dt>GAME HASH</dt><dd>{session ? session.gameKey.slice(0, 8).toUpperCase() : "--------"}</dd></div>
+            <div><dt>REPLAY</dt><dd>{replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
+            <div><dt>ACTIONS</dt><dd>{replayActions.toString().padStart(6, "0")}</dd></div>
+            <div><dt>CHECKPOINTS</dt><dd>{replayCheckpoints.toString().padStart(6, "0")}</dd></div>
+            <div><dt>VERIFY</dt><dd>{lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
           </dl>
 
           <div className="rule" />
@@ -523,7 +607,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>CAPABILITY ≠ AUTHORITY // HASH-NAMESPACED SAVES // GOVERNED STATE CHANGES // ACTION BUS ONLY</footer>
+      <footer>CAPABILITY ≠ AUTHORITY // FRAME-STAMPED ACTIONS // HASHED CHECKPOINTS // REPLAY RECEIPTS</footer>
     </main>
   );
 }
