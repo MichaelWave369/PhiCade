@@ -1,8 +1,9 @@
 use crate::{ActionEnvelope, ActionKind, ActionSource, PhiBotObservation};
 use serde::{Deserialize, Serialize};
 
-pub const AGENT_TURN_REQUEST_SCHEMA: &str = "phicade.agent-turn-request.v1";
-pub const AGENT_TURN_RESPONSE_SCHEMA: &str = "phicade.agent-turn-response.v1";
+pub const AGENT_TURN_REQUEST_SCHEMA: &str = "phicade.agent-turn-request.v2";
+pub const AGENT_TURN_RESPONSE_SCHEMA: &str = "phicade.agent-turn-response.v2";
+pub const AGENT_MEMORY_MAX_BYTES: u32 = 16_384;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -20,6 +21,14 @@ pub struct AgentTurnRequest {
     pub max_actions: u8,
     pub max_delay_frames: u16,
     pub valid_until_frame: u64,
+    pub memory: String,
+    pub memory_sha256: String,
+    pub max_memory_bytes: u32,
+    pub max_memory_update_bytes: u32,
+}
+
+fn is_sha256_hex(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 impl AgentTurnRequest {
@@ -37,6 +46,22 @@ impl AgentTurnRequest {
         if self.valid_until_frame < self.observation.frame {
             return Err("agent turn expires before its observation frame".into());
         }
+        if !(1..=AGENT_MEMORY_MAX_BYTES).contains(&self.max_memory_bytes) {
+            return Err(format!(
+                "agent turn maxMemoryBytes must be in 1..={AGENT_MEMORY_MAX_BYTES}"
+            ));
+        }
+        if self.max_memory_update_bytes == 0
+            || self.max_memory_update_bytes > self.max_memory_bytes
+        {
+            return Err("agent turn maxMemoryUpdateBytes must be in 1..=maxMemoryBytes".into());
+        }
+        if self.memory.len() > self.max_memory_bytes as usize {
+            return Err("agent turn memory exceeds maxMemoryBytes".into());
+        }
+        if !is_sha256_hex(&self.memory_sha256) {
+            return Err("agent turn memorySha256 must be a 64-character hex digest".into());
+        }
         Ok(())
     }
 }
@@ -50,6 +75,8 @@ pub struct AgentTurnResponse {
     pub seat: u8,
     pub observation_frame: u64,
     pub observation_sha256: String,
+    pub memory_sha256: String,
+    pub memory_update: Option<String>,
     pub actions: Vec<AgentTurnAction>,
 }
 
@@ -78,6 +105,17 @@ impl AgentTurnResponse {
         }
         if self.observation_sha256 != request.observation.frame_sha256 {
             return Err("agent turn response observation hash does not match request".into());
+        }
+        if self.memory_sha256 != request.memory_sha256 {
+            return Err("agent turn response memorySha256 does not match pending memory".into());
+        }
+        if let Some(memory_update) = &self.memory_update {
+            if memory_update.len() > request.max_memory_update_bytes as usize {
+                return Err("agent turn memoryUpdate exceeds maxMemoryUpdateBytes".into());
+            }
+            if memory_update.len() > request.max_memory_bytes as usize {
+                return Err("agent turn memoryUpdate exceeds maxMemoryBytes".into());
+            }
         }
         if current_frame > request.valid_until_frame {
             return Err("agent turn response arrived after request expiry".into());
@@ -152,6 +190,10 @@ mod tests {
             max_actions: 4,
             max_delay_frames: 8,
             valid_until_frame: 120,
+            memory: "door=east".into(),
+            memory_sha256: "d".repeat(64),
+            max_memory_bytes: 4096,
+            max_memory_update_bytes: 1024,
         }
     }
 
@@ -163,6 +205,8 @@ mod tests {
             seat: 1,
             observation_frame: 100,
             observation_sha256: "a".repeat(64),
+            memory_sha256: "d".repeat(64),
+            memory_update: Some("door=east; key=blue".into()),
             actions: vec![
                 AgentTurnAction {
                     delay_frames: 0,
@@ -203,6 +247,20 @@ mod tests {
     fn rejects_wrong_observation_hash() {
         let mut response = response();
         response.observation_sha256 = "c".repeat(64);
+        assert!(response.validate_against(&request(), 105).is_err());
+    }
+
+    #[test]
+    fn rejects_wrong_memory_hash() {
+        let mut response = response();
+        response.memory_sha256 = "c".repeat(64);
+        assert!(response.validate_against(&request(), 105).is_err());
+    }
+
+    #[test]
+    fn rejects_oversized_memory_update() {
+        let mut response = response();
+        response.memory_update = Some("x".repeat(1025));
         assert!(response.validate_against(&request(), 105).is_err());
     }
 
