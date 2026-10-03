@@ -119,10 +119,23 @@
 - [x] Automatic score receipt for every Autodrive stop path
 - [x] Full native governance/benchmark CI tests
 
+## Rung 13 — Benchmark Campaigns
+- [x] Native 3–20 trial campaign bounds
+- [x] Desktop five-trial default campaign
+- [x] Shared deterministic campaign statistics
+- [x] Live installed-digest re-check before every trial
+- [x] Qualification-receipt hash pinning
+- [x] SameBoy binary hash pinning
+- [x] Exact Autodrive policy pinning
+- [x] Immutable SHA-256 references to individual trial receipts
+- [x] COMPLETE and PARTIAL campaign summaries
+- [x] Operator/end and core-shutdown evidence preservation
+- [x] Success rate + mean/median/min/max/population stddev
+
 ## Later
 
-Adaptive observation cadence, repeated-trial model benchmarks, statistical
-comparison reports, provider capability profiles beyond Ollama, cloud-provider
-adapters, metadata/cover art, additional systems, true multi-port versus play,
-netplay, spectator mode, achievements, tournaments, CommonLine rooms, and a shared
-Phi Game Runtime with Night Circuit.
+Adaptive observation cadence, cross-model comparison reports, confidence intervals,
+provider capability profiles beyond Ollama, cloud-provider adapters, metadata/cover
+art, additional systems, true multi-port versus play, netplay, spectator mode,
+achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
+Night Circuit.
