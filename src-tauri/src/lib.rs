@@ -809,9 +809,12 @@ fn session_paths(
     let profile_dir = root.join("profiles");
     let replay_dir = root.join("replays").join(game_key);
     let autodrive_dir = root.join("autodrive").join(game_key);
-    let model_benchmark_dir = root.join("model-benchmarks").join(game_key);
-    let benchmark_campaign_dir = root.join("benchmark-campaigns").join(game_key);
+    let model_benchmark_root = root.join("model-benchmarks");
+    let benchmark_campaign_root = root.join("benchmark-campaigns");
+    let model_benchmark_dir = model_benchmark_root.join(game_key);
+    let benchmark_campaign_dir = benchmark_campaign_root.join(game_key);
     let campaign_comparison_dir = root.join("campaign-comparisons").join(game_key);
+    let suite_report_dir = root.join("suite-reports").join(BENCHMARK_SUITE_V1_ID);
 
     fs::create_dir_all(&state_dir)
         .map_err(|error| format!("cannot create {}: {error}", state_dir.display()))?;
@@ -829,6 +832,8 @@ fn session_paths(
         .map_err(|error| format!("cannot create {}: {error}", benchmark_campaign_dir.display()))?;
     fs::create_dir_all(&campaign_comparison_dir)
         .map_err(|error| format!("cannot create {}: {error}", campaign_comparison_dir.display()))?;
+    fs::create_dir_all(&suite_report_dir)
+        .map_err(|error| format!("cannot create {}: {error}", suite_report_dir.display()))?;
 
     Ok(SessionPaths {
         save_ram: root.join("saves").join(format!("{game_key}.srm")),
@@ -837,8 +842,11 @@ fn session_paths(
         replay_dir,
         autodrive_dir,
         model_benchmark_dir,
+        model_benchmark_root,
+        benchmark_campaign_root,
         benchmark_campaign_dir,
         campaign_comparison_dir,
+        suite_report_dir,
         profile: profile_dir.join(format!("{game_key}.json")),
     })
 }
