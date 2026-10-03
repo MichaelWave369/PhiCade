@@ -86,7 +86,7 @@ const milestones = [
   ["CADENCE", "NATIVE", "The runtime owns when the next model observation is eligible; the desktop cannot force an early turn."],
   ["SETTLE", "ACTION-AWARE", "Accepted action delays plus a frozen post-action settle window determine the next observation boundary."],
   ["BACKOFF", "ADAPTIVE", "Consecutive empty turns exponentially increase observation spacing up to a hard policy cap."],
-  ["EVIDENCE", "RECEIPTED", "Autodrive receipts record total cadence wait, maximum wait, last observation frame, and the exact cadence policy."],
+  ["EVIDENCE", "RECEIPTED", "Autodrive receipts record total scheduled cadence wait, maximum wait, last observation frame, and the exact cadence policy."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1696,8 +1696,8 @@ export function App() {
             <div><dt>AUTO ACTIONS</dt><dd>{autodrive ? `${autodrive.totalActions}/${autodrive.policy.maxTotalActions}` : "0/0"}</dd></div>
             <div><dt>NEXT OBS</dt><dd>{autodrive?.active ? `F${autodrive.nextObservationFrame}` : "----"}</dd></div>
             <div><dt>OBS READY</dt><dd>{autodrive?.active ? (frameNumber >= autodrive.nextObservationFrame ? "YES" : `WAIT ${autodrive.nextObservationFrame - frameNumber}F`) : "----"}</dd></div>
-            <div><dt>CADENCE WAIT</dt><dd>{autodrive ? `${autodrive.totalCadenceWaitFrames}F` : "0F"}</dd></div>
-            <div><dt>CADENCE MAX</dt><dd>{autodrive ? `${autodrive.maxCadenceWaitFrames}F` : "0F"}</dd></div>
+            <div><dt>SCHED WAIT</dt><dd>{autodrive ? `${autodrive.totalScheduledCadenceWaitFrames}F` : "0F"}</dd></div>
+            <div><dt>SCHED MAX</dt><dd>{autodrive ? `${autodrive.maxScheduledCadenceWaitFrames}F` : "0F"}</dd></div>
             <div><dt>EMPTY STREAK</dt><dd>{autodrive ? autodrive.consecutiveEmptyTurns : 0}</dd></div>
             <div><dt>AUTO RECEIPT</dt><dd>{lastAutodrive ? `RUN ${lastAutodrive.receipt.runId}` : "NONE"}</dd></div>
             <div><dt>BENCH TASK</dt><dd>{session?.benchmarkTask ? session.benchmarkTask.title.toUpperCase() : "NONE"}</dd></div>
