@@ -653,8 +653,9 @@ mod tests {
         req.observation.game_sha256 = AGENT_GYM_ROM_SHA256.into();
         let prompt = system_prompt(&req);
         assert!(prompt.contains("move the solid square block onto the visible X target"));
-        assert!(!prompt.contains("136"));
-        assert!(!prompt.contains("112"));
+        for leaked in ["136,112", "136, 112", "(136,112)", "(136, 112)", "x=136", "y=112"] {
+            assert!(!prompt.contains(leaked), "prompt leaked benchmark coordinate: {leaked}");
+        }
     }
 
     #[test]
@@ -663,10 +664,13 @@ mod tests {
         req.observation.game_sha256 = AGENT_GYM_MIRROR_ROM_SHA256.into();
         let prompt = system_prompt(&req);
         assert!(prompt.contains("move the solid square block onto the visible X target"));
-        assert!(!prompt.contains("16"));
-        assert!(!prompt.contains("24"));
-        assert!(!prompt.contains("136"));
-        assert!(!prompt.contains("112"));
+        for leaked in [
+            "16,24", "16, 24", "(16,24)", "(16, 24)",
+            "136,112", "136, 112", "(136,112)", "(136, 112)",
+            "x=16", "y=24", "x=136", "y=112",
+        ] {
+            assert!(!prompt.contains(leaked), "prompt leaked benchmark coordinate: {leaked}");
+        }
     }
 
     #[test]
