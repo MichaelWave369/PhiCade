@@ -3,31 +3,28 @@
 > **Old worlds. New players.**
 
 PhiCade is an open-source retro game runtime and emulator front end built around
-one core idea: every player enters through the same governed runtime seam.
+one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 8
+## Current status — Rung 9
 
-PhiCade now has its first concrete AI provider adapter: **local Ollama vision**
-feeding the provider-neutral Agent Driver Protocol.
+PhiCade can now run a local Ollama vision model through a **bounded autonomous
+multi-turn gameplay loop**.
 
 Current stack:
 
 - Tauri 2 + React/TypeScript desktop shell
 - qualified SameBoy 1.0.3 GB/GBC runtime
-- battery RAM, states, rewind, screenshots, profiles
-- deterministic content-addressed Replay Ledger
-- framebuffer-only Phi-Bot observation API
-- HUMAN / PHI-BOT / CO-OP authority modes
-- scoped and expiring agent grants
-- provider-neutral AgentTurnRequest / AgentTurnResponse
-- native scheduled driver inbox and canonical sequencing
-- loopback-only Ollama REST adapter
-- local model discovery
-- RGBA framebuffer → PNG vision input
-- JSON-schema-constrained button decisions
-- THINK PAUSE while local inference runs
-- explicit turn cancellation on provider failure
-- native mock-Ollama CI tests
+- save RAM, states, rewind, screenshots, profiles
+- deterministic Replay Ledger
+- governed Phi-Bot seat
+- provider-neutral Agent Driver Protocol
+- loopback-only local Ollama vision adapter
+- native bounded Autodrive policy
+- queue-aware repeated model turns
+- immediate human takeover
+- explicit provider/grant/budget stop reasons
+- persistent autonomous-run receipts
+- SameBoy bounded-loop CI qualification
 
 ## Run
 
@@ -36,32 +33,37 @@ npm install
 npm run desktop
 ```
 
-For ordinary emulation, choose a ROM directory, select a compatible SameBoy
-libretro core, choose a `.gb` or `.gbc` image, then use **LOAD / RUN**.
+Choose a ROM directory, select a compatible SameBoy libretro core, and load a
+`.gb` or `.gbc` game.
 
-## Local Ollama gameplay
+## Local autonomous play
 
-Run Ollama locally on its standard loopback endpoint, then in PhiCade:
+With Ollama running locally:
 
 1. **SCAN MODELS**
-2. select an installed **vision-capable** model
-3. load a GB/GBC game
-4. select **HANDOFF**
-5. press **OLLAMA TURN**
+2. select a vision-capable local model
+3. load a game
+4. choose **HANDOFF**
+5. press **AUTO DRIVE**
 
-PhiCade freezes emulation on the observed frame while the model evaluates it,
-then submits the model's structured button proposal through the same Agent Driver
-and AuthorityPolicy used by every other Phi-Bot controller.
+Default autonomous limits are:
 
-The default endpoint is:
+- 32 turns
+- 128 total proposed actions
+- 4 consecutive empty turns
+- 3,600 emulated frames
 
-`http://127.0.0.1:11434`
+PhiCade pauses the emulator during each vision inference, resumes to execute the
+bounded action sequence, waits for the native queue to drain, then issues the next
+turn.
 
-Rung 8 is intentionally loopback-only. Remote model transport is not silently
-treated as equivalent to a local process.
+**HUMAN remains live at all times** and immediately terminates the run and revokes
+the bot grant.
 
-PhiCade does not guess which installed models support vision. Selecting a text-only
-model can fail cleanly without submitting gameplay actions.
+AUTO DRIVE can also stop because of provider failure, grant expiry, turn/action/
+frame budgets, repeated empty turns, or core shutdown.
+
+Each completed/stopped run writes a receipt under the local game fingerprint.
 
 ## Qualification
 
@@ -69,15 +71,15 @@ model can fail cleanly without submitting gameplay actions.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-Produces the frozen core/session/replay/driver receipts.
+Produces:
 
-Native CI additionally runs loopback mock-Ollama tests for:
+- `artifacts/sameboy-qualification.json`
+- `artifacts/replay-qualification.json`
+- `artifacts/phibot-qualification.json`
+- `artifacts/agent-driver-qualification.json`
+- `artifacts/autodrive-qualification.json`
 
-- model discovery
-- RGBA → PNG vision conversion
-- structured-output schema budgets
-- chat-response → AgentTurnResponse conversion
-- remote-host refusal
+Native CI also runs the local mock-Ollama adapter tests.
 
 See:
 
@@ -87,6 +89,7 @@ See:
 - `docs/PHIBOT_SEAT.md`
 - `docs/AGENT_DRIVER_PROTOCOL.md`
 - `docs/OLLAMA_PROVIDER.md`
+- `docs/AUTODRIVE.md`
 - `docs/ARCHITECTURE.md`
 
 ## Content policy
