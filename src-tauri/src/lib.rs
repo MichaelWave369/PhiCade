@@ -48,6 +48,8 @@ const STATE_MAGIC: &[u8] = b"PHICADE_STATE_V1\0";
 const MODEL_GAMEPLAY_BENCHMARK_SCHEMA: &str = "phicade.model-gameplay-benchmark.v1";
 const MIN_CAMPAIGN_TRIALS: u16 = 3;
 const MAX_CAMPAIGN_TRIALS: u16 = 20;
+const MANUAL_AGENT_MEMORY_MAX_BYTES: u32 = 4_096;
+const MANUAL_AGENT_MEMORY_UPDATE_MAX_BYTES: u32 = 1_024;
 
 #[derive(Default)]
 struct EmulatorState {
@@ -95,6 +97,39 @@ struct ReplayExport {
 struct AutodriveExport {
     receipt_path: PathBuf,
     receipt: AutodriveReceipt,
+}
+
+#[derive(Debug, Clone)]
+struct AgentMemoryState {
+    content: String,
+    initial_sha256: String,
+    revision: u64,
+    updates: u64,
+    bytes_written: u64,
+    refusals: u64,
+}
+
+impl AgentMemoryState {
+    fn new() -> Self {
+        let content = String::new();
+        let initial_sha256 = sha256_bytes(content.as_bytes());
+        Self {
+            content,
+            initial_sha256,
+            revision: 0,
+            updates: 0,
+            bytes_written: 0,
+            refusals: 0,
+        }
+    }
+
+    fn sha256(&self) -> String {
+        sha256_bytes(self.content.as_bytes())
+    }
+
+    fn bytes(&self) -> u32 {
+        u32::try_from(self.content.len()).unwrap_or(u32::MAX)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -500,6 +535,7 @@ struct EmulatorSession {
     agent_inbox: VecDeque<ActionEnvelope>,
     next_driver_turn_id: u64,
     next_action_sequence: u64,
+    agent_memory: AgentMemoryState,
     autodrive: Option<AutodriveStatus>,
     last_autodrive: Option<AutodriveExport>,
     next_autodrive_run_id: u64,
@@ -678,6 +714,13 @@ struct DriverStatus {
     pending_turn_id: Option<u64>,
     queued_actions: usize,
     next_turn_id: u64,
+    memory_content: String,
+    memory_sha256: String,
+    memory_bytes: u32,
+    memory_revision: u64,
+    memory_updates: u64,
+    memory_bytes_written: u64,
+    memory_refusals: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1772,6 +1815,7 @@ fn start_emulation(
         agent_inbox: VecDeque::new(),
         next_driver_turn_id: 1,
         next_action_sequence: 0,
+        agent_memory: AgentMemoryState::new(),
         autodrive: None,
         last_autodrive: None,
         next_autodrive_run_id,
@@ -1936,6 +1980,7 @@ fn set_control_mode(
     session.authority.set_mode(mode, grant)?;
     session.pending_agent_turn = None;
     session.agent_inbox.clear();
+    session.agent_memory = AgentMemoryState::new();
     session.core.restore_input_mask(0);
     session.last_authority_reason = Some(format!(
         "operator set control mode to {}",
@@ -2273,6 +2318,7 @@ fn finish_autodrive(
     reason: AutodriveStopReason,
 ) -> Result<AutodriveArtifact, String> {
     let current_frame = session.core.frame_count();
+    let memory = session.agent_memory.clone();
     let status = session
         .autodrive
         .as_mut()
@@ -2311,6 +2357,14 @@ fn finish_autodrive(
         last_observation_frame: status.last_observation_frame,
         stop_reason: reason,
         final_frame_sha256: sha256_bytes(&session.last_frame.rgba8),
+        initial_memory_sha256: memory.initial_sha256.clone(),
+        final_memory_sha256: memory.sha256(),
+        final_memory_content: memory.content.clone(),
+        final_memory_bytes: memory.bytes(),
+        memory_revision: memory.revision,
+        memory_updates: memory.updates,
+        memory_bytes_written: memory.bytes_written,
+        memory_refusals: memory.refusals,
         policy: status.policy.clone(),
     };
 
@@ -2328,6 +2382,7 @@ fn finish_autodrive(
     };
     session.last_autodrive = Some(export.clone());
     let _ = finish_model_benchmark(session, &export)?;
+    session.agent_memory = AgentMemoryState::new();
     Ok(autodrive_artifact(&export))
 }
 
@@ -2441,6 +2496,10 @@ fn start_autodrive_inner(
         return Err("AUTO DRIVE qualification receipt does not match the selected model digest".into());
     }
     policy.validate()?;
+    if policy.policy_version != 1 {
+        return Err("new autonomous runs require Autodrive policyVersion 1".into());
+    }
+    session.agent_memory = AgentMemoryState::new();
 
     let frame = session.core.frame_count();
     let status = AutodriveStatus {
@@ -3921,6 +3980,13 @@ fn driver_status_for(session: &EmulatorSession) -> DriverStatus {
         pending_turn_id: session.pending_agent_turn.as_ref().map(|request| request.turn_id),
         queued_actions: session.agent_inbox.len(),
         next_turn_id: session.next_driver_turn_id,
+        memory_content: session.agent_memory.content.clone(),
+        memory_sha256: session.agent_memory.sha256(),
+        memory_bytes: session.agent_memory.bytes(),
+        memory_revision: session.agent_memory.revision,
+        memory_updates: session.agent_memory.updates,
+        memory_bytes_written: session.agent_memory.bytes_written,
+        memory_refusals: session.agent_memory.refusals,
     }
 }
 
@@ -3975,12 +4041,28 @@ fn issue_agent_turn(
     }
 
     let observation = build_phi_bot_observation(session, agent_id, seat)?;
+    let (max_memory_bytes, max_memory_update_bytes) = session
+        .autodrive
+        .as_ref()
+        .filter(|status| status.active)
+        .map(|status| (
+            status.policy.max_memory_bytes,
+            status.policy.max_memory_update_bytes,
+        ))
+        .unwrap_or((
+            MANUAL_AGENT_MEMORY_MAX_BYTES,
+            MANUAL_AGENT_MEMORY_UPDATE_MAX_BYTES,
+        ));
     let request = AgentTurnRequest {
         schema: AGENT_TURN_REQUEST_SCHEMA.to_owned(),
         turn_id: session.next_driver_turn_id,
         max_actions: 8,
         max_delay_frames: 30,
         valid_until_frame: observation.frame.saturating_add(120),
+        memory: session.agent_memory.content.clone(),
+        memory_sha256: session.agent_memory.sha256(),
+        max_memory_bytes,
+        max_memory_update_bytes,
         observation,
     };
     request.validate()?;
@@ -4100,6 +4182,12 @@ fn submit_agent_turn(
         .cloned()
         .ok_or_else(|| "no agent turn is pending".to_owned())?;
     let apply_frame = session.core.frame_count();
+    if let Err(error) = response.validate_against(&request, apply_frame) {
+        if error.to_ascii_lowercase().contains("memory") {
+            session.agent_memory.refusals = session.agent_memory.refusals.saturating_add(1);
+        }
+        return Err(error);
+    }
     let max_action_delay_frames = response
         .actions
         .iter()
@@ -4113,6 +4201,18 @@ fn submit_agent_turn(
         if !status.can_accept_actions(compiled_count) {
             let _ = finish_autodrive(session, AutodriveStopReason::ActionBudget)?;
             return Err("autonomous run action budget would be exceeded".into());
+        }
+    }
+
+    if let Some(memory_update) = response.memory_update.as_ref() {
+        if memory_update != &session.agent_memory.content {
+            session.agent_memory.content = memory_update.clone();
+            session.agent_memory.revision = session.agent_memory.revision.saturating_add(1);
+            session.agent_memory.updates = session.agent_memory.updates.saturating_add(1);
+            session.agent_memory.bytes_written = session
+                .agent_memory
+                .bytes_written
+                .saturating_add(memory_update.len() as u64);
         }
     }
 
@@ -4176,6 +4276,7 @@ fn step_emulation(
         session.authority.set_mode(ControlMode::Human, None)?;
         session.pending_agent_turn = None;
         session.agent_inbox.clear();
+        session.agent_memory = AgentMemoryState::new();
         session.core.restore_input_mask(0);
         session.last_authority_reason =
             Some("Phi-Bot grant expired; control returned to HUMAN".to_owned());
