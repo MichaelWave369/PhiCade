@@ -6,6 +6,7 @@ license = "MIT"
 description = "Minimal governed libretro host for PhiCade"
 
 [dependencies]
+base64 = "0.22"
 libloading = "0.8"
 phicade-runtime = { path = "../phicade-runtime" }
 serde = { version = "1", features = ["derive"] }
