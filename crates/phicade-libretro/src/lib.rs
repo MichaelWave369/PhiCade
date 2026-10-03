@@ -305,6 +305,17 @@ impl LibretroCore {
         callbacks().lock().map(|s| s.shutdown).unwrap_or(false)
     }
 
+    pub fn input_mask_snapshot(&self) -> u16 {
+        self.input_mask
+    }
+
+    pub fn restore_input_mask(&mut self, mask: u16) {
+        self.input_mask = mask;
+        if let Ok(mut state) = callbacks().lock() {
+            state.input_mask = mask;
+        }
+    }
+
     pub fn serialize_state(&self) -> Result<Vec<u8>, CoreError> {
         if !self.loaded {
             return Err(CoreError::InvalidState("no game loaded".into()));
