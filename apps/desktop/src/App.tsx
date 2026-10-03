@@ -63,6 +63,7 @@ export function App() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [running, setRunning] = useState(false);
   const [frameNumber, setFrameNumber] = useState(0);
+  const [audioRate, setAudioRate] = useState(0);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
@@ -162,6 +163,7 @@ export function App() {
         frameRef.current = packet.frame;
         drawFrame(packet);
         playAudio(packet);
+        setAudioRate((current) => current === packet.sampleRateHz ? current : packet.sampleRateHz);
         if (packet.frame % 6 === 0) setFrameNumber(packet.frame);
         if (packet.shutdownRequested) {
           setNotice("CORE REQUESTED SHUTDOWN");
@@ -275,6 +277,7 @@ export function App() {
       gamepadRef.current = emptyGameBoyButtons();
       frameRef.current = 0;
       setFrameNumber(0);
+      setAudioRate(0);
 
       const info = await startEmulation(corePath, selectedGame.path);
       setSession(info);
@@ -405,7 +408,7 @@ export function App() {
             <div><dt>LIBRARY</dt><dd>{games.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>GAMEPADS</dt><dd>{controllers.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>CORE</dt><dd>{running ? "ONLINE" : "STANDBY"}</dd></div>
-            <div><dt>AUDIO</dt><dd>{session ? `${session.core.sampleRateHz} HZ` : "OFFLINE"}</dd></div>
+            <div><dt>AUDIO</dt><dd>{running ? (audioRate ? `${audioRate} HZ` : "SYNC") : "OFFLINE"}</dd></div>
           </dl>
 
           <div className="rule" />
