@@ -12,6 +12,10 @@ use std::{
     process,
 };
 
+const RIGHT_FRAMES: u64 = 60;
+const DOWN_FRAMES: u64 = 44;
+const SETTLE_FRAMES: u64 = 6;
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct AgentGymQualificationReceipt {
