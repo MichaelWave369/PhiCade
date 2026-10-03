@@ -247,9 +247,29 @@
 - [x] Reference driver upgraded to Protocol v2
 - [x] Desktop live memory telemetry
 
+## Rung 21 — Temporal Cue Memory Benchmark
+- [x] Balanced LEFT/RIGHT source-first Game Boy cue tasks
+- [x] Identical provider instruction across cue variants
+- [x] Cue disappears before the later decision
+- [x] 90-frame post-cue lockout
+- [x] Identical two-door decision framebuffer design
+- [x] Neutral-arm rule blocks same-turn directional carry-through
+- [x] Task-owned exact benchmark button grants
+- [x] Generic oracle supports A + explicit WAIT legs
+- [x] Dedicated pair qualification harness
+- [x] Cue-frame difference control
+- [x] Decision-frame identity control
+- [x] Carry-through refusal control
+- [x] Neutral re-arm recovery control
+- [x] Benchmark Suite v3 with exact v2 reuse + both temporal tasks
+- [x] v2 READY at 3/3 while v3 remains INCOMPLETE at 3/5
+- [x] v3 remains INCOMPLETE at 4/5
+- [x] v3 READY only at 5/5
+- [ ] Freeze canonical temporal source + ROM SHA-256 after behavioral qualification
+
 ## Later
 
-Temporal-cue benchmark tasks, additional benchmark capabilities/tasks, additional uncertainty methods, provider
+Additional benchmark capabilities/tasks, additional uncertainty methods, provider
 capability profiles beyond Ollama, cloud-provider adapters, metadata/cover art,
 additional systems, true multi-port versus play, netplay, spectator mode,
 achievements, tournaments, CommonLine rooms, and a shared Phi Game Runtime with
