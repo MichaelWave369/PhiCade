@@ -77,8 +77,9 @@ temporarily restoring the replay's initial core state, re-executing its exact
 frame-stamped ActionEnvelope stream, comparing checkpoints, and then restoring the
 live game session you were playing before verification.
 
-Replay v1 intentionally blocks save-state, load-state, rewind, and profile changes
-while recording so the tape remains a linear deterministic claim.
+Replay v1 intentionally records controller/axis input only. Save-state, load-state,
+rewind, reset, and profile changes are blocked while recording so the tape remains
+a linear deterministic claim.
 
 ## Tests
 
