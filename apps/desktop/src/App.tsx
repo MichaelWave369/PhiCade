@@ -18,6 +18,7 @@ import {
   completeOllamaTurn,
   compareBenchmarkCampaigns,
   continueBenchmarkCampaign,
+  buildBenchmarkSuiteReport,
   failAutodriveProvider,
   flushGameSave,
   getAuthorityStatus,
@@ -30,6 +31,7 @@ import {
   getOllamaQualificationStatus,
   issueAgentTurn,
   listBenchmarkCampaignReceipts,
+  listBenchmarkSuiteReportCandidates,
   listOllamaModels,
   qualifyOllamaModel,
   loadSettings,
@@ -60,6 +62,8 @@ import {
   type BenchmarkCampaignStatus,
   type CampaignComparisonArtifact,
   type CampaignListEntry,
+  type BenchmarkSuiteReportArtifact,
+  type BenchmarkSuiteReportCandidate,
   type ControlMode,
   type FramePacket,
   type GameProfile,
@@ -75,10 +79,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["SUITE", "TWO-TASK", "Suite v1 freezes the original diagonal task plus Mirror Dash with reversed start/target geometry."],
-  ["REGISTRY", "HASH-BOUND", "Native benchmark identity comes from exact ROM SHA-256, never filename or display title."],
-  ["QUALIFICATION", "DUAL", "Both source-first ROMs must pass no-input, oracle, exact replay, and source/ROM hash controls."],
-  ["RUNTIME", "GENERIC", "Benchmark start, scoring, task-success, campaigns, prompts, and UI resolve the active task from one registry."],
+  ["COHORT", "CROSS-TASK", "Suite cohorts group COMPLETE campaigns by exact model, qualification, core, policy, and trial-count pins."],
+  ["COVERAGE", "ALL TASKS", "A suite report is READY only when every registered Suite v1 task has one verified campaign."],
+  ["AGGREGATE", "MACRO", "Task means receive equal weight while overall success rate uses every observed trial."],
+  ["PROVENANCE", "WALKED", "Every suite build re-verifies campaign receipts and their underlying trial hashes before aggregation."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -140,6 +144,10 @@ export function App() {
   const [comparisonBId, setComparisonBId] = useState<number | null>(null);
   const [lastComparison, setLastComparison] = useState<CampaignComparisonArtifact | null>(null);
   const [comparisonBusy, setComparisonBusy] = useState(false);
+  const [suiteCandidates, setSuiteCandidates] = useState<BenchmarkSuiteReportCandidate[]>([]);
+  const [selectedSuiteCohortId, setSelectedSuiteCohortId] = useState<string | null>(null);
+  const [lastSuiteReport, setLastSuiteReport] = useState<BenchmarkSuiteReportArtifact | null>(null);
+  const [suiteReportBusy, setSuiteReportBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
