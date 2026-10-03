@@ -60,7 +60,7 @@ pub use suite_comparison::{
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
 pub use driver::{
     compile_agent_turn, AgentTurnAction, AgentTurnRequest, AgentTurnResponse,
-    AGENT_TURN_REQUEST_SCHEMA, AGENT_TURN_RESPONSE_SCHEMA,
+    AGENT_MEMORY_MAX_BYTES, AGENT_TURN_REQUEST_SCHEMA, AGENT_TURN_RESPONSE_SCHEMA,
 };
 pub use library::{GameImage, SystemId};
 pub use replay::{

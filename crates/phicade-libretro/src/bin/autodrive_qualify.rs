@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use phicade_libretro::LibretroCore;
 use phicade_runtime::{
-    compile_agent_turn, ActionEnvelope, ActionKind, ActionSource, AgentGrant, AgentTurnAction,
+    compile_agent_turn, ActionEnvelope, ActionKind, AgentGrant, AgentTurnAction,
     AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveStatus, AutodriveStopReason,
     AudioBuffer, AuthorityPolicy, ControlMode, EmulatorCore, FrameBuffer, GameImage,
     PhiBotObservation, SystemId, AGENT_TURN_REQUEST_SCHEMA, AGENT_TURN_RESPONSE_SCHEMA,
@@ -166,6 +166,7 @@ fn run() -> Result<(), String> {
     let game_sha256 = sha256_file(&rom_path)?;
     let started_frame = core.frame_count();
     let policy_config = AutodrivePolicy {
+        policy_version: 1,
         max_turns: 3,
         max_total_actions: 6,
         max_consecutive_empty_turns: 2,
@@ -174,6 +175,8 @@ fn run() -> Result<(), String> {
         post_action_settle_frames: 2,
         empty_turn_backoff_frames: 8,
         max_observation_interval_frames: 60,
+        max_memory_bytes: 4096,
+        max_memory_update_bytes: 1024,
     };
     policy_config.validate()?;
 
@@ -230,6 +233,10 @@ fn run() -> Result<(), String> {
             max_actions: 2,
             max_delay_frames: 4,
             valid_until_frame: obs.frame + 20,
+            memory: String::new(),
+            memory_sha256: sha256_bytes(b""),
+            max_memory_bytes: run_status.policy.max_memory_bytes,
+            max_memory_update_bytes: run_status.policy.max_memory_update_bytes,
         };
         request.validate()?;
         run_status.note_turn_issued_at(core.frame_count());
@@ -242,6 +249,8 @@ fn run() -> Result<(), String> {
             seat: 1,
             observation_frame: obs.frame,
             observation_sha256: obs.frame_sha256.clone(),
+            memory_sha256: request.memory_sha256.clone(),
+            memory_update: None,
             actions: vec![
                 AgentTurnAction {
                     delay_frames: 0,

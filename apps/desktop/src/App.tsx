@@ -71,6 +71,7 @@ import {
   type BenchmarkSuiteReportCandidate,
   type BenchmarkSuiteReportListEntry,
   type ControlMode,
+  type DriverStatus,
   type FramePacket,
   type GameProfile,
   type ModelBenchmarkArtifact,
@@ -85,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["CADENCE", "NATIVE", "The runtime owns when the next model observation is eligible; the desktop cannot force an early turn."],
-  ["SETTLE", "ACTION-AWARE", "Accepted action delays plus a frozen post-action settle window determine the next observation boundary."],
-  ["BACKOFF", "ADAPTIVE", "Consecutive empty turns exponentially increase observation spacing up to a hard policy cap."],
-  ["EVIDENCE", "RECEIPTED", "Autodrive receipts record total scheduled cadence wait, maximum wait, last observation frame, and the exact cadence policy."],
+  ["MEMORY", "GOVERNED", "The model may propose a bounded UTF-8 working-memory replacement; only the native runtime can accept it."],
+  ["HASH", "TURN-BOUND", "Every agent response echoes the exact pending memory SHA-256 alongside the framebuffer hash."],
+  ["LIMITS", "POLICY", "Autodrive freezes total capsule and per-turn update byte budgets as comparison-relevant policy."],
+  ["EVIDENCE", "RECEIPTED", "Run receipts seal initial/final memory hashes, final content, revision count, bytes written, and refusals."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -131,6 +132,7 @@ export function App() {
   const [lastObservation, setLastObservation] = useState<string | null>(null);
   const [driverPendingTurnId, setDriverPendingTurnId] = useState<number | null>(null);
   const [driverQueuedActions, setDriverQueuedActions] = useState(0);
+  const [driverMemory, setDriverMemory] = useState<DriverStatus | null>(null);
   const [ollamaModels, setOllamaModels] = useState<OllamaModel[]>([]);
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [ollamaScanning, setOllamaScanning] = useState(false);
@@ -527,6 +529,7 @@ export function App() {
       const status = await submitAgentTurn(result.response);
       setDriverPendingTurnId(status.pendingTurnId);
       setDriverQueuedActions(status.queuedActions);
+      setDriverMemory(status);
       const currentAutodrive = await getAutodriveStatus();
       setAutodrive(currentAutodrive);
       const durationMs = result.totalDurationNs === null
@@ -534,7 +537,7 @@ export function App() {
         : result.totalDurationNs / 1_000_000;
       setLastProviderDurationMs(durationMs);
       setLastObservation(
-        `OLLAMA T${request.turnId} // F${request.observation.frame} // ${result.response.actions.length} ACTIONS`,
+        `OLLAMA T${request.turnId} // F${request.observation.frame} // ${result.response.actions.length} ACTIONS // MEM r${status.memoryRevision} ${status.memoryBytes}B`,
       );
       setNotice(
         autonomous && currentAutodrive
@@ -554,6 +557,7 @@ export function App() {
           const status = await cancelAgentTurn();
           setDriverPendingTurnId(status.pendingTurnId);
           setDriverQueuedActions(status.queuedActions);
+          setDriverMemory(status);
         } else {
           setAutodrive(currentAutodrive);
           const artifact = await getLastAutodriveReceipt();
@@ -592,8 +596,9 @@ export function App() {
       );
       setAutodrive(status);
       setLastAutodrive(null);
+      setDriverMemory(await getDriverStatus());
       setNotice(
-        `AUTODRIVE RUN ${status.runId} // QUALIFIED ${qualification.details.digest.slice(0, 12)}… // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / CADENCE ${status.policy.minObservationIntervalFrames}-${status.policy.maxObservationIntervalFrames}F`,
+        `AUTODRIVE RUN ${status.runId} // QUALIFIED ${qualification.details.digest.slice(0, 12)}… // ${status.policy.maxTurns}T / ${status.policy.maxTotalActions}A / CADENCE ${status.policy.minObservationIntervalFrames}-${status.policy.maxObservationIntervalFrames}F // MEMORY ${status.policy.maxMemoryBytes}B/${status.policy.maxMemoryUpdateBytes}B`,
       );
     } catch (error) {
       setNotice(`AUTODRIVE START ERROR // ${String(error)}`);
@@ -914,8 +919,9 @@ export function App() {
       setAutodrive(await getAutodriveStatus());
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
+      setDriverMemory(await getDriverStatus());
       setNotice(
-        `AUTODRIVE STOPPED // ${artifact.receipt.stopReason.toUpperCase()} // ${artifact.receipt.turnsCompleted} TURNS`,
+        `AUTODRIVE STOPPED // ${artifact.receipt.stopReason.toUpperCase()} // ${artifact.receipt.turnsCompleted} TURNS // MEM r${artifact.receipt.memoryRevision} ${artifact.receipt.finalMemoryBytes}B`,
       );
     } catch (error) {
       setNotice(`AUTODRIVE STOP ERROR // ${String(error)}`);
@@ -1056,6 +1062,7 @@ export function App() {
       setLastObservation(null);
       setDriverPendingTurnId(null);
       setDriverQueuedActions(0);
+      setDriverMemory(await getDriverStatus());
       const currentAutodrive = await getAutodriveStatus();
       setAutodrive(currentAutodrive);
       if (currentAutodrive && !currentAutodrive.active) {
@@ -1085,12 +1092,14 @@ export function App() {
       const selector = Number.parseInt(observation.frameSha256.slice(-2), 16);
       const button = candidates[selector % candidates.length];
       const response: AgentTurnResponse = {
-        schema: "phicade.agent-turn-response.v1",
+        schema: "phicade.agent-turn-response.v2",
         turnId: request.turnId,
         agentId: PHIBOT_AGENT_ID,
         seat: 1,
         observationFrame: observation.frame,
         observationSha256: observation.frameSha256,
+        memorySha256: request.memorySha256,
+        memoryUpdate: null,
         actions: [
           { delayFrames: 0, action: { kind: "button", button, pressed: true } },
           { delayFrames: 2, action: { kind: "button", button, pressed: false } },
@@ -1100,7 +1109,8 @@ export function App() {
       const status = await submitAgentTurn(response);
       setDriverPendingTurnId(status.pendingTurnId);
       setDriverQueuedActions(status.queuedActions);
-      setLastObservation(`T${request.turnId} // F${observation.frame} // ${observation.frameSha256.slice(0, 12)}… // ${button}`);
+      setDriverMemory(status);
+      setLastObservation(`T${request.turnId} // F${observation.frame} // ${observation.frameSha256.slice(0, 12)}… // ${button} // MEM r${status.memoryRevision}`);
       setNotice(`DRIVER TURN ${request.turnId} ACCEPTED // ${button} TAP ENTERED NATIVE INBOX`);
     } catch (error) {
       setNotice(`AGENT DRIVER ERROR // ${String(error)}`);
@@ -1218,6 +1228,7 @@ export function App() {
       setAuthority(initialAuthority);
       setDriverPendingTurnId(initialDriver.pendingTurnId);
       setDriverQueuedActions(initialDriver.queuedActions);
+      setDriverMemory(initialDriver);
       setProfile(info.profile);
       setRunning(true);
       runningRef.current = true;
@@ -1266,6 +1277,7 @@ export function App() {
       await stopEmulation();
       setSession(null);
       setProfile(null);
+      setDriverMemory(null);
       setRewindSnapshots(0);
       setReplayRecording(false);
       setReplayActions(0);
@@ -1320,6 +1332,7 @@ export function App() {
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
+          <span><i className="lamp lamp-green" /> MEMORY {driverMemory ? `r${driverMemory.memoryRevision} / ${driverMemory.memoryBytes}B / ${driverMemory.memorySha256.slice(0, 8)}…` : "STANDBY"}</span>
           <span><i className={`lamp ${ollamaOnline ? "lamp-green" : "lamp-amber"}`} /> OLLAMA {providerBusy ? "THINKING" : ollamaOnline ? "LOCAL" : "UNPROBED"}</span>
           <span><i className={`lamp ${autodrive?.active ? "lamp-amber" : "lamp-green"}`} /> AUTODRIVE {autodrive?.active ? `RUN ${autodrive.runId}` : autodrive?.stopReason?.toUpperCase() ?? "STANDBY"}</span>
           <span><i className={`lamp ${benchmarkRunning ? "lamp-amber" : lastModelBenchmark ? "lamp-green" : "lamp-green"}`} /> BENCH {benchmarkRunning ? `RUN ${benchmarkRunId}` : lastModelBenchmark ? `${lastModelBenchmark.receipt.score1000 ?? "ERR"}/1000` : "STANDBY"}</span>
@@ -1405,6 +1418,7 @@ export function App() {
             <button onClick={() => changeControlMode("versus")} disabled={!running || replayRecording || autodrive?.active}>VERSUS</button>
             <button onClick={runReferenceDriverTurn} disabled={!running || replayRecording || autodrive?.active || !authority || !["phi-bot", "coop"].includes(authority.mode) || driverPendingTurnId !== null}>DRIVER TURN</button>
             <small>{lastObservation ?? (authority?.agentId ? `${authority.agentId} // P${authority.agentSeat} // GRANT TO F${authority.expiresAtFrame}` : "NO AGENT GRANT")}</small>
+            <small>MEMORY // r{driverMemory?.memoryRevision ?? 0} // {driverMemory?.memoryBytes ?? 0}B // {driverMemory?.memoryUpdates ?? 0} UPDATES // {driverMemory?.memoryRefusals ?? 0} REFUSALS // {driverMemory?.memoryContent || "(empty)"}</small>
           </div>
 
           <div className="provider-strip">

@@ -1,24 +1,40 @@
 use serde::{Deserialize, Serialize};
 
-pub const AUTODRIVE_STATUS_SCHEMA: &str = "phicade.autodrive-status.v2";
-pub const AUTODRIVE_RECEIPT_SCHEMA: &str = "phicade.autodrive-receipt.v2";
+pub const AUTODRIVE_STATUS_SCHEMA: &str = "phicade.autodrive-status.v3";
+pub const AUTODRIVE_RECEIPT_SCHEMA: &str = "phicade.autodrive-receipt.v3";
+
+fn legacy_min_observation_interval_frames() -> u16 { 1 }
+fn legacy_post_action_settle_frames() -> u16 { 0 }
+fn legacy_empty_turn_backoff_frames() -> u16 { 1 }
+fn legacy_max_observation_interval_frames() -> u16 { 1 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct AutodrivePolicy {
+    #[serde(default)]
+    pub policy_version: u8,
     pub max_turns: u16,
     pub max_total_actions: u32,
     pub max_consecutive_empty_turns: u8,
     pub max_emulated_frames: u64,
+    #[serde(default = "legacy_min_observation_interval_frames")]
     pub min_observation_interval_frames: u16,
+    #[serde(default = "legacy_post_action_settle_frames")]
     pub post_action_settle_frames: u16,
+    #[serde(default = "legacy_empty_turn_backoff_frames")]
     pub empty_turn_backoff_frames: u16,
+    #[serde(default = "legacy_max_observation_interval_frames")]
     pub max_observation_interval_frames: u16,
+    #[serde(default)]
+    pub max_memory_bytes: u32,
+    #[serde(default)]
+    pub max_memory_update_bytes: u32,
 }
 
 impl Default for AutodrivePolicy {
     fn default() -> Self {
         Self {
+            policy_version: 1,
             max_turns: 32,
             max_total_actions: 128,
             max_consecutive_empty_turns: 4,
@@ -27,12 +43,17 @@ impl Default for AutodrivePolicy {
             post_action_settle_frames: 2,
             empty_turn_backoff_frames: 8,
             max_observation_interval_frames: 60,
+            max_memory_bytes: 4096,
+            max_memory_update_bytes: 1024,
         }
     }
 }
 
 impl AutodrivePolicy {
     pub fn validate(&self) -> Result<(), String> {
+        if self.policy_version > 1 {
+            return Err("policyVersion must be 0 or 1".into());
+        }
         if !(1..=500).contains(&self.max_turns) {
             return Err("maxTurns must be in 1..=500".into());
         }
@@ -62,6 +83,21 @@ impl AutodrivePolicy {
         }
         if self.empty_turn_backoff_frames > self.max_observation_interval_frames {
             return Err("emptyTurnBackoffFrames must be <= maxObservationIntervalFrames".into());
+        }
+        if self.policy_version == 0 {
+            if self.max_memory_bytes != 0 || self.max_memory_update_bytes != 0 {
+                return Err("historical policyVersion 0 cannot claim governed memory".into());
+            }
+        } else {
+            if !(256..=16_384).contains(&self.max_memory_bytes) {
+                return Err("maxMemoryBytes must be in 256..=16384".into());
+            }
+            if self.max_memory_update_bytes == 0
+                || self.max_memory_update_bytes > self.max_memory_bytes
+                || self.max_memory_update_bytes > 4096
+            {
+                return Err("maxMemoryUpdateBytes must be in 1..=min(maxMemoryBytes,4096)".into());
+            }
         }
         Ok(())
     }
@@ -248,6 +284,22 @@ pub struct AutodriveReceipt {
     pub last_observation_frame: Option<u64>,
     pub stop_reason: AutodriveStopReason,
     pub final_frame_sha256: String,
+    #[serde(default)]
+    pub initial_memory_sha256: String,
+    #[serde(default)]
+    pub final_memory_sha256: String,
+    #[serde(default)]
+    pub final_memory_content: String,
+    #[serde(default)]
+    pub final_memory_bytes: u32,
+    #[serde(default)]
+    pub memory_revision: u64,
+    #[serde(default)]
+    pub memory_updates: u64,
+    #[serde(default)]
+    pub memory_bytes_written: u64,
+    #[serde(default)]
+    pub memory_refusals: u64,
     pub policy: AutodrivePolicy,
 }
 
@@ -257,7 +309,26 @@ mod tests {
 
     #[test]
     fn default_policy_is_bounded_and_valid() {
-        AutodrivePolicy::default().validate().expect("valid");
+        let policy = AutodrivePolicy::default();
+        policy.validate().expect("valid");
+        assert_eq!(policy.policy_version, 1);
+        assert_eq!(policy.max_memory_bytes, 4096);
+        assert_eq!(policy.max_memory_update_bytes, 1024);
+    }
+
+    #[test]
+    fn legacy_policy_json_does_not_inherit_new_cadence_or_memory_defaults() {
+        let legacy = r#"{"maxTurns":32,"maxTotalActions":128,"maxConsecutiveEmptyTurns":4,"maxEmulatedFrames":3600}"#;
+        let policy: AutodrivePolicy = serde_json::from_str(legacy).expect("legacy policy");
+        assert_eq!(policy.policy_version, 0);
+        assert_eq!(policy.min_observation_interval_frames, 1);
+        assert_eq!(policy.post_action_settle_frames, 0);
+        assert_eq!(policy.empty_turn_backoff_frames, 1);
+        assert_eq!(policy.max_observation_interval_frames, 1);
+        assert_eq!(policy.max_memory_bytes, 0);
+        assert_eq!(policy.max_memory_update_bytes, 0);
+        policy.validate().expect("legacy policy remains readable");
+        assert_ne!(policy, AutodrivePolicy::default());
     }
 
     #[test]
