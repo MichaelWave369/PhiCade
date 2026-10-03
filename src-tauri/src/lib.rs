@@ -22,7 +22,9 @@ use tauri::{AppHandle, Manager, State};
 
 mod providers;
 
-use providers::ollama::{self, OllamaModel, OllamaTurnResult};
+use providers::ollama::{
+    self, OllamaModel, OllamaModelDetails, OllamaQualificationReceipt, OllamaTurnResult,
+};
 
 const MAX_LIBRARY_ENTRIES: usize = 4096;
 const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
@@ -254,12 +256,98 @@ struct ReplayArtifact {
     receipt: ReplayReceipt,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OllamaQualificationArtifact {
+    receipt_path: String,
+    receipt: OllamaQualificationReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OllamaQualificationStatus {
+    details: OllamaModelDetails,
+    qualified: bool,
+    receipt: Option<OllamaQualificationReceipt>,
+    receipt_path: Option<String>,
+}
+
 fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
     let directory = app
         .path()
         .app_config_dir()
         .map_err(|error| format!("cannot resolve app config directory: {error}"))?;
     Ok(directory.join("settings.json"))
+}
+
+fn ollama_qualification_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("cannot resolve app data directory: {error}"))?;
+    Ok(root.join("model-qualifications").join("ollama"))
+}
+
+fn ollama_qualification_path(app: &AppHandle, digest: &str) -> Result<PathBuf, String> {
+    if digest.trim().is_empty() {
+        return Err("model qualification requires a non-empty digest".into());
+    }
+    Ok(ollama_qualification_dir(app)?
+        .join(format!("{}.json", sanitize_component(digest))))
+}
+
+fn persist_ollama_qualification(
+    app: &AppHandle,
+    receipt: &OllamaQualificationReceipt,
+) -> Result<OllamaQualificationArtifact, String> {
+    let path = ollama_qualification_path(app, &receipt.digest)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| "qualification receipt path has no parent".to_owned())?;
+    fs::create_dir_all(parent)
+        .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
+    let json = serde_json::to_vec_pretty(receipt)
+        .map_err(|error| format!("serialize Ollama qualification receipt: {error}"))?;
+    write_atomic(&path, &json)?;
+
+    Ok(OllamaQualificationArtifact {
+        receipt_path: path.to_string_lossy().to_string(),
+        receipt: receipt.clone(),
+    })
+}
+
+fn load_ollama_qualification(
+    app: &AppHandle,
+    digest: &str,
+) -> Result<Option<OllamaQualificationArtifact>, String> {
+    let path = ollama_qualification_path(app, digest)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<OllamaQualificationReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+
+    Ok(Some(OllamaQualificationArtifact {
+        receipt_path: path.to_string_lossy().to_string(),
+        receipt,
+    }))
+}
+
+fn qualification_receipt_passes(
+    receipt: &OllamaQualificationReceipt,
+    model: &str,
+    digest: &str,
+) -> bool {
+    receipt.schema == "phicade.ollama-model-qualification.v1"
+        && receipt.result == "PASS"
+        && receipt.provider == "ollama"
+        && receipt.model == model
+        && receipt.digest == digest
+        && receipt.vision_advertised
+        && receipt.structured_output_pass
+        && receipt.vision_probe_pass
 }
 
 #[tauri::command]
@@ -1527,9 +1615,11 @@ fn autodrive_post_step_guard(session: &mut EmulatorSession) -> Result<(), String
 
 #[tauri::command]
 fn start_autodrive(
+    app: AppHandle,
     state: State<'_, EmulatorState>,
     provider: String,
     model: String,
+    model_digest: String,
     policy: AutodrivePolicy,
 ) -> Result<AutodriveStatus, String> {
     let mut session = state
@@ -1568,6 +1658,15 @@ fn start_autodrive(
     if model.is_empty() {
         return Err("autonomous driving requires a selected model".into());
     }
+    let model_digest = model_digest.trim().to_owned();
+    if model_digest.is_empty() {
+        return Err("autonomous driving requires a qualified model digest".into());
+    }
+    let artifact = load_ollama_qualification(&app, &model_digest)?
+        .ok_or_else(|| "AUTO DRIVE requires a qualification receipt for this model digest".to_owned())?;
+    if !qualification_receipt_passes(&artifact.receipt, &model, &model_digest) {
+        return Err("AUTO DRIVE qualification receipt does not match the selected model digest".into());
+    }
     policy.validate()?;
 
     let frame = session.core.frame_count();
@@ -1576,7 +1675,7 @@ fn start_autodrive(
         run_id: session.next_autodrive_run_id,
         active: true,
         provider,
-        model,
+        model: format!("{model}@{model_digest}"),
         started_frame: frame,
         current_frame: frame,
         turns_issued: 0,
@@ -1723,6 +1822,53 @@ fn cancel_agent_turn(state: State<'_, EmulatorState>) -> Result<DriverStatus, St
 #[tauri::command]
 async fn list_ollama_models(base_url: String) -> Result<Vec<OllamaModel>, String> {
     ollama::list_models(&base_url).await
+}
+
+#[tauri::command]
+async fn inspect_ollama_model(
+    base_url: String,
+    model: String,
+) -> Result<OllamaModelDetails, String> {
+    ollama::inspect_model(&base_url, &model).await
+}
+
+#[tauri::command]
+async fn qualify_ollama_model(
+    app: AppHandle,
+    base_url: String,
+    model: String,
+) -> Result<OllamaQualificationArtifact, String> {
+    let receipt = ollama::qualify_model(&base_url, &model).await?;
+    persist_ollama_qualification(&app, &receipt)
+}
+
+#[tauri::command]
+async fn ollama_qualification_status(
+    app: AppHandle,
+    base_url: String,
+    model: String,
+) -> Result<OllamaQualificationStatus, String> {
+    let details = ollama::inspect_model(&base_url, &model).await?;
+    let artifact = load_ollama_qualification(&app, &details.digest)?;
+    let (qualified, receipt, receipt_path) = match artifact {
+        Some(artifact) => {
+            let qualified =
+                qualification_receipt_passes(&artifact.receipt, &details.name, &details.digest);
+            (
+                qualified,
+                Some(artifact.receipt),
+                Some(artifact.receipt_path),
+            )
+        }
+        None => (false, None, None),
+    };
+
+    Ok(OllamaQualificationStatus {
+        details,
+        qualified,
+        receipt,
+        receipt_path,
+    })
 }
 
 #[tauri::command]
@@ -2315,6 +2461,9 @@ pub fn run() {
             issue_agent_turn,
             cancel_agent_turn,
             list_ollama_models,
+            inspect_ollama_model,
+            qualify_ollama_model,
+            ollama_qualification_status,
             complete_ollama_turn,
             submit_agent_turn,
             set_game_profile,
