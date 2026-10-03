@@ -357,6 +357,10 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let temp = path.with_extension("tmp");
     fs::write(&temp, bytes)
         .map_err(|error| format!("cannot write {}: {error}", temp.display()))?;
+    if path.exists() {
+        fs::remove_file(path)
+            .map_err(|error| format!("cannot replace {}: {error}", path.display()))?;
+    }
     fs::rename(&temp, path)
         .map_err(|error| format!("cannot replace {}: {error}", path.display()))
 }
