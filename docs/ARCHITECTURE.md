@@ -115,3 +115,60 @@ not part of the agent observation contract.
 SameBoy currently has one playable input port. The shared policy supports a
 two-seat versus topology, but the SameBoy host refuses VERSUS rather than aliasing
 seat 2 onto player 1.
+
+
+## Agent Driver Protocol
+
+Rung 7 separates provider/model execution from game-runtime authority.
+
+```text
+PhiBotObservation
+       |
+       v
+AgentTurnRequest
+       |
+       v
+provider / local model / script
+       |
+       v
+AgentTurnResponse
+       |
+       v
+native validation + scheduled inbox
+       |
+       v
+canonical live sequencing
+       |
+       v
+AuthorityPolicy
+       |
+       v
+core
+```
+
+The driver protocol is transport-neutral. A provider does not receive a core
+handle and does not publish ActionEnvelope values directly. It returns bounded
+action intents tied to one observation hash and turn ID.
+
+The native runtime owns:
+
+- turn IDs
+- turn expiry
+- response validation
+- scheduling
+- ActionSource identity
+- canonical action sequence numbers
+- authority filtering
+
+Browser/UI action sequence numbers are not treated as global truth. Live actions
+are re-sequenced after authority acceptance at the native boundary.
+
+Same-frame live-source ordering is exported from `phicade-runtime`:
+
+`Replay < Script < Phi-Bot < Human`
+
+Human input therefore has final application precedence on a same-frame CO-OP
+conflict.
+
+Control-mode changes and grant expiry neutralize the frontend input mask and clear
+pending driver work. Grant expiry falls back to HUMAN authority.
