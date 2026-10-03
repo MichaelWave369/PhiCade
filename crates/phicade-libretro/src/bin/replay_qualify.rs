@@ -294,7 +294,7 @@ fn run() -> Result<(), String> {
         .iter_mut()
         .find(|event| {
             matches!(
-                event.action,
+                &event.action,
                 ActionKind::System {
                     command: SystemCommand::Reset,
                     ..
