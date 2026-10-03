@@ -948,22 +948,25 @@ mod tests {
         assert_eq!(memberships[5].id, BENCHMARK_SUITE_V6_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 4);
+        assert_eq!(wall_memberships.len(), 5);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(wall_memberships[3].id, BENCHMARK_SUITE_V5_ID);
+        assert_eq!(wall_memberships[4].id, BENCHMARK_SUITE_V6_ID);
 
         let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 3);
+        assert_eq!(temporal_memberships.len(), 4);
         assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
+        assert_eq!(temporal_memberships[3].id, BENCHMARK_SUITE_V6_ID);
 
         let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 2);
+        assert_eq!(relay_memberships.len(), 3);
         assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
+        assert_eq!(relay_memberships[2].id, BENCHMARK_SUITE_V6_ID);
 
         let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
         assert_eq!(key_gate_memberships.len(), 2);
