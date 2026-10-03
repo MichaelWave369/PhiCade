@@ -1933,6 +1933,7 @@ fn start_model_gameplay_benchmark(
         return Err("model benchmark requires PHI-BOT handoff mode".into());
     }
 
+    policy.validate()?;
     let model = model.trim().to_owned();
     let model_digest = model_digest.trim().to_owned();
     let qualification = load_ollama_qualification(&app, &model_digest)?
