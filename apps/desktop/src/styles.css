@@ -756,3 +756,61 @@ footer {
     grid-column: 1 / -1;
   }
 }
+
+
+/* Rung 16: Benchmark Suite Reports */
+.suite-strip {
+  display: grid;
+  grid-template-columns: auto minmax(240px, 1.5fr) auto auto minmax(240px, 1.5fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #465944;
+  background: #071008;
+}
+
+.suite-strip > span {
+  color: var(--green);
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.suite-strip select,
+.suite-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.suite-strip button {
+  cursor: pointer;
+}
+
+.suite-strip button:hover:not(:disabled),
+.suite-strip select:focus {
+  border-color: var(--green);
+  outline: none;
+}
+
+.suite-strip > small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .suite-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .suite-strip > span,
+  .suite-strip > small,
+  .suite-strip select {
+    grid-column: 1 / -1;
+  }
+}
