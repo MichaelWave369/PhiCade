@@ -20,6 +20,7 @@ pub enum SystemCommand {
     Reset,
     SaveState,
     LoadState,
+    Rewind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
