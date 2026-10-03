@@ -17,8 +17,8 @@ use std::{
 const WARMUP_FRAMES: u64 = 120;
 const SIDE_FRAMES: u64 = 28;
 const STAGE2_UP_FRAMES: u64 = 16;
-const GENERATOR_UP_FRAMES: u64 = 4;
-const GATE_UP_FRAMES: u64 = 8;
+const GENERATOR_UP_FRAMES: u64 = 8;
+const GATE_UP_FRAMES: u64 = 4;
 const TARGET_UP_FRAMES: u64 = 16;
 const BLOCK_PROBE_FRAMES: u64 = 8;
 const SETTLE_FRAMES: u64 = 2;
