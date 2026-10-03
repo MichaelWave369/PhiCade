@@ -46,8 +46,8 @@
       "id": "temporal-cue-right-v1",
       "title": "Temporal Cue: Right",
       "source": "benchmarks/agent-gym-temporal-right/main.asm",
-      "sourceSha256": "3333333333333333333333333333333333333333333333333333333333333333",
-      "romSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "sourceSha256": "8c814246cb6948d50d5242ef2e01369c90a5965cb2151da5b9e4f27fff5e282f",
+      "romSha256": "eefb364a47b68267138d35b402d2d6f5de1d70940318cac947fb400d6e210337",
       "oracle": ["A", "WAIT", "RIGHT"],
       "qualificationReceipt": "artifacts/agent-gym-temporal-right-qualification.json"
     }
