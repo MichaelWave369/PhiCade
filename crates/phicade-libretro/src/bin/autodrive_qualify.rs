@@ -235,8 +235,8 @@ fn run() -> Result<(), String> {
             valid_until_frame: obs.frame + 20,
             memory: String::new(),
             memory_sha256: sha256_bytes(b""),
-            max_memory_bytes: policy_config.max_memory_bytes,
-            max_memory_update_bytes: policy_config.max_memory_update_bytes,
+            max_memory_bytes: run_status.policy.max_memory_bytes,
+            max_memory_update_bytes: run_status.policy.max_memory_update_bytes,
         };
         request.validate()?;
         run_status.note_turn_issued_at(core.frame_count());
