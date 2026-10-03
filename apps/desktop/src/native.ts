@@ -411,6 +411,72 @@ export interface CampaignComparisonArtifact {
   receipt: CampaignComparisonReceipt;
 }
 
+
+export interface BenchmarkSuiteAggregateStats {
+  taskCount: number;
+  totalObservedTrials: number;
+  totalSuccessfulTrials: number;
+  overallSuccessRate: number;
+  macroMeanScore1000: number;
+  minTaskMeanScore1000: number;
+  maxTaskMeanScore1000: number;
+  populationStddevTaskMeanScore1000: number;
+}
+
+export interface SuiteTaskCampaignRef {
+  taskId: string;
+  taskTitle: string;
+  campaignId: number;
+  campaignReceiptSha256: string;
+  sourceSha256: string;
+  romSha256: string;
+  stats: BenchmarkCampaignStats;
+}
+
+export interface BenchmarkSuiteReportReceipt {
+  schema: string;
+  recordStatus: "COMPLETE";
+  reportId: number;
+  suiteId: string;
+  cohortId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  policy: AutodrivePolicy;
+  trialsPerTask: number;
+  tasks: SuiteTaskCampaignRef[];
+  stats: BenchmarkSuiteAggregateStats;
+}
+
+export interface BenchmarkSuiteReportArtifact {
+  receiptPath: string;
+  receipt: BenchmarkSuiteReportReceipt;
+}
+
+export interface SuiteCandidateTask {
+  taskId: string;
+  taskTitle: string;
+  campaignId: number;
+  meanScore1000: number;
+  successRate: number;
+}
+
+export interface BenchmarkSuiteReportCandidate {
+  cohortId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  trialsPerTask: number;
+  coveredTasks: number;
+  suiteTaskCount: number;
+  ready: boolean;
+  tasks: SuiteCandidateTask[];
+}
+
 export const defaultAutodrivePolicy: AutodrivePolicy = {
   maxTurns: 32,
   maxTotalActions: 128,
@@ -784,4 +850,15 @@ export async function compareBenchmarkCampaigns(
     campaignAId,
     campaignBId,
   });
+}
+
+
+export async function listBenchmarkSuiteReportCandidates(): Promise<BenchmarkSuiteReportCandidate[]> {
+  return invoke<BenchmarkSuiteReportCandidate[]>("list_benchmark_suite_report_candidates");
+}
+
+export async function buildBenchmarkSuiteReport(
+  cohortId: string,
+): Promise<BenchmarkSuiteReportArtifact> {
+  return invoke<BenchmarkSuiteReportArtifact>("build_benchmark_suite_report", { cohortId });
 }
