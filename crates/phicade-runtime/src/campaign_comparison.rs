@@ -136,6 +136,8 @@ pub fn compare_campaign_samples(
         None
     };
 
+    let success_rate_difference = sample_a.success_rate - sample_b.success_rate;
+
     Ok(CampaignComparisonStats {
         sample_a,
         sample_b,
@@ -145,7 +147,7 @@ pub fn compare_campaign_samples(
         mean_difference_ci95_low: ci_low,
         mean_difference_ci95_high: ci_high,
         hedges_g_a_minus_b: hedges_g,
-        success_rate_difference_a_minus_b: sample_a.success_rate - sample_b.success_rate,
+        success_rate_difference_a_minus_b: success_rate_difference,
     })
 }
 
