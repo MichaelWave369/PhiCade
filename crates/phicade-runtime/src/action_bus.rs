@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+fn default_seat_one() -> u8 {
+    1
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum ActionSource {
@@ -10,6 +14,7 @@ pub enum ActionSource {
     PhiBot {
         #[serde(rename = "agentId")]
         agent_id: String,
+        #[serde(default = "default_seat_one")]
         seat: u8,
     },
 }
