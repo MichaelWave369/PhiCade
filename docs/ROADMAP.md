@@ -331,6 +331,27 @@
 - [x] v6 READY only at 11/11
 - [x] Freeze canonical Power Chain source + ROM SHA-256 after qualification
 
+## Rung 25 — Conditional Branch Selector Benchmark
+- [x] Balanced TRIANGLE/SQUARE source-first Branch Selector tasks
+- [x] Both branch modules rendered in both variants at fixed positions
+- [x] Selector-only initial condition difference
+- [x] Same provider instruction across variants
+- [x] Matching module accepted with A
+- [x] Wrong module enters explicit irreversible FAIL state
+- [x] Failed state clamps back to shared center
+- [x] Generator refuses failed branch state
+- [x] Gate remains blocked after failed branch
+- [x] Failed-center framebuffer convergence
+- [x] Correct-selection framebuffer convergence
+- [x] Powered-generator framebuffer convergence
+- [x] Opened-gate framebuffer convergence
+- [x] Shared downstream generator → gate → target chain
+- [x] Benchmark Suite v7 with exact v6 reuse + both Branch Selector tasks
+- [x] v6 READY at 11/11 while v7 remains INCOMPLETE at 11/13
+- [x] v7 remains INCOMPLETE at 12/13
+- [x] v7 READY only at 13/13
+- [ ] Freeze canonical Branch Selector source + ROM SHA-256 after qualification
+
 ## Later
 
 Additional benchmark capabilities/tasks, additional uncertainty methods, provider
