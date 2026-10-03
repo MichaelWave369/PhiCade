@@ -12,7 +12,7 @@ pub mod replay;
 pub mod observation;
 
 pub use action_bus::{
-    ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
+    live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
 };
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
 pub use core::{AudioBuffer, CoreError, EmulatorCore, FrameBuffer};
