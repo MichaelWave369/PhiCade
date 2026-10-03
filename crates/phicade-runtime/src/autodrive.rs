@@ -240,8 +240,11 @@ pub struct AutodriveReceipt {
     pub turns_issued: u16,
     pub turns_completed: u16,
     pub total_actions: u32,
+    #[serde(default)]
     pub total_cadence_wait_frames: u64,
+    #[serde(default)]
     pub max_cadence_wait_frames: u16,
+    #[serde(default)]
     pub last_observation_frame: Option<u64>,
     pub stop_reason: AutodriveStopReason,
     pub final_frame_sha256: String,
