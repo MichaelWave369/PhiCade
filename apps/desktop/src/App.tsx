@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy two positions; the controller must retain the symbol→position relation, not merely a direction."],
-  ["ERASURE", "DELAY", "A removes every position-bearing briefing pixel before a lockout separates observation from the later decision."],
-  ["QUERY", "RECALL", "A newly revealed symbol sits above two identical doors; current pixels identify what to recall but not which door is correct."],
-  ["COMMIT", "FACTORIAL", "Arrangement × query flips the answer across four variants; wrong-door A is terminal and fixed-side shortcuts cap at 2/4."],
+  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy opposite positions; the controller must retain the relation after the briefing is erased."],
+  ["ERASURE", "DELAY", "A removes every position-bearing briefing pixel before a lockout separates observation from later reasoning."],
+  ["QUERY", "RULE", "The later scene reveals a symbol plus MATCH (=) or FLIP (X): preserve the remembered side or invert it."],
+  ["COMMIT", "COMPOSE", "Arrangement × query × operator spans eight variants; fixed-side and operator-ignoring shortcuts cap at 4/8."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>OBSERVE BINDING // ERASE // DELAY // READ QUERY // RECALL RELATION // COMMIT // RECEIPT MEMORY</footer>
+      <footer>OBSERVE BINDING // ERASE // DELAY // READ QUERY + RULE // RECALL // TRANSFORM // COMMIT // RECEIPT COMPOSITION</footer>
     </main>
   );
 }

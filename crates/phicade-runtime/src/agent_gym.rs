@@ -10,6 +10,7 @@ pub const BENCHMARK_SUITE_V6_ID: &str = "phicade-agent-gym-suite-v6";
 pub const BENCHMARK_SUITE_V7_ID: &str = "phicade-agent-gym-suite-v7";
 pub const BENCHMARK_SUITE_V8_ID: &str = "phicade-agent-gym-suite-v8";
 pub const BENCHMARK_SUITE_V9_ID: &str = "phicade-agent-gym-suite-v9";
+pub const BENCHMARK_SUITE_V10_ID: &str = "phicade-agent-gym-suite-v10";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -137,6 +138,54 @@ pub const AGENT_GYM_BINDING_SWAPPED_SQUARE_ROM_SHA256: &str =
 pub const AGENT_GYM_BINDING_SWAPPED_SQUARE_SOURCE_SHA256: &str =
     "e1773c96b87e92f51e9129ed54f6cb60ca3cd4d03f35d1ed287edba915460c4d";
 
+pub const AGENT_GYM_COMP_NTM_ID: &str = "compositional-recall-normal-triangle-match-v1";
+pub const AGENT_GYM_COMP_NTM_ROM_SHA256: &str =
+    "a0dd1c4fd34a308c9951fee576f687a9337bef9c1dd05d38e751ef48e7949720";
+pub const AGENT_GYM_COMP_NTM_SOURCE_SHA256: &str =
+    "d9c6f0e0462502a2e5906a9a8f07861526bdc65d2f99758db57b630e6233d6e7";
+
+pub const AGENT_GYM_COMP_NTF_ID: &str = "compositional-recall-normal-triangle-flip-v1";
+pub const AGENT_GYM_COMP_NTF_ROM_SHA256: &str =
+    "3dcf0413ad3d62a49d45167a108a7483755925259ec8527ef2e9772d07b4f8d0";
+pub const AGENT_GYM_COMP_NTF_SOURCE_SHA256: &str =
+    "8b555998f193fd5cb40e61358da986119698e522938e213670c6e1d3c6a3dde4";
+
+pub const AGENT_GYM_COMP_NSM_ID: &str = "compositional-recall-normal-square-match-v1";
+pub const AGENT_GYM_COMP_NSM_ROM_SHA256: &str =
+    "8aa58e9e982594462cce0b48aab2a9b6a060537e1a404b185511f9b6598f4afe";
+pub const AGENT_GYM_COMP_NSM_SOURCE_SHA256: &str =
+    "58659c6891709c5524644f40b0626ec0fca1df7ba5c36fada31f6a0611374eee";
+
+pub const AGENT_GYM_COMP_NSF_ID: &str = "compositional-recall-normal-square-flip-v1";
+pub const AGENT_GYM_COMP_NSF_ROM_SHA256: &str =
+    "aa10327cd7ef0d06b8506d062b72bcfe6d4199759def0f31fdd6e44da6beb83e";
+pub const AGENT_GYM_COMP_NSF_SOURCE_SHA256: &str =
+    "f77ebc811b75f15d47845246e702650d4f27129f5329eb767bd1c19b7d3c0123";
+
+pub const AGENT_GYM_COMP_STM_ID: &str = "compositional-recall-swapped-triangle-match-v1";
+pub const AGENT_GYM_COMP_STM_ROM_SHA256: &str =
+    "7732b4fc7220698bb20e3a40fd6c8bb85fdfa608bcc75f9135c6743e2453da57";
+pub const AGENT_GYM_COMP_STM_SOURCE_SHA256: &str =
+    "b145f5b94fd0af906020257c07d8f4167c70b6e95fbc37677e92f427e1dc98d2";
+
+pub const AGENT_GYM_COMP_STF_ID: &str = "compositional-recall-swapped-triangle-flip-v1";
+pub const AGENT_GYM_COMP_STF_ROM_SHA256: &str =
+    "5717f04ab690b1a887448205358f17aee64a590e3a0011b7fec039183ff6bea4";
+pub const AGENT_GYM_COMP_STF_SOURCE_SHA256: &str =
+    "2bab8e7b334d0fbeeb6c1f3901fe51aec2fbddeb450ed6d710853e6058362108";
+
+pub const AGENT_GYM_COMP_SSM_ID: &str = "compositional-recall-swapped-square-match-v1";
+pub const AGENT_GYM_COMP_SSM_ROM_SHA256: &str =
+    "1174a6b2b158b3712a9a71b880983259bfe4a8e26f166193f56e86e5b09886dd";
+pub const AGENT_GYM_COMP_SSM_SOURCE_SHA256: &str =
+    "886a3dab4a3814b8a9723e94353daff511f1c510976e7f3766a84dbda8ac75b9";
+
+pub const AGENT_GYM_COMP_SSF_ID: &str = "compositional-recall-swapped-square-flip-v1";
+pub const AGENT_GYM_COMP_SSF_ROM_SHA256: &str =
+    "c86b4bbacc6e9bedc9d731d2b396d5bef64889ecca2243031289d7f1020a996b";
+pub const AGENT_GYM_COMP_SSF_SOURCE_SHA256: &str =
+    "1e1f8380981896ddca16fa5f89ab7915175e94476e2c3cf2fdd425fb895f2613";
+
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_START_X: i32 = 16;
@@ -210,6 +259,7 @@ pub static AGENT_GYM_POWER_CHAIN_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT"
 pub static AGENT_GYM_BRANCH_SELECTOR_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_NESTED_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_BINDING_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
+pub static AGENT_GYM_COMPOSITIONAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -949,7 +999,135 @@ pub const AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK: BenchmarkTaskSpec = BenchmarkTa
     oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 21] = [
+pub const AGENT_GYM_COMP_NTM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_NTM_ID,
+    title: "Compositional Recall: Normal / Triangle / MATCH",
+    rom_sha256: AGENT_GYM_COMP_NTM_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_NTM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: "Benchmark task: memorize where TRIANGLE and SQUARE appear in the briefing, press A to erase the briefing, and wait for the choice chamber. The later scene shows a query symbol plus an operator. MATCH (=) means choose the door where that queried symbol appeared earlier; FLIP (X) means choose the opposite door. The doors are identical and a wrong commitment is irreversible.",
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_NTF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_NTF_ID,
+    title: "Compositional Recall: Normal / Triangle / FLIP",
+    rom_sha256: AGENT_GYM_COMP_NTF_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_NTF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_NSM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_NSM_ID,
+    title: "Compositional Recall: Normal / Square / MATCH",
+    rom_sha256: AGENT_GYM_COMP_NSM_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_NSM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_NSF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_NSF_ID,
+    title: "Compositional Recall: Normal / Square / FLIP",
+    rom_sha256: AGENT_GYM_COMP_NSF_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_NSF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_STM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_STM_ID,
+    title: "Compositional Recall: Swapped / Triangle / MATCH",
+    rom_sha256: AGENT_GYM_COMP_STM_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_STM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_STF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_STF_ID,
+    title: "Compositional Recall: Swapped / Triangle / FLIP",
+    rom_sha256: AGENT_GYM_COMP_STF_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_STF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_SSM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_SSM_ID,
+    title: "Compositional Recall: Swapped / Square / MATCH",
+    rom_sha256: AGENT_GYM_COMP_SSM_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_SSM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_COMP_SSF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V10_ID,
+    id: AGENT_GYM_COMP_SSF_ID,
+    title: "Compositional Recall: Swapped / Square / FLIP",
+    rom_sha256: AGENT_GYM_COMP_SSF_ROM_SHA256,
+    source_sha256: AGENT_GYM_COMP_SSF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_COMPOSITIONAL_BUTTONS,
+    prompt: AGENT_GYM_COMP_NTM_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 29] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -971,6 +1149,14 @@ pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 21] = [
     AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
     AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
     AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+    AGENT_GYM_COMP_NTM_TASK,
+    AGENT_GYM_COMP_NTF_TASK,
+    AGENT_GYM_COMP_NSM_TASK,
+    AGENT_GYM_COMP_NSF_TASK,
+    AGENT_GYM_COMP_STM_TASK,
+    AGENT_GYM_COMP_STF_TASK,
+    AGENT_GYM_COMP_SSM_TASK,
+    AGENT_GYM_COMP_SSF_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
@@ -1083,6 +1269,38 @@ pub static BENCHMARK_SUITE_V9_TASKS: [BenchmarkTaskSpec; 21] = [
     AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
 ];
 
+pub static BENCHMARK_SUITE_V10_TASKS: [BenchmarkTaskSpec; 29] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+    AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
+    AGENT_GYM_POWER_CHAIN_LEFT_TASK,
+    AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CROSS_TASK,
+    AGENT_GYM_NESTED_SQUARE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_SQUARE_CROSS_TASK,
+    AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+    AGENT_GYM_COMP_NTM_TASK,
+    AGENT_GYM_COMP_NTF_TASK,
+    AGENT_GYM_COMP_NSM_TASK,
+    AGENT_GYM_COMP_NSF_TASK,
+    AGENT_GYM_COMP_STM_TASK,
+    AGENT_GYM_COMP_STF_TASK,
+    AGENT_GYM_COMP_SSM_TASK,
+    AGENT_GYM_COMP_SSF_TASK,
+];
+
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     id: BENCHMARK_SUITE_V1_ID,
     title: "Phi-Agent Gym Suite v1",
@@ -1146,7 +1364,14 @@ pub static BENCHMARK_SUITE_V9: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V9_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 9] = [
+pub static BENCHMARK_SUITE_V10: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V10_ID,
+    title: "Phi-Agent Gym Suite v10",
+    version: 10,
+    tasks: &BENCHMARK_SUITE_V10_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 10] = [
     &BENCHMARK_SUITE_V1,
     &BENCHMARK_SUITE_V2,
     &BENCHMARK_SUITE_V3,
@@ -1156,6 +1381,7 @@ pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 9] = [
     &BENCHMARK_SUITE_V7,
     &BENCHMARK_SUITE_V8,
     &BENCHMARK_SUITE_V9,
+    &BENCHMARK_SUITE_V10,
 ];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
@@ -1200,6 +1426,10 @@ pub fn benchmark_suite_v8_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v9_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V9_TASKS
+}
+
+pub fn benchmark_suite_v10_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V10_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -1518,9 +1748,48 @@ mod tests {
     }
 
     #[test]
+    fn suite_v10_preserves_v9_and_adds_compositional_recall_factorial() {
+        let tasks = benchmark_suite_v10_tasks();
+        assert_eq!(tasks.len(), 29);
+        assert_eq!(tasks[..21], BENCHMARK_SUITE_V9_TASKS);
+        let ids = [
+            AGENT_GYM_COMP_NTM_ID, AGENT_GYM_COMP_NTF_ID,
+            AGENT_GYM_COMP_NSM_ID, AGENT_GYM_COMP_NSF_ID,
+            AGENT_GYM_COMP_STM_ID, AGENT_GYM_COMP_STF_ID,
+            AGENT_GYM_COMP_SSM_ID, AGENT_GYM_COMP_SSF_ID,
+        ];
+        for (offset, id) in ids.iter().enumerate() {
+            assert_eq!(tasks[21 + offset].id, *id);
+        }
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V10_ID).unwrap().version, 10);
+
+        let comp = [
+            AGENT_GYM_COMP_NTM_TASK, AGENT_GYM_COMP_NTF_TASK,
+            AGENT_GYM_COMP_NSM_TASK, AGENT_GYM_COMP_NSF_TASK,
+            AGENT_GYM_COMP_STM_TASK, AGENT_GYM_COMP_STF_TASK,
+            AGENT_GYM_COMP_SSM_TASK, AGENT_GYM_COMP_SSF_TASK,
+        ];
+        for task in &comp[1..] {
+            assert_eq!(task.prompt, comp[0].prompt);
+            assert_eq!(task.allowed_buttons, comp[0].allowed_buttons);
+        }
+        let prompt = comp[0].prompt.to_ascii_lowercase();
+        for leak in [
+            "normal /", "swapped /", "normal-triangle", "swapped-triangle",
+            "normal-square", "swapped-square", "correct door is", "answer is left",
+            "answer is right",
+        ] {
+            assert!(!prompt.contains(leak), "provider prompt leaked variant detail: {leak}");
+        }
+        assert!(prompt.contains("match (=)"));
+        assert!(prompt.contains("flip (x)"));
+        assert!(comp.iter().all(|task| task.oracle.len() == 4));
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
         let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 9);
+        assert_eq!(memberships.len(), 10);
         assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
         assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
@@ -1530,9 +1799,10 @@ mod tests {
         assert_eq!(memberships[6].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(memberships[7].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(memberships[8].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(memberships[9].id, BENCHMARK_SUITE_V10_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 8);
+        assert_eq!(wall_memberships.len(), 9);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
@@ -1541,9 +1811,10 @@ mod tests {
         assert_eq!(wall_memberships[5].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(wall_memberships[6].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(wall_memberships[7].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(wall_memberships[8].id, BENCHMARK_SUITE_V10_ID);
 
         let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 7);
+        assert_eq!(temporal_memberships.len(), 8);
         assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
@@ -1551,43 +1822,49 @@ mod tests {
         assert_eq!(temporal_memberships[4].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(temporal_memberships[5].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(temporal_memberships[6].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(temporal_memberships[7].id, BENCHMARK_SUITE_V10_ID);
 
         let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 6);
+        assert_eq!(relay_memberships.len(), 7);
         assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(relay_memberships[2].id, BENCHMARK_SUITE_V6_ID);
         assert_eq!(relay_memberships[3].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(relay_memberships[4].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(relay_memberships[5].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(relay_memberships[6].id, BENCHMARK_SUITE_V10_ID);
 
         let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
-        assert_eq!(key_gate_memberships.len(), 5);
+        assert_eq!(key_gate_memberships.len(), 6);
         assert_eq!(key_gate_memberships[0].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(key_gate_memberships[1].id, BENCHMARK_SUITE_V6_ID);
         assert_eq!(key_gate_memberships[2].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(key_gate_memberships[3].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(key_gate_memberships[4].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(key_gate_memberships[5].id, BENCHMARK_SUITE_V10_ID);
 
         let power_memberships = benchmark_suites_for_task(AGENT_GYM_POWER_CHAIN_LEFT_ID);
-        assert_eq!(power_memberships.len(), 4);
+        assert_eq!(power_memberships.len(), 5);
         assert_eq!(power_memberships[0].id, BENCHMARK_SUITE_V6_ID);
         assert_eq!(power_memberships[1].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(power_memberships[2].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(power_memberships[3].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(power_memberships[4].id, BENCHMARK_SUITE_V10_ID);
 
         let branch_memberships =
             benchmark_suites_for_task(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID);
-        assert_eq!(branch_memberships.len(), 3);
+        assert_eq!(branch_memberships.len(), 4);
         assert_eq!(branch_memberships[0].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(branch_memberships[1].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(branch_memberships[2].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(branch_memberships[3].id, BENCHMARK_SUITE_V10_ID);
 
         let nested_memberships =
             benchmark_suites_for_task(AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ID);
-        assert_eq!(nested_memberships.len(), 2);
+        assert_eq!(nested_memberships.len(), 3);
         assert_eq!(nested_memberships[0].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(nested_memberships[1].id, BENCHMARK_SUITE_V9_ID);
+        assert_eq!(nested_memberships[2].id, BENCHMARK_SUITE_V10_ID);
     }
 
     #[test]
@@ -1719,13 +1996,39 @@ mod tests {
         ] {
             assert_eq!(benchmark_task_by_id(id).map(|task| task.id), Some(id));
             let memberships = benchmark_suites_for_task(id);
-            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships.len(), 2);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V9_ID);
+            assert_eq!(memberships[1].id, BENCHMARK_SUITE_V10_ID);
         }
         assert_eq!(AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_NORMAL_SQUARE_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
+    }
+
+    #[test]
+    fn registry_resolves_compositional_recall_tasks_by_id() {
+        let tasks = [
+            AGENT_GYM_COMP_NTM_TASK, AGENT_GYM_COMP_NTF_TASK,
+            AGENT_GYM_COMP_NSM_TASK, AGENT_GYM_COMP_NSF_TASK,
+            AGENT_GYM_COMP_STM_TASK, AGENT_GYM_COMP_STF_TASK,
+            AGENT_GYM_COMP_SSM_TASK, AGENT_GYM_COMP_SSF_TASK,
+        ];
+        for task in tasks {
+            assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
+            assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
+            let memberships = benchmark_suites_for_task(task.id);
+            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships[0].id, BENCHMARK_SUITE_V10_ID);
+        }
+        assert_eq!(AGENT_GYM_COMP_NTM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_NTF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_NSM_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_NSF_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_STM_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_STF_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_SSM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
+        assert_eq!(AGENT_GYM_COMP_SSF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
     }
 
     #[test]

@@ -212,8 +212,72 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BIND_SS_OBJ" "$BIND_SS_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BIND_SS_ROM" "$BIND_SS_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBINDSS" "$BIND_SS_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task V / Compositional Recall NORMAL-TRIANGLE-MATCH\n'
+COMP_NTM_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-normal-triangle-match/main.asm"
+COMP_NTM_OBJ="$WORK/phi-agent-gym-compositional-recall-normal-triangle-match.o"
+COMP_NTM_ROM="$WORK/phi-agent-gym-compositional-recall-normal-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_NTM_OBJ" "$COMP_NTM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_NTM_ROM" "$COMP_NTM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRNTM" "$COMP_NTM_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task W / Compositional Recall NORMAL-TRIANGLE-FLIP\n'
+COMP_NTF_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-normal-triangle-flip/main.asm"
+COMP_NTF_OBJ="$WORK/phi-agent-gym-compositional-recall-normal-triangle-flip.o"
+COMP_NTF_ROM="$WORK/phi-agent-gym-compositional-recall-normal-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_NTF_OBJ" "$COMP_NTF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_NTF_ROM" "$COMP_NTF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRNTF" "$COMP_NTF_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task X / Compositional Recall NORMAL-SQUARE-MATCH\n'
+COMP_NSM_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-normal-square-match/main.asm"
+COMP_NSM_OBJ="$WORK/phi-agent-gym-compositional-recall-normal-square-match.o"
+COMP_NSM_ROM="$WORK/phi-agent-gym-compositional-recall-normal-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_NSM_OBJ" "$COMP_NSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_NSM_ROM" "$COMP_NSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRNSM" "$COMP_NSM_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task Y / Compositional Recall NORMAL-SQUARE-FLIP\n'
+COMP_NSF_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-normal-square-flip/main.asm"
+COMP_NSF_OBJ="$WORK/phi-agent-gym-compositional-recall-normal-square-flip.o"
+COMP_NSF_ROM="$WORK/phi-agent-gym-compositional-recall-normal-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_NSF_OBJ" "$COMP_NSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_NSF_ROM" "$COMP_NSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRNSF" "$COMP_NSF_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task Z / Compositional Recall SWAPPED-TRIANGLE-MATCH\n'
+COMP_STM_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-swapped-triangle-match/main.asm"
+COMP_STM_OBJ="$WORK/phi-agent-gym-compositional-recall-swapped-triangle-match.o"
+COMP_STM_ROM="$WORK/phi-agent-gym-compositional-recall-swapped-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_STM_OBJ" "$COMP_STM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_STM_ROM" "$COMP_STM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRSTM" "$COMP_STM_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task AA / Compositional Recall SWAPPED-TRIANGLE-FLIP\n'
+COMP_STF_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-swapped-triangle-flip/main.asm"
+COMP_STF_OBJ="$WORK/phi-agent-gym-compositional-recall-swapped-triangle-flip.o"
+COMP_STF_ROM="$WORK/phi-agent-gym-compositional-recall-swapped-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_STF_OBJ" "$COMP_STF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_STF_ROM" "$COMP_STF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRSTF" "$COMP_STF_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task AB / Compositional Recall SWAPPED-SQUARE-MATCH\n'
+COMP_SSM_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-swapped-square-match/main.asm"
+COMP_SSM_OBJ="$WORK/phi-agent-gym-compositional-recall-swapped-square-match.o"
+COMP_SSM_ROM="$WORK/phi-agent-gym-compositional-recall-swapped-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_SSM_OBJ" "$COMP_SSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_SSM_ROM" "$COMP_SSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRSSM" "$COMP_SSM_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task AC / Compositional Recall SWAPPED-SQUARE-FLIP\n'
+COMP_SSF_SRC="$ROOT/benchmarks/agent-gym-compositional-recall-swapped-square-flip/main.asm"
+COMP_SSF_OBJ="$WORK/phi-agent-gym-compositional-recall-swapped-square-flip.o"
+COMP_SSF_ROM="$WORK/phi-agent-gym-compositional-recall-swapped-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_SSF_OBJ" "$COMP_SSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_SSF_ROM" "$COMP_SSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRSSF" "$COMP_SSF_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -468,6 +532,83 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "binding-memory-swapped-square-v1" \
   --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
 
+printf '==> running Compositional Recall 2x2x2 qualification\n'
+cargo run -p phicade-libretro --bin compositional_recall_qualify -- \
+  --core "$CORE" \
+  --ntm-rom "$COMP_NTM_ROM" \
+  --ntf-rom "$COMP_NTF_ROM" \
+  --nsm-rom "$COMP_NSM_ROM" \
+  --nsf-rom "$COMP_NSF_ROM" \
+  --stm-rom "$COMP_STM_ROM" \
+  --stf-rom "$COMP_STF_ROM" \
+  --ssm-rom "$COMP_SSM_ROM" \
+  --ssf-rom "$COMP_SSF_ROM" \
+  --receipt "$ROOT/artifacts/compositional-recall-qualification.json"
+
+printf '==> running Phi-Agent Gym task V / Compositional Recall normal-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NTM_ROM" \
+  --source "$COMP_NTM_SRC" \
+  --task "compositional-recall-normal-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-triangle-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task W / Compositional Recall normal-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NTF_ROM" \
+  --source "$COMP_NTF_SRC" \
+  --task "compositional-recall-normal-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-triangle-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task X / Compositional Recall normal-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NSM_ROM" \
+  --source "$COMP_NSM_SRC" \
+  --task "compositional-recall-normal-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-square-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task Y / Compositional Recall normal-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NSF_ROM" \
+  --source "$COMP_NSF_SRC" \
+  --task "compositional-recall-normal-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-square-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task Z / Compositional Recall swapped-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_STM_ROM" \
+  --source "$COMP_STM_SRC" \
+  --task "compositional-recall-swapped-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-triangle-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task AA / Compositional Recall swapped-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_STF_ROM" \
+  --source "$COMP_STF_SRC" \
+  --task "compositional-recall-swapped-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-triangle-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task AB / Compositional Recall swapped-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_SSM_ROM" \
+  --source "$COMP_SSM_SRC" \
+  --task "compositional-recall-swapped-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-square-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task AC / Compositional Recall swapped-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_SSF_ROM" \
+  --source "$COMP_SSF_SRC" \
+  --task "compositional-recall-swapped-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -502,3 +643,12 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qual
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/compositional-recall-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
