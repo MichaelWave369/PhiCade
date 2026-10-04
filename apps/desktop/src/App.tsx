@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy opposite positions; the controller must retain the relation after the briefing is erased."],
-  ["ERASURE", "DELAY", "A removes every position-bearing briefing pixel before a lockout separates observation from later reasoning."],
-  ["QUERY", "RULE", "The later scene reveals a symbol plus MATCH (=) or FLIP (X): preserve the remembered side or invert it."],
-  ["COMMIT", "COMPOSE", "Arrangement × query × operator spans eight variants; fixed-side and operator-ignoring shortcuts cap at 4/8."],
+  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy opposite positions; the relation must survive after the briefing is erased."],
+  ["STAGE 1", "TRANSFORM", "A later query plus operator 1 transforms the remembered side into an intermediate result, then A erases Stage 1."],
+  ["STAGE 2", "CARRY", "Only operator 2 remains visible; the controller must apply it to the hidden intermediate state from Stage 1."],
+  ["COMMIT", "SEQUENCE", "Arrangement × query × operator1 × operator2 spans sixteen variants; one-step shortcuts cap at 8/16."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>OBSERVE BINDING // ERASE // DELAY // READ QUERY + RULE // RECALL // TRANSFORM // COMMIT // RECEIPT COMPOSITION</footer>
+      <footer>OBSERVE // ERASE // STAGE 1 // TRANSFORM // ERASE // CARRY // STAGE 2 // TRANSFORM // COMMIT // RECEIPT SEQUENCE</footer>
     </main>
   );
 }
