@@ -429,8 +429,10 @@ ReadMove:
     ld a, [wPlayerY]
     cp STAGE1_Y
     jr z, .rightClampCenter
-    cp STAGE2_Y
-    jr nz, .rightBounds
+    cp STAGE2_MIN_Y
+    jr c, .rightBounds
+    cp STAGE2_MAX_Y
+    jr nc, .rightBounds
     ld a, [wPlayerX]
     cp STAGE2_RIGHT_X
     jr z, .left
@@ -475,8 +477,10 @@ ReadMove:
     ld a, [wPlayerY]
     cp STAGE1_Y
     jr z, .leftClampCenter
-    cp STAGE2_Y
-    jr nz, .leftBounds
+    cp STAGE2_MIN_Y
+    jr c, .leftBounds
+    cp STAGE2_MAX_Y
+    jr nc, .leftBounds
     ld a, [wPlayerX]
     cp STAGE2_LEFT_X
     jr z, .up
