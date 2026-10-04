@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy opposite positions; the relation must survive after the briefing is erased."],
-  ["STAGE 1", "TRANSFORM", "A later query plus operator 1 transforms the remembered side into an intermediate result, then A erases Stage 1."],
-  ["STAGE 2", "CARRY", "Only operator 2 remains visible; the controller must apply it to the hidden intermediate state from Stage 1."],
-  ["COMMIT", "SEQUENCE", "Arrangement × query × operator1 × operator2 spans sixteen variants; one-step shortcuts cap at 8/16."],
+  ["BRIEFING", "BANKS", "CIRCLE and CROSS each hold their own TRIANGLE/SQUARE relation, with opposite bindings visible at the same time."],
+  ["ERASURE", "MEMORY", "A removes both bank markers and all position-bearing symbol evidence before the later decision exists."],
+  ["ROUTE", "SELECT", "The later scene reveals bank selector + query + MATCH/FLIP, forcing addressed retrieval from the correct erased bank."],
+  ["COMMIT", "CONTEXT", "Layout × bank × query × operator spans sixteen variants; fixed and context-ignoring shortcuts cap at 8/16."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>OBSERVE // ERASE // STAGE 1 // TRANSFORM // ERASE // CARRY // STAGE 2 // TRANSFORM // COMMIT // RECEIPT SEQUENCE</footer>
+      <footer>OBSERVE BANKS // ERASE // SELECT CONTEXT // QUERY // TRANSFORM // COMMIT // RECEIPT ROUTING</footer>
     </main>
   );
 }

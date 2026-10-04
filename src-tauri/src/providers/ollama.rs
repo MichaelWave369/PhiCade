@@ -17,6 +17,14 @@ use phicade_runtime::{
     AGENT_GYM_SEQ_STFM_ROM_SHA256, AGENT_GYM_SEQ_STFF_ROM_SHA256,
     AGENT_GYM_SEQ_SSMM_ROM_SHA256, AGENT_GYM_SEQ_SSMF_ROM_SHA256,
     AGENT_GYM_SEQ_SSFM_ROM_SHA256, AGENT_GYM_SEQ_SSFF_ROM_SHA256,
+    AGENT_GYM_CTX_A_CIR_TM_ROM_SHA256, AGENT_GYM_CTX_A_CIR_TF_ROM_SHA256,
+    AGENT_GYM_CTX_A_CIR_SM_ROM_SHA256, AGENT_GYM_CTX_A_CIR_SF_ROM_SHA256,
+    AGENT_GYM_CTX_A_CRS_TM_ROM_SHA256, AGENT_GYM_CTX_A_CRS_TF_ROM_SHA256,
+    AGENT_GYM_CTX_A_CRS_SM_ROM_SHA256, AGENT_GYM_CTX_A_CRS_SF_ROM_SHA256,
+    AGENT_GYM_CTX_B_CIR_TM_ROM_SHA256, AGENT_GYM_CTX_B_CIR_TF_ROM_SHA256,
+    AGENT_GYM_CTX_B_CIR_SM_ROM_SHA256, AGENT_GYM_CTX_B_CIR_SF_ROM_SHA256,
+    AGENT_GYM_CTX_B_CRS_TM_ROM_SHA256, AGENT_GYM_CTX_B_CRS_TF_ROM_SHA256,
+    AGENT_GYM_CTX_B_CRS_SM_ROM_SHA256, AGENT_GYM_CTX_B_CRS_SF_ROM_SHA256,
     AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
     AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256, AGENT_GYM_POWER_CHAIN_LEFT_ROM_SHA256,
     AGENT_GYM_POWER_CHAIN_RIGHT_ROM_SHA256, AGENT_GYM_MIRROR_ROM_SHA256,
@@ -888,6 +896,43 @@ mod tests {
         assert!(!prompt.contains("Swapped /"));
         assert!(!prompt.contains("MATCH / MATCH"));
         assert!(!prompt.contains("FLIP / FLIP"));
+    }
+
+    #[test]
+    fn selective_context_factorial_uses_identical_non_leaking_instruction() {
+        let hashes = [
+            AGENT_GYM_CTX_A_CIR_TM_ROM_SHA256, AGENT_GYM_CTX_A_CIR_TF_ROM_SHA256,
+            AGENT_GYM_CTX_A_CIR_SM_ROM_SHA256, AGENT_GYM_CTX_A_CIR_SF_ROM_SHA256,
+            AGENT_GYM_CTX_A_CRS_TM_ROM_SHA256, AGENT_GYM_CTX_A_CRS_TF_ROM_SHA256,
+            AGENT_GYM_CTX_A_CRS_SM_ROM_SHA256, AGENT_GYM_CTX_A_CRS_SF_ROM_SHA256,
+            AGENT_GYM_CTX_B_CIR_TM_ROM_SHA256, AGENT_GYM_CTX_B_CIR_TF_ROM_SHA256,
+            AGENT_GYM_CTX_B_CIR_SM_ROM_SHA256, AGENT_GYM_CTX_B_CIR_SF_ROM_SHA256,
+            AGENT_GYM_CTX_B_CRS_TM_ROM_SHA256, AGENT_GYM_CTX_B_CRS_TF_ROM_SHA256,
+            AGENT_GYM_CTX_B_CRS_SM_ROM_SHA256, AGENT_GYM_CTX_B_CRS_SF_ROM_SHA256,
+        ];
+        let prompts: Vec<String> = hashes
+            .iter()
+            .map(|hash| {
+                let mut req = request();
+                req.observation.game_sha256 = (*hash).into();
+                req.observation.allowed_buttons =
+                    vec!["A".into(), "LEFT".into(), "RIGHT".into()];
+                system_prompt(&req)
+            })
+            .collect();
+
+        assert!(prompts.windows(2).all(|pair| pair[0] == pair[1]));
+        let prompt = &prompts[0];
+        assert!(prompt.contains("CIRCLE"));
+        assert!(prompt.contains("CROSS"));
+        assert!(prompt.contains("bank"));
+        assert!(prompt.contains("MATCH (=)"));
+        assert!(prompt.contains("FLIP (X)"));
+        assert!(prompt.contains("wrong commitment is irreversible"));
+        assert!(!prompt.contains("Layout A"));
+        assert!(!prompt.contains("Layout B"));
+        assert!(!prompt.contains("CIRCLE / Triangle / MATCH"));
+        assert!(!prompt.contains("CROSS / Square / FLIP"));
     }
 
     #[test]
