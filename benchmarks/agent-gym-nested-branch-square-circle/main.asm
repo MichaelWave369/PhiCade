@@ -332,6 +332,7 @@ ReadAction:
     ld [$FE00], a
     ld a, 1
     ld [wPowerOn], a
+    ld a, 4
     ld [wMoveLock], a
     jp .done
 
@@ -357,6 +358,7 @@ ReadAction:
     ld [$FE00], a
     ld a, 1
     ld [wGateOpen], a
+    ld a, 4
     ld [wMoveLock], a
 
 .done:
@@ -373,13 +375,13 @@ ReadMove:
     and $0F
     ld b, a
 
-    ; Branch commitment and failure transitions own this frame. Suppress any
-    ; stale directional state that the host may still expose during the same
-    ; emulated frame, then normalize converged worlds onto the shared x seam.
+    ; Branch and interaction boundaries can reserve one or more frames.
+    ; Countdown locking suppresses stale directional state across press/release
+    ; and settle frames before normal movement resumes.
     ld a, [wMoveLock]
     and a
     jr z, .checkConverged
-    xor a
+    dec a
     ld [wMoveLock], a
     ld a, $30
     ldh [rP1], a
