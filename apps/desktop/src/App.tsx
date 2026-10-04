@@ -86,10 +86,10 @@ const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as 
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
-  ["STAGE 1", "FAMILY", "TRIANGLE/SQUARE is visible first; the future Stage 2 condition is intentionally absent from the framebuffer."],
-  ["STAGE 2", "REVEAL", "Only a correct first commitment reveals CIRCLE/CROSS, forcing a fresh observation instead of one memorized route."],
-  ["FAILURE", "DEPTH", "A wrong family or wrong submodule independently collapses the run into the same irreversible FAIL world."],
-  ["CONVERGE", "FACTORIAL", "After two correct choices, all four 2×2 variants become one generator → gate → target world."],
+  ["BRIEFING", "BIND", "TRIANGLE and SQUARE occupy two positions; the controller must retain the symbol→position relation, not merely a direction."],
+  ["ERASURE", "DELAY", "A removes every position-bearing briefing pixel before a lockout separates observation from the later decision."],
+  ["QUERY", "RECALL", "A newly revealed symbol sits above two identical doors; current pixels identify what to recall but not which door is correct."],
+  ["COMMIT", "FACTORIAL", "Arrangement × query flips the answer across four variants; wrong-door A is terminal and fixed-side shortcuts cap at 2/4."],
 ] as const;
 
 function decodeBase64(value: string): Uint8Array {
@@ -1844,7 +1844,7 @@ export function App() {
         ))}
       </section>
 
-      <footer>READ FAMILY // COMMIT // REVEAL SUBMODULE // COMMIT // CONVERGE // POWER // GATE // RECEIPT GRAPH</footer>
+      <footer>OBSERVE BINDING // ERASE // DELAY // READ QUERY // RECALL RELATION // COMMIT // RECEIPT MEMORY</footer>
     </main>
   );
 }
