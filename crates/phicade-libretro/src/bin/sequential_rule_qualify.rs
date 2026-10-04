@@ -405,6 +405,10 @@ fn run() -> Result<(), String> {
         && use_only_operator1_succeeds_exactly_eight
         && use_only_operator2_succeeds_exactly_eight)
     {
+        eprintln!(
+            "SEQUENTIAL DEBUG EVIDENCE:\n{}",
+            serde_json::to_string_pretty(&variants).unwrap_or_else(|_| "<serialize failed>".into())
+        );
         return Err(format!(
             "sequential controls failed: normal={normal_briefing_condition_independent} swapped={swapped_briefing_condition_independent} arrangements={arrangements_visibly_distinct} stage1_future={stage1_independent_of_operator2} stage1_visible={stage1_conditions_visibly_distinct} stage2_converges={stage2_converges_by_operator2} stage2_visible={stage2_operators_visibly_distinct} geometry={all_geometry_identical} hashes={all_registry_hashes_match} correct={all_correct_paths_pass} terminal={all_wrong_commits_terminal} left8={fixed_left_succeeds_exactly_eight} right8={fixed_right_succeeds_exactly_eight} ignore1={ignore_operator1_succeeds_exactly_eight} ignore2={ignore_operator2_succeeds_exactly_eight}"
         ));
