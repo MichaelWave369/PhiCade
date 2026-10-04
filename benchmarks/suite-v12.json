@@ -1,0 +1,975 @@
+{
+  "schema": "phicade.benchmark-suite-manifest.v1",
+  "id": "phicade-agent-gym-suite-v12",
+  "system": "GB",
+  "coreQualification": "SameBoy 1.0.3 / pinned source revision",
+  "observation": "rendered-framebuffer-only",
+  "taskCount": 61,
+  "tasks": [
+    {
+      "id": "move-block-to-x-v1",
+      "title": "Move the Block to the X",
+      "source": "benchmarks/agent-gym/main.asm",
+      "sourceSha256": "0c82f65532030d64bf022539002f334716a5aae822672b3cdfca511906e51e6f",
+      "romSha256": "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e",
+      "oracle": [
+        "RIGHT",
+        "DOWN"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-qualification.json"
+    },
+    {
+      "id": "move-block-to-x-mirror-v1",
+      "title": "Mirror Dash",
+      "source": "benchmarks/agent-gym-mirror/main.asm",
+      "sourceSha256": "fc10866cf7166f74f1ae41f8957f3b6057d8bf710731e42a02cbdb9087feb658",
+      "romSha256": "278a8106343fe1688a1370c0575578417744c96ae52568ab1e97f446dc222bfb",
+      "oracle": [
+        "LEFT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-mirror-qualification.json"
+    },
+    {
+      "id": "wall-detour-v1",
+      "title": "Wall Detour",
+      "source": "benchmarks/agent-gym-wall-detour/main.asm",
+      "sourceSha256": "02fc444e7ffc6f9de819f7462685448268b41a641592332918f972e17fd0fc96",
+      "romSha256": "c8bfbe95b368635370a61abf004d0efd4135b96c8fa9e4fb510582e25534c4f8",
+      "oracle": [
+        "DOWN",
+        "RIGHT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-wall-detour-qualification.json"
+    },
+    {
+      "id": "temporal-cue-left-v1",
+      "title": "Temporal Cue: Left",
+      "source": "benchmarks/agent-gym-temporal-left/main.asm",
+      "sourceSha256": "450ecadadb3ed51e1e613e4edd06007880309c4841fbae313bb45f0a75932a4c",
+      "romSha256": "da16bdda571bd2f3d5581097e1643ce7496ae3ea586f3b1756330a2b3fc171f5",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-left-qualification.json"
+    },
+    {
+      "id": "temporal-cue-right-v1",
+      "title": "Temporal Cue: Right",
+      "source": "benchmarks/agent-gym-temporal-right/main.asm",
+      "sourceSha256": "8c814246cb6948d50d5242ef2e01369c90a5965cb2151da5b9e4f27fff5e282f",
+      "romSha256": "eefb364a47b68267138d35b402d2d6f5de1d70940318cac947fb400d6e210337",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-right-qualification.json"
+    },
+    {
+      "id": "relay-rooms-left-v1",
+      "title": "Relay Rooms: Left",
+      "source": "benchmarks/agent-gym-relay-left/main.asm",
+      "sourceSha256": "75011896544ab2a2c1285d5fa667af22fbc329334e7d96601642577cf4d73bac",
+      "romSha256": "563a0b902f9e93d8887be830302e938f5ad394bf30c052f926511765486dae7e",
+      "oracle": [
+        "A",
+        "WAIT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "WAIT",
+        "LEFT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-relay-left-qualification.json"
+    },
+    {
+      "id": "relay-rooms-right-v1",
+      "title": "Relay Rooms: Right",
+      "source": "benchmarks/agent-gym-relay-right/main.asm",
+      "sourceSha256": "0408d7f1d8325e9e12564a33aa45b8814e889c689e53116a77b13c685657b739",
+      "romSha256": "83beb9b0c08754aaefa2f4d2598cba8548d4e56d7139487ae7fb84c3dd75f242",
+      "oracle": [
+        "A",
+        "WAIT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "WAIT",
+        "RIGHT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-relay-right-qualification.json"
+    },
+    {
+      "id": "key-gate-left-v1",
+      "title": "Key Gate: Left",
+      "source": "benchmarks/agent-gym-key-gate-left/main.asm",
+      "sourceSha256": "d9fcf741c4c5b78faa7276b61829321950384ada58a69f5ab07ed53fe982fa5c",
+      "romSha256": "904492aa3be9ebfca1f02ff220417eb94ee3f12332dfa4e2263e20c4009094db",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "UP",
+        "A",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-key-gate-left-qualification.json"
+    },
+    {
+      "id": "key-gate-right-v1",
+      "title": "Key Gate: Right",
+      "source": "benchmarks/agent-gym-key-gate-right/main.asm",
+      "sourceSha256": "e22c6d8f9b42105a5c6d4cb706631736c9cc61738ea8e94a8162c7761435961c",
+      "romSha256": "72553ffab515b83e9548b454e85491246b6260474bdddb8d3011c0be1b631442",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "UP",
+        "A",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-key-gate-right-qualification.json"
+    },
+    {
+      "id": "power-chain-left-v1",
+      "title": "Power Chain: Left",
+      "source": "benchmarks/agent-gym-power-chain-left/main.asm",
+      "sourceSha256": "59a619dc42500e8ee1488474869252df41533d58159da247e0df2793222b4afe",
+      "romSha256": "fd84eb10474a0834817101b99a5efc8b233d9b13a4c8d6d784c9394320636e40",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-power-chain-left-qualification.json"
+    },
+    {
+      "id": "power-chain-right-v1",
+      "title": "Power Chain: Right",
+      "source": "benchmarks/agent-gym-power-chain-right/main.asm",
+      "sourceSha256": "687f150dbf82bb634c8975362d02b967f1aa26299ac36380bbfa0eb99d4e68eb",
+      "romSha256": "33026212377de8c08dec00dbc7d6bc4852902c093d87624916bfcc3bc69e9b9f",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-power-chain-right-qualification.json"
+    },
+    {
+      "id": "branch-selector-triangle-v1",
+      "title": "Branch Selector: Triangle",
+      "source": "benchmarks/agent-gym-branch-selector-triangle/main.asm",
+      "sourceSha256": "b58ad96706d25724f85d6802afc499353419aeb09bd0f421b02e764f08d6e071",
+      "romSha256": "80c1dbd415f14a16823a7903b7117564b352ee2fe7d151d9c41c9f51fef20505",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-branch-selector-triangle-qualification.json"
+    },
+    {
+      "id": "branch-selector-square-v1",
+      "title": "Branch Selector: Square",
+      "source": "benchmarks/agent-gym-branch-selector-square/main.asm",
+      "sourceSha256": "0dc8ba01a974cc467349058cd92e0a50e2168a67bcbff3dea36f64ddfc376a35",
+      "romSha256": "300d827be392f9859fe85e0b0eb06a0af329b3148ba222295ee47dcd5290e10a",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-branch-selector-square-qualification.json"
+    },
+    {
+      "id": "nested-branch-triangle-circle-v1",
+      "title": "Nested Branch: Triangle → Circle",
+      "source": "benchmarks/agent-gym-nested-branch-triangle-circle/main.asm",
+      "sourceSha256": "2bb724ae134c2e7ec31c24b3096ac08e3f94158f24e75c50ff37b871fdce7a82",
+      "romSha256": "85bebe2dca1974b87c434abde755ec138a6f398f2e33b9cfcf81fae1db4914f5",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "UP",
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-triangle-circle-qualification.json"
+    },
+    {
+      "id": "nested-branch-triangle-cross-v1",
+      "title": "Nested Branch: Triangle → Cross",
+      "source": "benchmarks/agent-gym-nested-branch-triangle-cross/main.asm",
+      "sourceSha256": "d65fbb5339300243d33de0d1544eb1abc8c87ec626fa126b33b56f91657dcde6",
+      "romSha256": "5e96ec33e6b5a33776bebef68a63a311087cd51bca5976a60ef3aad55ca3e5b2",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "UP",
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
+    },
+    {
+      "id": "nested-branch-square-circle-v1",
+      "title": "Nested Branch: Square → Circle",
+      "source": "benchmarks/agent-gym-nested-branch-square-circle/main.asm",
+      "sourceSha256": "051ffafd163aa65c310145c999c76bedbf90978e74503901a6ed82d1aa8a7137",
+      "romSha256": "7779a57acf881c39709e1b31f561a361ab6539f1aed36ab875cacab094726f0f",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "UP",
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-square-circle-qualification.json"
+    },
+    {
+      "id": "nested-branch-square-cross-v1",
+      "title": "Nested Branch: Square → Cross",
+      "source": "benchmarks/agent-gym-nested-branch-square-cross/main.asm",
+      "sourceSha256": "eb915d89c6241f71150854d32c1f768079865a895e8f62137c8bdf76409994fd",
+      "romSha256": "9ca574ca0c55540ccc734146f8230c2f26bb6b1b98f87c43f3b186f9d57e80d6",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "UP",
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-square-cross-qualification.json"
+    },
+    {
+      "id": "binding-memory-normal-triangle-v1",
+      "title": "Binding Memory: Normal / Triangle",
+      "source": "benchmarks/agent-gym-binding-memory-normal-triangle/main.asm",
+      "sourceSha256": "1a0b386a2cfa4a8e6caf93e58e40620dd8913f068cf6a90bb09159cafbf506da",
+      "romSha256": "5f96edb28dbc65ae6f37d2f0bc740ef2ce9e2c2b8b9191a8e1a9882eaffd1a95",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-binding-memory-normal-triangle-qualification.json"
+    },
+    {
+      "id": "binding-memory-normal-square-v1",
+      "title": "Binding Memory: Normal / Square",
+      "source": "benchmarks/agent-gym-binding-memory-normal-square/main.asm",
+      "sourceSha256": "d2607daadac805fe27901ff1840639293f5cadb06b40e86ff5fdb477cd148faa",
+      "romSha256": "ee5eeac96f5073605014ad2e709331d96c7771a0b076f332f38ec5ec6356270d",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-binding-memory-normal-square-qualification.json"
+    },
+    {
+      "id": "binding-memory-swapped-triangle-v1",
+      "title": "Binding Memory: Swapped / Triangle",
+      "source": "benchmarks/agent-gym-binding-memory-swapped-triangle/main.asm",
+      "sourceSha256": "41f8b37237832f824275f307beacabbd3731e86c507ac3098ec206b4b4cdbf2e",
+      "romSha256": "31cfb105608c2e33c0cf1f43be7c8c037f0a56a4401aa4abfd43ecc6ff694300",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
+    },
+    {
+      "id": "binding-memory-swapped-square-v1",
+      "title": "Binding Memory: Swapped / Square",
+      "source": "benchmarks/agent-gym-binding-memory-swapped-square/main.asm",
+      "sourceSha256": "e1773c96b87e92f51e9129ed54f6cb60ca3cd4d03f35d1ed287edba915460c4d",
+      "romSha256": "c6f9a0d73187dbec822753c026405199c6d278dee19b4343de524e6fd4568492",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
+    },
+    {
+      "id": "compositional-recall-normal-triangle-match-v1",
+      "title": "Compositional Recall: Normal / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-compositional-recall-normal-triangle-match/main.asm",
+      "sourceSha256": "d9c6f0e0462502a2e5906a9a8f07861526bdc65d2f99758db57b630e6233d6e7",
+      "romSha256": "a0dd1c4fd34a308c9951fee576f687a9337bef9c1dd05d38e751ef48e7949720",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-normal-triangle-match-qualification.json"
+    },
+    {
+      "id": "compositional-recall-normal-triangle-flip-v1",
+      "title": "Compositional Recall: Normal / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-compositional-recall-normal-triangle-flip/main.asm",
+      "sourceSha256": "8b555998f193fd5cb40e61358da986119698e522938e213670c6e1d3c6a3dde4",
+      "romSha256": "3dcf0413ad3d62a49d45167a108a7483755925259ec8527ef2e9772d07b4f8d0",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-normal-triangle-flip-qualification.json"
+    },
+    {
+      "id": "compositional-recall-normal-square-match-v1",
+      "title": "Compositional Recall: Normal / Square / MATCH",
+      "source": "benchmarks/agent-gym-compositional-recall-normal-square-match/main.asm",
+      "sourceSha256": "58659c6891709c5524644f40b0626ec0fca1df7ba5c36fada31f6a0611374eee",
+      "romSha256": "8aa58e9e982594462cce0b48aab2a9b6a060537e1a404b185511f9b6598f4afe",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-normal-square-match-qualification.json"
+    },
+    {
+      "id": "compositional-recall-normal-square-flip-v1",
+      "title": "Compositional Recall: Normal / Square / FLIP",
+      "source": "benchmarks/agent-gym-compositional-recall-normal-square-flip/main.asm",
+      "sourceSha256": "f77ebc811b75f15d47845246e702650d4f27129f5329eb767bd1c19b7d3c0123",
+      "romSha256": "aa10327cd7ef0d06b8506d062b72bcfe6d4199759def0f31fdd6e44da6beb83e",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-normal-square-flip-qualification.json"
+    },
+    {
+      "id": "compositional-recall-swapped-triangle-match-v1",
+      "title": "Compositional Recall: Swapped / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-compositional-recall-swapped-triangle-match/main.asm",
+      "sourceSha256": "b145f5b94fd0af906020257c07d8f4167c70b6e95fbc37677e92f427e1dc98d2",
+      "romSha256": "7732b4fc7220698bb20e3a40fd6c8bb85fdfa608bcc75f9135c6743e2453da57",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-swapped-triangle-match-qualification.json"
+    },
+    {
+      "id": "compositional-recall-swapped-triangle-flip-v1",
+      "title": "Compositional Recall: Swapped / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-compositional-recall-swapped-triangle-flip/main.asm",
+      "sourceSha256": "2bab8e7b334d0fbeeb6c1f3901fe51aec2fbddeb450ed6d710853e6058362108",
+      "romSha256": "5717f04ab690b1a887448205358f17aee64a590e3a0011b7fec039183ff6bea4",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-swapped-triangle-flip-qualification.json"
+    },
+    {
+      "id": "compositional-recall-swapped-square-match-v1",
+      "title": "Compositional Recall: Swapped / Square / MATCH",
+      "source": "benchmarks/agent-gym-compositional-recall-swapped-square-match/main.asm",
+      "sourceSha256": "886a3dab4a3814b8a9723e94353daff511f1c510976e7f3766a84dbda8ac75b9",
+      "romSha256": "1174a6b2b158b3712a9a71b880983259bfe4a8e26f166193f56e86e5b09886dd",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-swapped-square-match-qualification.json"
+    },
+    {
+      "id": "compositional-recall-swapped-square-flip-v1",
+      "title": "Compositional Recall: Swapped / Square / FLIP",
+      "source": "benchmarks/agent-gym-compositional-recall-swapped-square-flip/main.asm",
+      "sourceSha256": "1e1f8380981896ddca16fa5f89ab7915175e94476e2c3cf2fdd425fb895f2613",
+      "romSha256": "c86b4bbacc6e9bedc9d731d2b396d5bef64889ecca2243031289d7f1020a996b",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-compositional-recall-swapped-square-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-triangle-match-match-v1",
+      "title": "Sequential Rule: NORMAL / TRIANGLE / MATCH / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-triangle-match-match/main.asm",
+      "sourceSha256": "79a5fcd7a3c503b00dbff2b59c1eb31f45f42c4c24fde0bf66ec26090de4ddc9",
+      "romSha256": "0cee85d2c39a9c37ac530a7c1b73c0de9afb43040eb94153efa4edbcefe778cc",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-triangle-match-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-triangle-match-flip-v1",
+      "title": "Sequential Rule: NORMAL / TRIANGLE / MATCH / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-triangle-match-flip/main.asm",
+      "sourceSha256": "4c13efc70adef3322a243dc41bb7d6c185f00282d02917a3712a574366f0051f",
+      "romSha256": "8d382853a99a38b967a397cb166733c49fa3df87d9364c5bbb0d6816d77dbe13",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-triangle-match-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-triangle-flip-match-v1",
+      "title": "Sequential Rule: NORMAL / TRIANGLE / FLIP / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-triangle-flip-match/main.asm",
+      "sourceSha256": "c25a6b5158629209a4fd524e88f9af0d2b1681216b8e0237cbba8604519f01ad",
+      "romSha256": "3f9055e1feefda8325c08dddcb311955de013f237dcc55e49603eefa21d8eca9",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-triangle-flip-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-triangle-flip-flip-v1",
+      "title": "Sequential Rule: NORMAL / TRIANGLE / FLIP / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-triangle-flip-flip/main.asm",
+      "sourceSha256": "b0b7ad42bbdba665ee74c233ee0895f69fc73da3e3d6b04e10218881ec815d1d",
+      "romSha256": "8f1ef5abac3100f688b1fa13adee4ff89db74b7906f30f27d9829d2dfd2e1b8e",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-triangle-flip-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-square-match-match-v1",
+      "title": "Sequential Rule: NORMAL / SQUARE / MATCH / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-square-match-match/main.asm",
+      "sourceSha256": "e0d8739aa1dbdd853c42c5c8fa09ffbec6e7a4bd7bb0958759ace04570f9b58d",
+      "romSha256": "460ddc6e00b5b29384a784acd162d6b1142348bfbe81544d784c16e57c4e3623",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-square-match-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-square-match-flip-v1",
+      "title": "Sequential Rule: NORMAL / SQUARE / MATCH / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-square-match-flip/main.asm",
+      "sourceSha256": "09ef1f71a27b95413175b5fc36b1672042ec6985800804beb53df3e42ea2fef1",
+      "romSha256": "b91d69651b6b6644f5d4b5bb9b186145e3ae442731bdb88197a8263b8785839f",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-square-match-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-square-flip-match-v1",
+      "title": "Sequential Rule: NORMAL / SQUARE / FLIP / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-square-flip-match/main.asm",
+      "sourceSha256": "ae45b59057ffc4a94de22f76acf8e2f8fd8a3158966a07e77add53ee812092d4",
+      "romSha256": "fce4ccce7c7ad284ba5abab7dead5e59efaad21135878301a63576fe19d47422",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-square-flip-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-normal-square-flip-flip-v1",
+      "title": "Sequential Rule: NORMAL / SQUARE / FLIP / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-normal-square-flip-flip/main.asm",
+      "sourceSha256": "7dacaff82f558d91407b876233847af2e729d37485660096db49792f53ed63e2",
+      "romSha256": "20a2946cce09f78c4a9c74b01ce53ae13479775faed017479b18227bf2be4da6",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-normal-square-flip-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-triangle-match-match-v1",
+      "title": "Sequential Rule: SWAPPED / TRIANGLE / MATCH / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-triangle-match-match/main.asm",
+      "sourceSha256": "7d43e44c60f88b53657efb2a98cf96fe839ada5da267c398014ab88adc115882",
+      "romSha256": "2b49b2a09d73d8c3670ffb3a16fc1e91f5360c24c2f8efaeb9e842dfbf46a739",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-triangle-match-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-triangle-match-flip-v1",
+      "title": "Sequential Rule: SWAPPED / TRIANGLE / MATCH / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-triangle-match-flip/main.asm",
+      "sourceSha256": "eef19eea18ea136862c9c1184e9a5e3da884ed7314a5e4122ca6e9f48c4ff484",
+      "romSha256": "d3298c31db90ec1e920b2fb085d8ed686759266bc8625348c15850bff6795780",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-triangle-match-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-triangle-flip-match-v1",
+      "title": "Sequential Rule: SWAPPED / TRIANGLE / FLIP / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-triangle-flip-match/main.asm",
+      "sourceSha256": "30c7e6788393596b9cafe0b62e7c080c775d0d76c6238393f333ff636cbb3edc",
+      "romSha256": "8ae8396bf1deeb7c686b8bcf75a6351f55693942ee91bb18465f0e95606d7cbc",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-triangle-flip-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-triangle-flip-flip-v1",
+      "title": "Sequential Rule: SWAPPED / TRIANGLE / FLIP / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-triangle-flip-flip/main.asm",
+      "sourceSha256": "6c0496ed6107124cb39bc6c96293ba50971bbfac7084bcfc7f4dd5cf5561599c",
+      "romSha256": "165160108ffd735a0aab52d1252d61520969821261ec16a839391e92b1ea3aed",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-triangle-flip-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-square-match-match-v1",
+      "title": "Sequential Rule: SWAPPED / SQUARE / MATCH / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-square-match-match/main.asm",
+      "sourceSha256": "e58497c3410e8c16711b05c48725c4e866e0953d326f070846a6e11acaaee733",
+      "romSha256": "91a505ff8c2c1c17e4796c878873636c4ceaa36aa19f57d9c9d37a44a60ff61f",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-square-match-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-square-match-flip-v1",
+      "title": "Sequential Rule: SWAPPED / SQUARE / MATCH / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-square-match-flip/main.asm",
+      "sourceSha256": "468d5e1a2b7a7f4f2fc248ad123e88ae4d966a24032d610403fcf9dc695a3c91",
+      "romSha256": "fe2546aba524ff82f89a03b7b67e162108ee58863c1ba960c427c1d03ddf6929",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-square-match-flip-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-square-flip-match-v1",
+      "title": "Sequential Rule: SWAPPED / SQUARE / FLIP / MATCH",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-square-flip-match/main.asm",
+      "sourceSha256": "6145ada1bdb22ac3e3e3fead6893e08cd31df4edab0d62cf5dd1b3b667fb061b",
+      "romSha256": "e94ef007dd822ec1c6921df6e534b724d0e5268ca9fcaf06d7ed7e161d677068",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-square-flip-match-qualification.json"
+    },
+    {
+      "id": "sequential-rule-swapped-square-flip-flip-v1",
+      "title": "Sequential Rule: SWAPPED / SQUARE / FLIP / FLIP",
+      "source": "benchmarks/agent-gym-sequential-rule-swapped-square-flip-flip/main.asm",
+      "sourceSha256": "eedf017f31d079a2e796b8c12e95d33bb2c3ea0233b95dc7cc5abb1fd3a1cd55",
+      "romSha256": "c707db53b771b2a13a0cade7975db0d95ff13b4e8e065d0da3af16f4a0894014",
+      "oracle": [
+        "A",
+        "WAIT",
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-sequential-rule-swapped-square-flip-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-a-circle-triangle-match-v1",
+      "title": "Selective Context: Layout A / CIRCLE / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-a-circle-triangle-match/main.asm",
+      "sourceSha256": "176debc38ce224163b2800bda75fedda818540d6880e04539cba9017c5c1e7ca",
+      "romSha256": "77b5e277aa8670eba795143f1bbaf9b489bf6cb40c7e8a6567d235e8f008f298",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-circle-triangle-match-qualification.json"
+    },
+    {
+      "id": "selective-context-a-circle-triangle-flip-v1",
+      "title": "Selective Context: Layout A / CIRCLE / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-a-circle-triangle-flip/main.asm",
+      "sourceSha256": "8857b12d4ab4cd9f778b164cdf756f88b3f1064d49b0496b131daf0542c3edd9",
+      "romSha256": "a01e1513de7b9650662dcdba1dfcd27700217976a1649da295cc5861fc8c0b8f",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-circle-triangle-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-a-circle-square-match-v1",
+      "title": "Selective Context: Layout A / CIRCLE / Square / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-a-circle-square-match/main.asm",
+      "sourceSha256": "a4a1afba61094e4f1c8ea63d90f4e3c51694840490727f979f061dff580bc52d",
+      "romSha256": "13bb8fcd93d051fb87461de1392ff6200ac498b51526b63e591d5cc17cc2ee3b",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-circle-square-match-qualification.json"
+    },
+    {
+      "id": "selective-context-a-circle-square-flip-v1",
+      "title": "Selective Context: Layout A / CIRCLE / Square / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-a-circle-square-flip/main.asm",
+      "sourceSha256": "41dbbef744f6a986108eeca6705d0f140f683fda025cccc5df10302ef1c71f48",
+      "romSha256": "dd2be5d2869e9d8cd4f128487a0c521fdec427ba963c857ae14ee72e46dc55a8",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-circle-square-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-a-cross-triangle-match-v1",
+      "title": "Selective Context: Layout A / CROSS / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-a-cross-triangle-match/main.asm",
+      "sourceSha256": "0ce49fa0e08c994976269f342659215d6a532188dc835121e8ea82c6e4a45a29",
+      "romSha256": "04bd93620fdaff5f41a60616d7dcf13fd9f49e85b27c3f993e6de4b11036c95c",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-cross-triangle-match-qualification.json"
+    },
+    {
+      "id": "selective-context-a-cross-triangle-flip-v1",
+      "title": "Selective Context: Layout A / CROSS / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-a-cross-triangle-flip/main.asm",
+      "sourceSha256": "089cc489ca19f97d7b1ef22b4f0bfcf543d6f15e0e9962e9fc2964b570720c78",
+      "romSha256": "3ed823d905b7f143f44368cd456ea64c5e0830b6a743422249afa10633af9247",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-cross-triangle-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-a-cross-square-match-v1",
+      "title": "Selective Context: Layout A / CROSS / Square / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-a-cross-square-match/main.asm",
+      "sourceSha256": "db8247c8211cf1016813a6f71926102ba608797f7e2d5b750431358e73e8c571",
+      "romSha256": "fdfd6480fff6f74e6621f4545471e72f9c1c608b61d649ccf5e42a3113394925",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-cross-square-match-qualification.json"
+    },
+    {
+      "id": "selective-context-a-cross-square-flip-v1",
+      "title": "Selective Context: Layout A / CROSS / Square / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-a-cross-square-flip/main.asm",
+      "sourceSha256": "da0890f7acd89820501064f911391fbcc01f46bd7e78e083571587cc5492b973",
+      "romSha256": "ac75edff024a826aa2e3bd3f1ca46c6f4eb91925d38a56771644a513c77c5472",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-a-cross-square-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-b-circle-triangle-match-v1",
+      "title": "Selective Context: Layout B / CIRCLE / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-b-circle-triangle-match/main.asm",
+      "sourceSha256": "0557158ac21f57d116a22bff7d59fa52b89ff3e46d8114a5ec6e63099dd098f4",
+      "romSha256": "984df7a495b096de25f09f0faa8c8ff97c8f717ee3b4649a91f16a8443415b13",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-circle-triangle-match-qualification.json"
+    },
+    {
+      "id": "selective-context-b-circle-triangle-flip-v1",
+      "title": "Selective Context: Layout B / CIRCLE / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-b-circle-triangle-flip/main.asm",
+      "sourceSha256": "5fe679d4b858b297b9eb0b61be0115fcf425b8e2c3dda4adac556dd28035908a",
+      "romSha256": "a41866a989965125b04b6531e19370a8dad69d3b27a186e11488419b2a38aefe",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-circle-triangle-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-b-circle-square-match-v1",
+      "title": "Selective Context: Layout B / CIRCLE / Square / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-b-circle-square-match/main.asm",
+      "sourceSha256": "d7e74f53b85f578f75ebcd449d6d23f34f25ee0dd9d5eb1f2bf138eb1723eb5c",
+      "romSha256": "f490a0b8f0224b0a90c8779c01af0374949cae4a9dbfc1a9152d4acd5f0d0b75",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-circle-square-match-qualification.json"
+    },
+    {
+      "id": "selective-context-b-circle-square-flip-v1",
+      "title": "Selective Context: Layout B / CIRCLE / Square / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-b-circle-square-flip/main.asm",
+      "sourceSha256": "ec5c9ad2b56a7779486bf48c78ba84211b1c70a3861feecdf97484a84726772e",
+      "romSha256": "041625e21fbd29786d72aaa277c9206e95adac4e9438fc47d218a362a5bd9bc6",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-circle-square-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-b-cross-triangle-match-v1",
+      "title": "Selective Context: Layout B / CROSS / Triangle / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-b-cross-triangle-match/main.asm",
+      "sourceSha256": "b6041e1a5e2035e6be211cd7e9a9276433b54bd6554f8ac34b8d7d00c81c6920",
+      "romSha256": "ec5421eb81ac5d31f23956dbfa1f45d1a93cd360489a1ea6a27b4cf74cb89118",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-cross-triangle-match-qualification.json"
+    },
+    {
+      "id": "selective-context-b-cross-triangle-flip-v1",
+      "title": "Selective Context: Layout B / CROSS / Triangle / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-b-cross-triangle-flip/main.asm",
+      "sourceSha256": "f32c18b34f22589a8ff7793ed82d9bfa6b9e08b7d7ac7c8d6240e180826f89e0",
+      "romSha256": "f46950eebced641b299698090c2e1c48435b585d6c9934bf81db107007d5abe9",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-cross-triangle-flip-qualification.json"
+    },
+    {
+      "id": "selective-context-b-cross-square-match-v1",
+      "title": "Selective Context: Layout B / CROSS / Square / MATCH",
+      "source": "benchmarks/agent-gym-selective-context-b-cross-square-match/main.asm",
+      "sourceSha256": "a2377983a973eaf9b3d9b3ecfa97409f058b2778e70c6e7caa1f36d7933a3c6f",
+      "romSha256": "17c349d7600c3cffe7e6fff52b4142d9ed7dd53d220f672c4634d07cc9f3d503",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-cross-square-match-qualification.json"
+    },
+    {
+      "id": "selective-context-b-cross-square-flip-v1",
+      "title": "Selective Context: Layout B / CROSS / Square / FLIP",
+      "source": "benchmarks/agent-gym-selective-context-b-cross-square-flip/main.asm",
+      "sourceSha256": "4e738f4647d201b738cdbc381ff062ee2ec6eb693ed9138e0c4688aac1388443",
+      "romSha256": "b37dd208ce52bbb83383d0f0e2af9d788e928163942412ce31c05a3671b9047c",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT",
+        "A"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-selective-context-b-cross-square-flip-qualification.json"
+    }
+  ]
+}
