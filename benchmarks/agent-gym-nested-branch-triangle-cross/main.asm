@@ -364,7 +364,7 @@ ReadMove:
 .forceCenter:
     ld a, CENTER_X
     ld [wPlayerX], a
-    jr .up
+    jp .up
 
 .horizontal:
     bit 0, b
