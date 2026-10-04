@@ -237,6 +237,11 @@ ReadAction:
     ld a, 1
     ld [wStage2Done], a
 
+    ; Stage 2 is the branch-graph convergence boundary. Normalize the actor
+    ; onto the shared center before erasing variant-specific evidence.
+    ld a, CENTER_X
+    ld [wPlayerX], a
+
     ; Erase second-level evidence and converge every variant.
     xor a
     ld hl, STAGE2_LEFT_MAP
@@ -253,6 +258,11 @@ ReadAction:
 .fail:
     ld a, 1
     ld [wFailed], a
+
+    ; Failure is also a convergence boundary: branch-local horizontal
+    ; position is discarded before entering the shared terminal FAIL world.
+    ld a, CENTER_X
+    ld [wPlayerX], a
 
     ; Any wrong commitment collapses onto one terminal FAIL world.
     xor a
