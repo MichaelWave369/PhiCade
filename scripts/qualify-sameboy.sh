@@ -427,6 +427,47 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "nested-branch-square-cross-v1" \
   --receipt "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"
 
+printf '==> running Relational Binding Memory factorial qualification\n'
+cargo run -p phicade-libretro --bin binding_memory_qualify -- \
+  --core "$CORE" \
+  --normal-triangle-rom "$BIND_NT_ROM" \
+  --normal-square-rom "$BIND_NS_ROM" \
+  --swapped-triangle-rom "$BIND_ST_ROM" \
+  --swapped-square-rom "$BIND_SS_ROM" \
+  --receipt "$ROOT/artifacts/binding-memory-qualification.json"
+
+printf '==> running Phi-Agent Gym task R / Binding Memory NORMAL-TRIANGLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_NT_ROM" \
+  --source "$BIND_NT_SRC" \
+  --task "binding-memory-normal-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qualification.json"
+
+printf '==> running Phi-Agent Gym task S / Binding Memory NORMAL-SQUARE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_NS_ROM" \
+  --source "$BIND_NS_SRC" \
+  --task "binding-memory-normal-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
+
+printf '==> running Phi-Agent Gym task T / Binding Memory SWAPPED-TRIANGLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_ST_ROM" \
+  --source "$BIND_ST_SRC" \
+  --task "binding-memory-swapped-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
+
+printf '==> running Phi-Agent Gym task U / Binding Memory SWAPPED-SQUARE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_SS_ROM" \
+  --source "$BIND_SS_SRC" \
+  --task "binding-memory-swapped-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -456,3 +497,8 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-circle-quali
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-circle-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/binding-memory-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
