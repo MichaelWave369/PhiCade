@@ -61,6 +61,12 @@ struct VariantEvidence {
     failed_stage2_center_player: PixelPoint,
     failed_stage2_center_sha256: String,
     failed_stage2_projection_sha256: String,
+    failed_stage2_badge_sha256: String,
+    failed_stage2_selector_sha256: String,
+    failed_stage2_stage1_slots_sha256: String,
+    failed_stage2_stage2_slots_sha256: String,
+    failed_stage2_generator_tile_sha256: String,
+    failed_stage2_gate_strips_sha256: String,
     failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
     failed_stage2_gate_sha256: String,
@@ -216,6 +222,29 @@ fn append_region(
         out.extend_from_slice(&video.rgba8[start..end]);
     }
     Ok(())
+}
+
+fn sha256_region(
+    video: &FrameBuffer,
+    x0: usize,
+    y0: usize,
+    width: usize,
+    height: usize,
+) -> Result<String, String> {
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, x0, y0, width, height)?;
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_two_regions(
+    video: &FrameBuffer,
+    first: (usize, usize, usize, usize),
+    second: (usize, usize, usize, usize),
+) -> Result<String, String> {
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, first.0, first.1, first.2, first.3)?;
+    append_region(&mut bytes, video, second.0, second.1, second.2, second.3)?;
+    Ok(sha256_bytes(&bytes))
 }
 
 fn sha256_gate_region(video: &FrameBuffer) -> Result<String, String> {
@@ -610,6 +639,14 @@ fn qualify_variant(
     let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
     let failed_stage2_projection_sha256 =
         sha256_failed_state_projection(&video)?;
+    let failed_stage2_badge_sha256 = sha256_region(&video, 8, 8, 8, 8)?;
+    let failed_stage2_selector_sha256 = sha256_region(&video, 72, 32, 8, 8)?;
+    let failed_stage2_stage1_slots_sha256 =
+        sha256_two_regions(&video, (24, 112, 8, 8), (120, 112, 8, 8))?;
+    let failed_stage2_stage2_slots_sha256 =
+        sha256_two_regions(&video, (24, 80, 8, 8), (120, 80, 8, 8))?;
+    let failed_stage2_generator_tile_sha256 = sha256_region(&video, 88, 72, 8, 8)?;
+    let failed_stage2_gate_strips_sha256 = sha256_gate_region(&video)?;
 
     no_input(
         &mut core,
@@ -856,6 +893,12 @@ fn qualify_variant(
             failed_stage2_center_player: failed_stage2_center,
             failed_stage2_center_sha256,
             failed_stage2_projection_sha256,
+            failed_stage2_badge_sha256,
+            failed_stage2_selector_sha256,
+            failed_stage2_stage1_slots_sha256,
+            failed_stage2_stage2_slots_sha256,
+            failed_stage2_generator_tile_sha256,
+            failed_stage2_gate_strips_sha256,
             failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
             failed_stage2_gate_sha256,
@@ -1104,28 +1147,68 @@ fn run() -> Result<(), String> {
             triangle_circle.failed_stage2_center_player,
             triangle_circle.accepted_stage2_center_player,
             triangle_circle.final_player,
-            format!("{} / world={}", triangle_circle.failed_stage2_center_sha256, triangle_circle.failed_stage2_projection_sha256),
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                triangle_circle.failed_stage2_center_sha256,
+                triangle_circle.failed_stage2_projection_sha256,
+                triangle_circle.failed_stage2_badge_sha256,
+                triangle_circle.failed_stage2_selector_sha256,
+                triangle_circle.failed_stage2_stage1_slots_sha256,
+                triangle_circle.failed_stage2_stage2_slots_sha256,
+                triangle_circle.failed_stage2_generator_tile_sha256,
+                triangle_circle.failed_stage2_gate_strips_sha256
+            ),
             triangle_circle.accepted_stage2_center_sha256,
             triangle_circle.powered_frame_sha256,
             triangle_circle.open_gate_frame_sha256,
             triangle_cross.failed_stage2_center_player,
             triangle_cross.accepted_stage2_center_player,
             triangle_cross.final_player,
-            format!("{} / world={}", triangle_cross.failed_stage2_center_sha256, triangle_cross.failed_stage2_projection_sha256),
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                triangle_cross.failed_stage2_center_sha256,
+                triangle_cross.failed_stage2_projection_sha256,
+                triangle_cross.failed_stage2_badge_sha256,
+                triangle_cross.failed_stage2_selector_sha256,
+                triangle_cross.failed_stage2_stage1_slots_sha256,
+                triangle_cross.failed_stage2_stage2_slots_sha256,
+                triangle_cross.failed_stage2_generator_tile_sha256,
+                triangle_cross.failed_stage2_gate_strips_sha256
+            ),
             triangle_cross.accepted_stage2_center_sha256,
             triangle_cross.powered_frame_sha256,
             triangle_cross.open_gate_frame_sha256,
             square_circle.failed_stage2_center_player,
             square_circle.accepted_stage2_center_player,
             square_circle.final_player,
-            format!("{} / world={}", square_circle.failed_stage2_center_sha256, square_circle.failed_stage2_projection_sha256),
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                square_circle.failed_stage2_center_sha256,
+                square_circle.failed_stage2_projection_sha256,
+                square_circle.failed_stage2_badge_sha256,
+                square_circle.failed_stage2_selector_sha256,
+                square_circle.failed_stage2_stage1_slots_sha256,
+                square_circle.failed_stage2_stage2_slots_sha256,
+                square_circle.failed_stage2_generator_tile_sha256,
+                square_circle.failed_stage2_gate_strips_sha256
+            ),
             square_circle.accepted_stage2_center_sha256,
             square_circle.powered_frame_sha256,
             square_circle.open_gate_frame_sha256,
             square_cross.failed_stage2_center_player,
             square_cross.accepted_stage2_center_player,
             square_cross.final_player,
-            format!("{} / world={}", square_cross.failed_stage2_center_sha256, square_cross.failed_stage2_projection_sha256),
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                square_cross.failed_stage2_center_sha256,
+                square_cross.failed_stage2_projection_sha256,
+                square_cross.failed_stage2_badge_sha256,
+                square_cross.failed_stage2_selector_sha256,
+                square_cross.failed_stage2_stage1_slots_sha256,
+                square_cross.failed_stage2_stage2_slots_sha256,
+                square_cross.failed_stage2_generator_tile_sha256,
+                square_cross.failed_stage2_gate_strips_sha256
+            ),
             square_cross.accepted_stage2_center_sha256,
             square_cross.powered_frame_sha256,
             square_cross.open_gate_frame_sha256,
