@@ -1494,10 +1494,23 @@ mod tests {
         assert_eq!(tasks[19].id, AGENT_GYM_BINDING_SWAPPED_TRIANGLE_ID);
         assert_eq!(tasks[20].id, AGENT_GYM_BINDING_SWAPPED_SQUARE_ID);
         assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V9_ID).unwrap().version, 9);
-        assert_eq!(
-            AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.prompt,
-            AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK.prompt
-        );
+        let binding_tasks = [
+            AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK,
+            AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
+            AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
+            AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+        ];
+        for task in &binding_tasks[1..] {
+            assert_eq!(task.prompt, binding_tasks[0].prompt);
+            assert_eq!(task.allowed_buttons, binding_tasks[0].allowed_buttons);
+        }
+        let prompt = binding_tasks[0].prompt.to_ascii_lowercase();
+        assert!(!prompt.contains("normal"));
+        assert!(!prompt.contains("swapped"));
+        assert!(!prompt.contains("triangle is left"));
+        assert!(!prompt.contains("triangle is right"));
+        assert!(!prompt.contains("square is left"));
+        assert!(!prompt.contains("square is right"));
         assert_eq!(AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.oracle.len(), 4);
         assert_eq!(AGENT_GYM_BINDING_NORMAL_SQUARE_TASK.oracle.len(), 4);
         assert_eq!(AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK.oracle.len(), 4);
