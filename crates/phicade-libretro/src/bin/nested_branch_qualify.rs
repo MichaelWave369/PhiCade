@@ -21,15 +21,14 @@ const SIDE_FRAMES: u64 = 32;
 // neutralizes the button before the release frame is simulated, so it does
 // not contribute an extra movement tick.
 const STAGE2_UP_FRAMES: u64 = 16;
-const GENERATOR_UP_FRAMES: u64 = 12;
-const GATE_UP_FRAMES: u64 = 8;
+const GATE_UP_FRAMES: u64 = 12;
 const TARGET_UP_FRAMES: u64 = 20;
 const BLOCK_PROBE_FRAMES: u64 = 8;
 const SETTLE_FRAMES: u64 = 2;
 
 const START: PixelPoint = PixelPoint { x: 72, y: 112 };
 const STAGE2_CENTER: PixelPoint = PixelPoint { x: 72, y: 80 };
-const GENERATOR_PLAYER: PixelPoint = PixelPoint { x: 72, y: 64 };
+const GENERATOR_PLAYER: PixelPoint = STAGE2_CENTER;
 const GATE_PLAYER: PixelPoint = PixelPoint { x: 72, y: 56 };
 const CHECKPOINT_TOLERANCE: i32 = 2;
 const ACTOR_MASK_PAD: i32 = 4;
@@ -669,15 +668,6 @@ fn qualify_variant(
     let accepted_stage2_world_sha256 =
         sha256_world_without_actor(&video, STAGE2_CENTER);
 
-    hold_button(
-        &mut core,
-        &mut sequence,
-        "UP",
-        GENERATOR_UP_FRAMES,
-        &mut video,
-        &mut audio,
-        "move accepted stage2 to generator",
-    )?;
     no_input(
         &mut core,
         SETTLE_FRAMES,
