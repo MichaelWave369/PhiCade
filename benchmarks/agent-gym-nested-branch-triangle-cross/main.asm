@@ -25,6 +25,8 @@ DEF STAGE1_Y          EQU 128
 DEF STAGE2_LEFT_X     EQU 32
 DEF STAGE2_RIGHT_X    EQU 128
 DEF STAGE2_Y          EQU 96
+DEF STAGE2_MIN_Y      EQU STAGE2_Y - 2
+DEF STAGE2_MAX_Y      EQU STAGE2_Y + 3
 DEF GENERATOR_X       EQU 80
 DEF GENERATOR_Y       EQU 80
 DEF GATE_CENTER_X     EQU 80
@@ -224,9 +226,13 @@ ReadAction:
     jp .done
 
 .tryStage2:
+    ; Use a five-pixel rendered overlap band instead of one sacred y pixel.
+    ; The branch choice remains exact in x and selector identity.
     ld a, [wPlayerY]
-    cp STAGE2_Y
-    jp nz, .done
+    cp STAGE2_MIN_Y
+    jp c, .done
+    cp STAGE2_MAX_Y
+    jp nc, .done
     ld a, [wPlayerX]
     cp STAGE2_RIGHT_X
     jr z, .acceptStage2
@@ -264,8 +270,14 @@ ReadAction:
     ld a, 1
     ld [wFailed], a
 
-    ; Failure is also a convergence boundary: branch-local horizontal
-    ; position is discarded before entering the shared terminal FAIL world.
+    ; Failure is also a convergence boundary. A Stage 2 failure normalizes
+    ; both axes onto the Stage 2 seam; Stage 1 failure preserves its row.
+    ld a, [wStage1Done]
+    and a
+    jr z, .failNormalizeX
+    ld a, STAGE2_Y
+    ld [wPlayerY], a
+.failNormalizeX:
     ld a, CENTER_X
     ld [wPlayerX], a
     ld a, 1
