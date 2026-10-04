@@ -160,8 +160,8 @@ MainLoop:
 
     call ReadAction
     call ReadMove
-    call RenderState
     call WritePlayerOam
+    call RenderState
 
 .waitVisible:
     ldh a, [rLY]
@@ -251,8 +251,10 @@ ReadAction:
     ; onto the shared center before erasing variant-specific evidence.
     ld a, CENTER_X
     ld [wPlayerX], a
+    ld [$FE01], a
     ld a, STAGE2_Y
     ld [wPlayerY], a
+    ld [$FE00], a
     ld a, 1
     ld [wMoveLock], a
 
@@ -283,6 +285,9 @@ ReadAction:
 .failNormalizeX:
     ld a, CENTER_X
     ld [wPlayerX], a
+    ld [$FE01], a
+    ld a, [wPlayerY]
+    ld [$FE00], a
     ld a, 1
     ld [wMoveLock], a
 
@@ -489,9 +494,8 @@ ReadMove:
     jr z, .down
 
 .upGateCheck:
-    ; After Stage 2 succeeds, the unpowered generator becomes the next
-    ; authoritative vertical interaction stop. Deliberate oracle overrun
-    ; therefore resolves to exact generator geometry instead of timing luck.
+    ; Stage 2 acceptance creates a hard generator stop. Approach from below
+    ; snaps the final <=2 px onto the exact interaction coordinate.
     ld a, [wStage2Done]
     and a
     jr z, .upGateBarrier
@@ -501,19 +505,37 @@ ReadMove:
     ld a, [wPlayerY]
     cp GENERATOR_Y
     jr z, .down
+    cp GENERATOR_Y + 3
+    jr nc, .upGateBarrier
+    ld a, GENERATOR_Y
+    ld [wPlayerY], a
+    jr .down
 
 .upGateBarrier:
     ld a, [wGateOpen]
     and a
-    jr nz, .upBounds
+    jr nz, .upTarget
     ld a, [wPlayerY]
     cp GATE_STOP_Y
     jr z, .down
+    cp GATE_STOP_Y + 3
+    jr nc, .upBounds
+    ld a, GATE_STOP_Y
+    ld [wPlayerY], a
+    jr .down
 
-.upBounds:
+.upTarget:
     ld a, [wPlayerY]
     cp TARGET_Y
     jr z, .down
+    cp TARGET_Y + 3
+    jr nc, .upBounds
+    ld a, TARGET_Y
+    ld [wPlayerY], a
+    jr .down
+
+.upBounds:
+    ld a, [wPlayerY]
     cp 18
     jr c, .down
     sub MOVE_STEP
