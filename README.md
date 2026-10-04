@@ -5,14 +5,14 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 27
+## Current status — Rung 28
 
-PhiCade now has a relational binding-memory benchmark. A briefing places
-TRIANGLE and SQUARE on opposite sides, then erases that position-bearing
-evidence. After a delay, a newly revealed query symbol asks the controller to
-choose the identical door where that symbol appeared earlier. Arrangement ×
-query forms a full 2×2 factorial, so no fixed symbol→side shortcut survives.
-Suite v9 preserves every Suite v8 task and adds all four binding-memory variants.
+PhiCade now has a compositional-recall benchmark. A briefing places TRIANGLE
+and SQUARE on opposite sides, then erases that position-bearing evidence.
+After a delay, the choice scene reveals both a query symbol and a new operator:
+MATCH preserves the remembered side; FLIP requires its opposite. Arrangement ×
+query × operator forms a full 2×2×2 factorial. Suite v10 preserves every Suite
+v9 task and adds all eight compositional-recall variants.
 
 Benchmark suites:
 
@@ -25,6 +25,7 @@ Benchmark suites:
 - **Suite v7** — the exact v6 tasks + **Branch Selector: Triangle** + **Branch Selector: Square**
 - **Suite v8** — the exact v7 tasks + the four **Nested Branch** 2×2 factorial variants
 - **Suite v9** — the exact v8 tasks + the four **Relational Binding Memory** 2×2 factorial variants
+- **Suite v10** — the exact v9 tasks + the eight **Compositional Recall** 2×2×2 factorial variants
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -41,6 +42,8 @@ Benchmark suites:
   four factorial variants prevent the second answer from being inferred from the first
 - **Relational Binding Memory quartet** — briefing arrangement is erased before
   a later symbol query; identical doors force retrieval of the earlier symbol→position relation
+- **Compositional Recall octet** — after erased relational memory, a later MATCH/FLIP
+  operator forces preservation or inversion of the recalled side before commitment
 
 Current evidence stack includes:
 
@@ -91,6 +94,10 @@ Current evidence stack includes:
 - fixed-left and fixed-right controls each capped at exactly 2/4
 - irreversible wrong-door commitment and recovery refusal
 - Benchmark Suite v9 with exact 21-task membership
+- eight-way arrangement × query × MATCH/FLIP compositional-recall factorial
+- same query+operator choice-frame convergence across opposite erased histories
+- always-left/right and ignore-operator/always-flip shortcuts capped at 4/8
+- Benchmark Suite v10 with exact 29-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -116,6 +123,23 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Compositional recall benchmark
+
+Suite v10 adds eight source-first Game Boy tasks spanning NORMAL/SWAPPED
+arrangement × TRIANGLE/SQUARE query × MATCH/FLIP operator.
+
+The briefing relation is erased before the later choice. MATCH (=) means choose
+the door where the queried symbol appeared earlier; FLIP (X) means choose the
+opposite door. The current framebuffer therefore supplies the query and rule,
+but not the erased relation the rule must operate on.
+
+The joint qualifier proves same-query+operator convergence across opposite
+histories, visible operator/query distinctions, terminal wrong commitments, and
+balanced 4/8 shortcut ceilings.
+
+See `docs/COMPOSITIONAL_RECALL_BENCHMARK.md` and
+`docs/BENCHMARK_SUITE_V10.md`.
 
 ## Relational binding-memory benchmark
 
@@ -315,7 +339,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select the desired frozen suite version, including **Suite v9**,
+2. select the desired frozen suite version, including **Suite v10**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -381,14 +405,17 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all twenty-one registered benchmark ROMs from source,
+CI assembles and qualifies all twenty-nine registered benchmark ROMs from source,
 jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, Branch
-Selector, Nested Branch Graph, and Relational Binding Memory controls, tests
-prior-suite preservation, Suite v9 17/21 → 18/21 → 19/21 → 20/21 → 21/21
-coverage, digest splitting, and trial-tamper refusal.
+Selector, Nested Branch Graph, Relational Binding Memory, and Compositional
+Recall controls, tests prior-suite preservation, Suite v10 21/29 → 22/29 →
+23/29 → 24/29 → 25/29 → 26/29 → 27/29 → 28/29 → 29/29 coverage, digest
+splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/COMPOSITIONAL_RECALL_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V10.md`
 - `docs/RELATIONAL_BINDING_MEMORY_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V9.md`
 - `docs/NESTED_BRANCH_GRAPH_BENCHMARK.md`
