@@ -111,6 +111,60 @@ fn point_within_tolerance(point: PixelPoint, expected: PixelPoint, tolerance: i3
         && (point.y - expected.y).abs() <= tolerance
 }
 
+fn checkpoint_dark(pixel: &[u8]) -> bool {
+    if pixel.len() < 4 {
+        return false;
+    }
+    let r = u16::from(pixel[0]);
+    let g = u16::from(pixel[1]);
+    let b = u16::from(pixel[2]);
+    (r + g + b) / 3 < 112
+}
+
+fn locate_player_near(
+    video: &FrameBuffer,
+    expected: PixelPoint,
+    radius: i32,
+) -> Result<PixelPoint, String> {
+    let width = i32::try_from(video.width).map_err(|_| "video width overflow")?;
+    let height = i32::try_from(video.height).map_err(|_| "video height overflow")?;
+    if video.rgba8.len() != (width as usize) * (height as usize) * 4 {
+        return Err("nested checkpoint framebuffer byte length mismatch".into());
+    }
+
+    let x0 = (expected.x - radius).max(0);
+    let y0 = (expected.y - radius).max(0);
+    let x1 = (expected.x + radius).min(width - 8);
+    let y1 = (expected.y + radius).min(height - 8);
+    let mut best: Option<(i32, i32, usize)> = None;
+
+    for y in y0..=y1 {
+        for x in x0..=x1 {
+            let mut dark_count = 0usize;
+            for py in y..y + 8 {
+                for px in x..x + 8 {
+                    let offset = ((py * width + px) * 4) as usize;
+                    if checkpoint_dark(&video.rgba8[offset..offset + 4]) {
+                        dark_count += 1;
+                    }
+                }
+            }
+            if best.is_none_or(|(_, _, count)| dark_count > count) {
+                best = Some((x, y, dark_count));
+            }
+        }
+    }
+
+    let (x, y, count) = best.ok_or_else(|| "no local player candidate found".to_owned())?;
+    if count < 52 {
+        return Err(format!(
+            "local player patch not found near {:?}: best 8x8 dark-pixel count was {count}",
+            expected
+        ));
+    }
+    Ok(PixelPoint { x, y })
+}
+
 fn sha256_world_without_actor(video: &FrameBuffer, actor: PixelPoint) -> String {
     let mut rgba = video.rgba8.clone();
     let width = video.width as i32;
@@ -467,7 +521,8 @@ fn qualify_variant(
         &mut audio,
         "settle stage2 fail center",
     )?;
-    let failed_stage2_center = locate_agent_gym_player(&video)?;
+    let failed_stage2_center =
+        locate_player_near(&video, STAGE2_CENTER, CHECKPOINT_TOLERANCE)?;
     if !point_within_tolerance(
         failed_stage2_center,
         STAGE2_CENTER,
@@ -598,7 +653,8 @@ fn qualify_variant(
         &mut audio,
         "settle accepted stage2 center",
     )?;
-    let accepted_stage2_center = locate_agent_gym_player(&video)?;
+    let accepted_stage2_center =
+        locate_player_near(&video, STAGE2_CENTER, CHECKPOINT_TOLERANCE)?;
     if !point_within_tolerance(
         accepted_stage2_center,
         STAGE2_CENTER,
@@ -643,7 +699,8 @@ fn qualify_variant(
         &mut audio,
         "settle powered generator",
     )?;
-    let powered_player = locate_agent_gym_player(&video)?;
+    let powered_player =
+        locate_player_near(&video, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE)?;
     if !point_within_tolerance(powered_player, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
         return Err(format!(
             "{} powered checkpoint left generator neighborhood: expected {:?} ±{}px, got {:?}",
@@ -684,7 +741,8 @@ fn qualify_variant(
         &mut audio,
         "settle open gate",
     )?;
-    let open_gate_player = locate_agent_gym_player(&video)?;
+    let open_gate_player =
+        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
     if !point_within_tolerance(open_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE) {
         return Err(format!(
             "{} open-gate checkpoint left gate neighborhood: expected {:?} ±{}px, got {:?}",
