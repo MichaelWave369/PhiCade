@@ -508,11 +508,30 @@ ReadMove:
     jr z, .down
 
 .upGateCheck:
-    ; Stage 2 acceptance creates a hard generator stop. Approach from below
-    ; snaps the final <=2 px onto the exact interaction coordinate.
-    ld a, [wStage2Done]
+    ; After Stage 1, the newly revealed Stage 2 row is an authoritative
+    ; decision boundary. The player cannot drift through it before committing
+    ; CIRCLE/CROSS. Approach from below snaps the final <=2 px onto STAGE2_Y.
+    ld a, [wFailed]
+    and a
+    jr nz, .upGateBarrier
+    ld a, [wStage1Done]
     and a
     jr z, .upGateBarrier
+    ld a, [wStage2Done]
+    and a
+    jr nz, .upGeneratorCheck
+    ld a, [wPlayerY]
+    cp STAGE2_Y
+    jr z, .down
+    cp STAGE2_Y + 3
+    jr nc, .upBounds
+    ld a, STAGE2_Y
+    ld [wPlayerY], a
+    jr .down
+
+.upGeneratorCheck:
+    ; Accepted Stage 2 and the shared generator occupy the same convergence
+    ; row. Until power is committed, UP remains blocked on that row.
     ld a, [wPowerOn]
     and a
     jr nz, .upGateBarrier
