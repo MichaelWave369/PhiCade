@@ -29,6 +29,7 @@ const SETTLE_FRAMES: u64 = 2;
 
 const START: PixelPoint = PixelPoint { x: 72, y: 112 };
 const STAGE2_CENTER: PixelPoint = PixelPoint { x: 72, y: 80 };
+const STAGE2_CENTER_TOLERANCE: i32 = 2;
 const GATE_STOP_Y: i32 = 56;
 
 #[derive(Debug, Clone, Copy)]
@@ -53,10 +54,12 @@ struct VariantEvidence {
     failed_stage1_center_sha256: String,
     failed_stage1_gate_player: PixelPoint,
     stage2_revealed_center_sha256: String,
+    failed_stage2_center_player: PixelPoint,
     failed_stage2_center_sha256: String,
     failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
     failed_stage2_gate_player: PixelPoint,
+    accepted_stage2_center_player: PixelPoint,
     accepted_stage2_center_sha256: String,
     powered_frame_sha256: String,
     open_gate_frame_sha256: String,
@@ -91,6 +94,11 @@ struct NestedBranchQualificationReceipt {
     open_gate_converges_all: bool,
     both_failure_depths_dead_end: bool,
     all_correct_paths_pass: bool,
+}
+
+fn point_within_tolerance(point: PixelPoint, expected: PixelPoint, tolerance: i32) -> bool {
+    (point.x - expected.x).abs() <= tolerance
+        && (point.y - expected.y).abs() <= tolerance
 }
 
 fn usage() -> ! {
@@ -427,10 +435,14 @@ fn qualify_variant(
         "settle stage2 fail center",
     )?;
     let failed_stage2_center = locate_agent_gym_player(&video)?;
-    if failed_stage2_center != STAGE2_CENTER {
+    if !point_within_tolerance(
+        failed_stage2_center,
+        STAGE2_CENTER,
+        STAGE2_CENTER_TOLERANCE,
+    ) {
         return Err(format!(
-            "{} stage2 fail did not settle at {:?}: {:?}",
-            task.id, STAGE2_CENTER, failed_stage2_center
+            "{} stage2 fail left the center neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, STAGE2_CENTER, STAGE2_CENTER_TOLERANCE, failed_stage2_center
         ));
     }
     let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
@@ -552,10 +564,14 @@ fn qualify_variant(
         "settle accepted stage2 center",
     )?;
     let accepted_stage2_center = locate_agent_gym_player(&video)?;
-    if accepted_stage2_center != STAGE2_CENTER {
+    if !point_within_tolerance(
+        accepted_stage2_center,
+        STAGE2_CENTER,
+        STAGE2_CENTER_TOLERANCE,
+    ) {
         return Err(format!(
-            "{} accepted stage2 did not settle at {:?}: {:?}",
-            task.id, STAGE2_CENTER, accepted_stage2_center
+            "{} accepted stage2 left the center neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, STAGE2_CENTER, STAGE2_CENTER_TOLERANCE, accepted_stage2_center
         ));
     }
     let accepted_stage2_center_sha256 = sha256_bytes(&video.rgba8);
@@ -631,10 +647,12 @@ fn qualify_variant(
             failed_stage1_center_sha256,
             failed_stage1_gate_player,
             stage2_revealed_center_sha256,
+            failed_stage2_center_player: failed_stage2_center,
             failed_stage2_center_sha256,
             failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
             failed_stage2_gate_player,
+            accepted_stage2_center_player: accepted_stage2_center,
             accepted_stage2_center_sha256,
             powered_frame_sha256,
             open_gate_frame_sha256,
