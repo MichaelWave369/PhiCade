@@ -42,6 +42,8 @@ DEF SELECTOR_MAP      EQU $9800 + 4 * 32 + 9
 DEF BADGE_MAP         EQU $9800 + 1 * 32 + 1
 DEF GENERATOR_MAP     EQU $9800 + 8 * 32 + 9
 DEF GATE_ROW          EQU $9800 + 7 * 32
+DEF STAGE1_SELECTOR_TILE EQU 3
+DEF STAGE2_SELECTOR_TILE EQU 10
 
 SECTION "Header", ROM0[$100]
     nop
@@ -158,6 +160,7 @@ MainLoop:
 
     call ReadAction
     call ReadMove
+    call RenderState
     call WritePlayerOam
 
 .waitVisible:
@@ -528,6 +531,141 @@ ReadMove:
 .doneMove:
     ld a, $30
     ldh [rP1], a
+    ret
+
+RenderState:
+    ; Rendering is a deterministic projection of WRAM state. This repairs any
+    ; transient tile-map write that missed its one-shot transition frame and
+    ; makes convergence evidence depend on state, not timing.
+
+    ld a, [wFailed]
+    and a
+    jp nz, .failed
+
+    ld a, [wStage2Done]
+    and a
+    jp nz, .accepted
+
+    ld a, [wStage1Done]
+    and a
+    jp nz, .stage2
+
+.initial:
+    ld hl, STAGE1_LEFT_MAP
+    ld a, 3
+    ld [hl], a
+    ld hl, STAGE1_RIGHT_MAP
+    ld a, 7
+    ld [hl], a
+    ld hl, STAGE2_LEFT_MAP
+    xor a
+    ld [hl], a
+    ld hl, STAGE2_RIGHT_MAP
+    ld [hl], a
+    ld hl, SELECTOR_MAP
+    ld a, STAGE1_SELECTOR_TILE
+    ld [hl], a
+    ld hl, BADGE_MAP
+    xor a
+    ld [hl], a
+    ld hl, GENERATOR_MAP
+    ld a, 5
+    ld [hl], a
+    jp .gate
+
+.stage2:
+    ld hl, STAGE1_LEFT_MAP
+    xor a
+    ld [hl], a
+    ld hl, STAGE1_RIGHT_MAP
+    ld [hl], a
+    ld hl, STAGE2_LEFT_MAP
+    ld a, 10
+    ld [hl], a
+    ld hl, STAGE2_RIGHT_MAP
+    ld a, 11
+    ld [hl], a
+    ld hl, SELECTOR_MAP
+    ld a, STAGE2_SELECTOR_TILE
+    ld [hl], a
+    ld hl, BADGE_MAP
+    xor a
+    ld [hl], a
+    ld hl, GENERATOR_MAP
+    ld a, 5
+    ld [hl], a
+    jp .gate
+
+.accepted:
+    ld hl, STAGE1_LEFT_MAP
+    xor a
+    ld [hl], a
+    ld hl, STAGE1_RIGHT_MAP
+    ld [hl], a
+    ld hl, STAGE2_LEFT_MAP
+    ld [hl], a
+    ld hl, STAGE2_RIGHT_MAP
+    ld [hl], a
+    ld hl, SELECTOR_MAP
+    ld [hl], a
+
+    ld a, [wPowerOn]
+    and a
+    jr nz, .powered
+
+    ld hl, BADGE_MAP
+    ld a, 8
+    ld [hl], a
+    ld hl, GENERATOR_MAP
+    ld a, 5
+    ld [hl], a
+    jr .gate
+
+.powered:
+    ld hl, BADGE_MAP
+    xor a
+    ld [hl], a
+    ld hl, GENERATOR_MAP
+    ld a, 6
+    ld [hl], a
+    jr .gate
+
+.failed:
+    ld hl, STAGE1_LEFT_MAP
+    xor a
+    ld [hl], a
+    ld hl, STAGE1_RIGHT_MAP
+    ld [hl], a
+    ld hl, STAGE2_LEFT_MAP
+    ld [hl], a
+    ld hl, STAGE2_RIGHT_MAP
+    ld [hl], a
+    ld hl, BADGE_MAP
+    ld [hl], a
+    ld hl, SELECTOR_MAP
+    ld a, 9
+    ld [hl], a
+    ld hl, GENERATOR_MAP
+    ld a, 5
+    ld [hl], a
+
+.gate:
+    ld a, [wGateOpen]
+    and a
+    jr nz, .gateOpen
+    ld a, 4
+    jr .writeGate
+
+.gateOpen:
+    xor a
+
+.writeGate:
+    ld hl, GATE_ROW
+    ld b, 20
+.writeGateLoop:
+    ld [hli], a
+    dec b
+    jr nz, .writeGateLoop
     ret
 
 WritePlayerOam:
