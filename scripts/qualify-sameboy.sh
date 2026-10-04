@@ -532,6 +532,14 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_B_CRS_SF_OBJ" "$CTX_B_CRS_S
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_B_CRS_SF_ROM" "$CTX_B_CRS_SF_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBCRSF" "$CTX_B_CRS_SF_ROM"
 
+printf '==> verifying Selective Context build-path uniqueness\n'
+CTX_SOURCE_PATH_COUNT=$(printf '%s\n' "$CTX_A_CIR_TM_SRC" "$CTX_A_CIR_TF_SRC" "$CTX_A_CIR_SM_SRC" "$CTX_A_CIR_SF_SRC" "$CTX_A_CRS_TM_SRC" "$CTX_A_CRS_TF_SRC" "$CTX_A_CRS_SM_SRC" "$CTX_A_CRS_SF_SRC" "$CTX_B_CIR_TM_SRC" "$CTX_B_CIR_TF_SRC" "$CTX_B_CIR_SM_SRC" "$CTX_B_CIR_SF_SRC" "$CTX_B_CRS_TM_SRC" "$CTX_B_CRS_TF_SRC" "$CTX_B_CRS_SM_SRC" "$CTX_B_CRS_SF_SRC" | sort -u | wc -l)
+CTX_ROM_PATH_COUNT=$(printf '%s\n' "$CTX_A_CIR_TM_ROM" "$CTX_A_CIR_TF_ROM" "$CTX_A_CIR_SM_ROM" "$CTX_A_CIR_SF_ROM" "$CTX_A_CRS_TM_ROM" "$CTX_A_CRS_TF_ROM" "$CTX_A_CRS_SM_ROM" "$CTX_A_CRS_SF_ROM" "$CTX_B_CIR_TM_ROM" "$CTX_B_CIR_TF_ROM" "$CTX_B_CIR_SM_ROM" "$CTX_B_CIR_SF_ROM" "$CTX_B_CRS_TM_ROM" "$CTX_B_CRS_TF_ROM" "$CTX_B_CRS_SM_ROM" "$CTX_B_CRS_SF_ROM" | sort -u | wc -l)
+if [ "$CTX_SOURCE_PATH_COUNT" -ne 16 ] || [ "$CTX_ROM_PATH_COUNT" -ne 16 ]; then
+  echo "Selective Context provenance paths are not unique: sources=$CTX_SOURCE_PATH_COUNT roms=$CTX_ROM_PATH_COUNT" >&2
+  exit 1
+fi
+
 printf '==> benchmark suite hashes\n'
 sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM" "$CTX_A_CIR_TM_SRC" "$CTX_A_CIR_TM_ROM" "$CTX_A_CIR_TF_SRC" "$CTX_A_CIR_TF_ROM" "$CTX_A_CIR_SM_SRC" "$CTX_A_CIR_SM_ROM" "$CTX_A_CIR_SF_SRC" "$CTX_A_CIR_SF_ROM" "$CTX_A_CRS_TM_SRC" "$CTX_A_CRS_TM_ROM" "$CTX_A_CRS_TF_SRC" "$CTX_A_CRS_TF_ROM" "$CTX_A_CRS_SM_SRC" "$CTX_A_CRS_SM_ROM" "$CTX_A_CRS_SF_SRC" "$CTX_A_CRS_SF_ROM" "$CTX_B_CIR_TM_SRC" "$CTX_B_CIR_TM_ROM" "$CTX_B_CIR_TF_SRC" "$CTX_B_CIR_TF_ROM" "$CTX_B_CIR_SM_SRC" "$CTX_B_CIR_SM_ROM" "$CTX_B_CIR_SF_SRC" "$CTX_B_CIR_SF_ROM" "$CTX_B_CRS_TM_SRC" "$CTX_B_CRS_TM_ROM" "$CTX_B_CRS_TF_SRC" "$CTX_B_CRS_TF_ROM" "$CTX_B_CRS_SM_SRC" "$CTX_B_CRS_SM_ROM" "$CTX_B_CRS_SF_SRC" "$CTX_B_CRS_SF_ROM"
 
@@ -1014,6 +1022,155 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "sequential-rule-swapped-square-flip-flip-v1" \
   --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-flip-qualification.json"
 
+printf '==> running Selective Context 2x2x2x2 qualification\n'
+cargo run -p phicade-libretro --bin selective_context_qualify -- \
+  --core "$CORE" \
+  --rom "selective-context-a-circle-triangle-match-v1=$CTX_A_CIR_TM_ROM" \
+  --rom "selective-context-a-circle-triangle-flip-v1=$CTX_A_CIR_TF_ROM" \
+  --rom "selective-context-a-circle-square-match-v1=$CTX_A_CIR_SM_ROM" \
+  --rom "selective-context-a-circle-square-flip-v1=$CTX_A_CIR_SF_ROM" \
+  --rom "selective-context-a-cross-triangle-match-v1=$CTX_A_CRS_TM_ROM" \
+  --rom "selective-context-a-cross-triangle-flip-v1=$CTX_A_CRS_TF_ROM" \
+  --rom "selective-context-a-cross-square-match-v1=$CTX_A_CRS_SM_ROM" \
+  --rom "selective-context-a-cross-square-flip-v1=$CTX_A_CRS_SF_ROM" \
+  --rom "selective-context-b-circle-triangle-match-v1=$CTX_B_CIR_TM_ROM" \
+  --rom "selective-context-b-circle-triangle-flip-v1=$CTX_B_CIR_TF_ROM" \
+  --rom "selective-context-b-circle-square-match-v1=$CTX_B_CIR_SM_ROM" \
+  --rom "selective-context-b-circle-square-flip-v1=$CTX_B_CIR_SF_ROM" \
+  --rom "selective-context-b-cross-triangle-match-v1=$CTX_B_CRS_TM_ROM" \
+  --rom "selective-context-b-cross-triangle-flip-v1=$CTX_B_CRS_TF_ROM" \
+  --rom "selective-context-b-cross-square-match-v1=$CTX_B_CRS_SM_ROM" \
+  --rom "selective-context-b-cross-square-flip-v1=$CTX_B_CRS_SF_ROM" \
+  --receipt "$ROOT/artifacts/selective-context-routing-qualification.json"
+
+printf '==> running Selective Context a-circle-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CIR_TM_ROM" \
+  --source "$CTX_A_CIR_TM_SRC" \
+  --task "selective-context-a-circle-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-circle-triangle-match-qualification.json"
+
+printf '==> running Selective Context a-circle-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CIR_TF_ROM" \
+  --source "$CTX_A_CIR_TF_SRC" \
+  --task "selective-context-a-circle-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-circle-triangle-flip-qualification.json"
+
+printf '==> running Selective Context a-circle-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CIR_SM_ROM" \
+  --source "$CTX_A_CIR_SM_SRC" \
+  --task "selective-context-a-circle-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-circle-square-match-qualification.json"
+
+printf '==> running Selective Context a-circle-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CIR_SF_ROM" \
+  --source "$CTX_A_CIR_SF_SRC" \
+  --task "selective-context-a-circle-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-circle-square-flip-qualification.json"
+
+printf '==> running Selective Context a-cross-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CRS_TM_ROM" \
+  --source "$CTX_A_CRS_TM_SRC" \
+  --task "selective-context-a-cross-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-cross-triangle-match-qualification.json"
+
+printf '==> running Selective Context a-cross-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CRS_TF_ROM" \
+  --source "$CTX_A_CRS_TF_SRC" \
+  --task "selective-context-a-cross-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-cross-triangle-flip-qualification.json"
+
+printf '==> running Selective Context a-cross-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CRS_SM_ROM" \
+  --source "$CTX_A_CRS_SM_SRC" \
+  --task "selective-context-a-cross-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-cross-square-match-qualification.json"
+
+printf '==> running Selective Context a-cross-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_A_CRS_SF_ROM" \
+  --source "$CTX_A_CRS_SF_SRC" \
+  --task "selective-context-a-cross-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-a-cross-square-flip-qualification.json"
+
+printf '==> running Selective Context b-circle-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CIR_TM_ROM" \
+  --source "$CTX_B_CIR_TM_SRC" \
+  --task "selective-context-b-circle-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-circle-triangle-match-qualification.json"
+
+printf '==> running Selective Context b-circle-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CIR_TF_ROM" \
+  --source "$CTX_B_CIR_TF_SRC" \
+  --task "selective-context-b-circle-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-circle-triangle-flip-qualification.json"
+
+printf '==> running Selective Context b-circle-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CIR_SM_ROM" \
+  --source "$CTX_B_CIR_SM_SRC" \
+  --task "selective-context-b-circle-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-circle-square-match-qualification.json"
+
+printf '==> running Selective Context b-circle-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CIR_SF_ROM" \
+  --source "$CTX_B_CIR_SF_SRC" \
+  --task "selective-context-b-circle-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-circle-square-flip-qualification.json"
+
+printf '==> running Selective Context b-cross-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CRS_TM_ROM" \
+  --source "$CTX_B_CRS_TM_SRC" \
+  --task "selective-context-b-cross-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-match-qualification.json"
+
+printf '==> running Selective Context b-cross-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CRS_TF_ROM" \
+  --source "$CTX_B_CRS_TF_SRC" \
+  --task "selective-context-b-cross-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-flip-qualification.json"
+
+printf '==> running Selective Context b-cross-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CRS_SM_ROM" \
+  --source "$CTX_B_CRS_SM_SRC" \
+  --task "selective-context-b-cross-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-match-qualification.json"
+
+printf '==> running Selective Context b-cross-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$CTX_B_CRS_SF_ROM" \
+  --source "$CTX_B_CRS_SF_SRC" \
+  --task "selective-context-b-cross-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-flip-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -1074,3 +1231,20 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-matc
 printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-match-flip-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-match-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/selective-context-routing-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-circle-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-circle-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-circle-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-circle-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-cross-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-cross-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-cross-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-a-cross-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-circle-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-circle-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-circle-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-circle-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-flip-qualification.json"
