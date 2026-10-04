@@ -858,7 +858,35 @@ fn run() -> Result<(), String> {
         && all_correct_paths_pass)
     {
         return Err(format!(
-            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}"
+            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
+            triangle_circle.failed_stage2_center_player,
+            triangle_circle.accepted_stage2_center_player,
+            triangle_circle.final_player,
+            triangle_circle.failed_stage2_center_sha256,
+            triangle_circle.accepted_stage2_center_sha256,
+            triangle_circle.powered_frame_sha256,
+            triangle_circle.open_gate_frame_sha256,
+            triangle_cross.failed_stage2_center_player,
+            triangle_cross.accepted_stage2_center_player,
+            triangle_cross.final_player,
+            triangle_cross.failed_stage2_center_sha256,
+            triangle_cross.accepted_stage2_center_sha256,
+            triangle_cross.powered_frame_sha256,
+            triangle_cross.open_gate_frame_sha256,
+            square_circle.failed_stage2_center_player,
+            square_circle.accepted_stage2_center_player,
+            square_circle.final_player,
+            square_circle.failed_stage2_center_sha256,
+            square_circle.accepted_stage2_center_sha256,
+            square_circle.powered_frame_sha256,
+            square_circle.open_gate_frame_sha256,
+            square_cross.failed_stage2_center_player,
+            square_cross.accepted_stage2_center_player,
+            square_cross.final_player,
+            square_cross.failed_stage2_center_sha256,
+            square_cross.accepted_stage2_center_sha256,
+            square_cross.powered_frame_sha256,
+            square_cross.open_gate_frame_sha256,
         ));
     }
 
