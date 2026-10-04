@@ -29,7 +29,10 @@ const SETTLE_FRAMES: u64 = 2;
 
 const START: PixelPoint = PixelPoint { x: 72, y: 112 };
 const STAGE2_CENTER: PixelPoint = PixelPoint { x: 72, y: 80 };
-const STAGE2_CENTER_TOLERANCE: i32 = 2;
+const GENERATOR_PLAYER: PixelPoint = PixelPoint { x: 72, y: 64 };
+const GATE_PLAYER: PixelPoint = PixelPoint { x: 72, y: 56 };
+const CHECKPOINT_TOLERANCE: i32 = 2;
+const ACTOR_MASK_PAD: i32 = 4;
 const GATE_STOP_Y: i32 = 56;
 
 #[derive(Debug, Clone, Copy)]
@@ -56,13 +59,19 @@ struct VariantEvidence {
     stage2_revealed_center_sha256: String,
     failed_stage2_center_player: PixelPoint,
     failed_stage2_center_sha256: String,
+    failed_stage2_world_sha256: String,
     failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
     failed_stage2_gate_player: PixelPoint,
     accepted_stage2_center_player: PixelPoint,
     accepted_stage2_center_sha256: String,
+    accepted_stage2_world_sha256: String,
+    powered_player: PixelPoint,
     powered_frame_sha256: String,
+    powered_world_sha256: String,
+    open_gate_player: PixelPoint,
     open_gate_frame_sha256: String,
+    open_gate_world_sha256: String,
     final_player: PixelPoint,
     wrong_stage1_dead_end: bool,
     wrong_stage2_generator_refused: bool,
@@ -92,6 +101,7 @@ struct NestedBranchQualificationReceipt {
     accepted_stage2_converges_all: bool,
     powered_converges_all: bool,
     open_gate_converges_all: bool,
+    actor_checkpoints_in_bounds_all: bool,
     both_failure_depths_dead_end: bool,
     all_correct_paths_pass: bool,
 }
@@ -99,6 +109,29 @@ struct NestedBranchQualificationReceipt {
 fn point_within_tolerance(point: PixelPoint, expected: PixelPoint, tolerance: i32) -> bool {
     (point.x - expected.x).abs() <= tolerance
         && (point.y - expected.y).abs() <= tolerance
+}
+
+fn sha256_world_without_actor(video: &FrameBuffer, actor: PixelPoint) -> String {
+    let mut rgba = video.rgba8.clone();
+    let width = video.width as i32;
+    let height = video.height as i32;
+    let x0 = (actor.x - ACTOR_MASK_PAD).max(0);
+    let y0 = (actor.y - ACTOR_MASK_PAD).max(0);
+    let x1 = (actor.x + 8 + ACTOR_MASK_PAD).min(width);
+    let y1 = (actor.y + 8 + ACTOR_MASK_PAD).min(height);
+
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let index = ((y * width + x) * 4) as usize;
+            if index + 3 < rgba.len() {
+                rgba[index] = 0;
+                rgba[index + 1] = 0;
+                rgba[index + 2] = 0;
+                rgba[index + 3] = 0;
+            }
+        }
+    }
+    sha256_bytes(&rgba)
 }
 
 fn usage() -> ! {
@@ -438,14 +471,16 @@ fn qualify_variant(
     if !point_within_tolerance(
         failed_stage2_center,
         STAGE2_CENTER,
-        STAGE2_CENTER_TOLERANCE,
+        CHECKPOINT_TOLERANCE,
     ) {
         return Err(format!(
             "{} stage2 fail left the center neighborhood: expected {:?} ±{}px, got {:?}",
-            task.id, STAGE2_CENTER, STAGE2_CENTER_TOLERANCE, failed_stage2_center
+            task.id, STAGE2_CENTER, CHECKPOINT_TOLERANCE, failed_stage2_center
         ));
     }
     let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
+    let failed_stage2_world_sha256 =
+        sha256_world_without_actor(&video, STAGE2_CENTER);
 
     hold_button(
         &mut core,
@@ -567,14 +602,16 @@ fn qualify_variant(
     if !point_within_tolerance(
         accepted_stage2_center,
         STAGE2_CENTER,
-        STAGE2_CENTER_TOLERANCE,
+        CHECKPOINT_TOLERANCE,
     ) {
         return Err(format!(
             "{} accepted stage2 left the center neighborhood: expected {:?} ±{}px, got {:?}",
-            task.id, STAGE2_CENTER, STAGE2_CENTER_TOLERANCE, accepted_stage2_center
+            task.id, STAGE2_CENTER, CHECKPOINT_TOLERANCE, accepted_stage2_center
         ));
     }
     let accepted_stage2_center_sha256 = sha256_bytes(&video.rgba8);
+    let accepted_stage2_world_sha256 =
+        sha256_world_without_actor(&video, STAGE2_CENTER);
 
     hold_button(
         &mut core,
@@ -606,7 +643,16 @@ fn qualify_variant(
         &mut audio,
         "settle powered generator",
     )?;
+    let powered_player = locate_agent_gym_player(&video)?;
+    if !point_within_tolerance(powered_player, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} powered checkpoint left generator neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE, powered_player
+        ));
+    }
     let powered_frame_sha256 = sha256_bytes(&video.rgba8);
+    let powered_world_sha256 =
+        sha256_world_without_actor(&video, GENERATOR_PLAYER);
 
     hold_button(
         &mut core,
@@ -638,7 +684,16 @@ fn qualify_variant(
         &mut audio,
         "settle open gate",
     )?;
+    let open_gate_player = locate_agent_gym_player(&video)?;
+    if !point_within_tolerance(open_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} open-gate checkpoint left gate neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, GATE_PLAYER, CHECKPOINT_TOLERANCE, open_gate_player
+        ));
+    }
     let open_gate_frame_sha256 = sha256_bytes(&video.rgba8);
+    let open_gate_world_sha256 =
+        sha256_world_without_actor(&video, GATE_PLAYER);
 
     hold_button(
         &mut core,
@@ -663,13 +718,19 @@ fn qualify_variant(
             stage2_revealed_center_sha256,
             failed_stage2_center_player: failed_stage2_center,
             failed_stage2_center_sha256,
+            failed_stage2_world_sha256,
             failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
             failed_stage2_gate_player,
             accepted_stage2_center_player: accepted_stage2_center,
             accepted_stage2_center_sha256,
+            accepted_stage2_world_sha256,
+            powered_player,
             powered_frame_sha256,
+            powered_world_sha256,
+            open_gate_player,
             open_gate_frame_sha256,
+            open_gate_world_sha256,
             final_player,
             wrong_stage1_dead_end,
             wrong_stage2_generator_refused,
@@ -813,29 +874,56 @@ fn run() -> Result<(), String> {
         &square_cross.failed_stage1_center_sha256,
     ]);
     let stage2_fail_converges_all = all_equal([
-        &triangle_circle.failed_stage2_center_sha256,
-        &triangle_cross.failed_stage2_center_sha256,
-        &square_circle.failed_stage2_center_sha256,
-        &square_cross.failed_stage2_center_sha256,
+        &triangle_circle.failed_stage2_world_sha256,
+        &triangle_cross.failed_stage2_world_sha256,
+        &square_circle.failed_stage2_world_sha256,
+        &square_cross.failed_stage2_world_sha256,
     ]);
     let accepted_stage2_converges_all = all_equal([
-        &triangle_circle.accepted_stage2_center_sha256,
-        &triangle_cross.accepted_stage2_center_sha256,
-        &square_circle.accepted_stage2_center_sha256,
-        &square_cross.accepted_stage2_center_sha256,
+        &triangle_circle.accepted_stage2_world_sha256,
+        &triangle_cross.accepted_stage2_world_sha256,
+        &square_circle.accepted_stage2_world_sha256,
+        &square_cross.accepted_stage2_world_sha256,
     ]);
     let powered_converges_all = all_equal([
-        &triangle_circle.powered_frame_sha256,
-        &triangle_cross.powered_frame_sha256,
-        &square_circle.powered_frame_sha256,
-        &square_cross.powered_frame_sha256,
+        &triangle_circle.powered_world_sha256,
+        &triangle_cross.powered_world_sha256,
+        &square_circle.powered_world_sha256,
+        &square_cross.powered_world_sha256,
     ]);
     let open_gate_converges_all = all_equal([
-        &triangle_circle.open_gate_frame_sha256,
-        &triangle_cross.open_gate_frame_sha256,
-        &square_circle.open_gate_frame_sha256,
-        &square_cross.open_gate_frame_sha256,
+        &triangle_circle.open_gate_world_sha256,
+        &triangle_cross.open_gate_world_sha256,
+        &square_circle.open_gate_world_sha256,
+        &square_cross.open_gate_world_sha256,
     ]);
+
+    let actor_checkpoints_in_bounds_all = [
+        &triangle_circle,
+        &triangle_cross,
+        &square_circle,
+        &square_cross,
+    ]
+    .iter()
+    .all(|evidence| {
+        point_within_tolerance(
+            evidence.failed_stage2_center_player,
+            STAGE2_CENTER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.accepted_stage2_center_player,
+            STAGE2_CENTER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.powered_player,
+            GENERATOR_PLAYER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.open_gate_player,
+            GATE_PLAYER,
+            CHECKPOINT_TOLERANCE,
+        )
+    });
 
     let both_failure_depths_dead_end = [
         &triangle_circle,
@@ -868,11 +956,12 @@ fn run() -> Result<(), String> {
         && accepted_stage2_converges_all
         && powered_converges_all
         && open_gate_converges_all
+        && actor_checkpoints_in_bounds_all
         && both_failure_depths_dead_end
         && all_correct_paths_pass)
     {
         return Err(format!(
-            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
+            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} actor_bounds={actor_checkpoints_in_bounds_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
             triangle_circle.failed_stage2_center_player,
             triangle_circle.accepted_stage2_center_player,
             triangle_circle.final_player,
@@ -924,6 +1013,7 @@ fn run() -> Result<(), String> {
         accepted_stage2_converges_all,
         powered_converges_all,
         open_gate_converges_all,
+        actor_checkpoints_in_bounds_all,
         both_failure_depths_dead_end,
         all_correct_paths_pass,
     };
