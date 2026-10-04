@@ -540,8 +540,144 @@ if [ "$CTX_SOURCE_PATH_COUNT" -ne 16 ] || [ "$CTX_ROM_PATH_COUNT" -ne 16 ]; then
   exit 1
 fi
 
+printf '==> assembling source-first Indirect Context a-normal-star-triangle\n'
+IND_A_NOR_STAR_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-normal-star-triangle/main.asm"
+IND_A_NOR_STAR_TRI_OBJ="$WORK/agent-gym-indirect-context-a-normal-star-triangle.o"
+IND_A_NOR_STAR_TRI_ROM="$WORK/agent-gym-indirect-context-a-normal-star-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_NOR_STAR_TRI_OBJ" "$IND_A_NOR_STAR_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_NOR_STAR_TRI_ROM" "$IND_A_NOR_STAR_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIANSTT" "$IND_A_NOR_STAR_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context a-normal-star-square\n'
+IND_A_NOR_STAR_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-normal-star-square/main.asm"
+IND_A_NOR_STAR_SQR_OBJ="$WORK/agent-gym-indirect-context-a-normal-star-square.o"
+IND_A_NOR_STAR_SQR_ROM="$WORK/agent-gym-indirect-context-a-normal-star-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_NOR_STAR_SQR_OBJ" "$IND_A_NOR_STAR_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_NOR_STAR_SQR_ROM" "$IND_A_NOR_STAR_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIANSTS" "$IND_A_NOR_STAR_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context a-normal-moon-triangle\n'
+IND_A_NOR_MOON_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-normal-moon-triangle/main.asm"
+IND_A_NOR_MOON_TRI_OBJ="$WORK/agent-gym-indirect-context-a-normal-moon-triangle.o"
+IND_A_NOR_MOON_TRI_ROM="$WORK/agent-gym-indirect-context-a-normal-moon-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_NOR_MOON_TRI_OBJ" "$IND_A_NOR_MOON_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_NOR_MOON_TRI_ROM" "$IND_A_NOR_MOON_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIANMOT" "$IND_A_NOR_MOON_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context a-normal-moon-square\n'
+IND_A_NOR_MOON_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-normal-moon-square/main.asm"
+IND_A_NOR_MOON_SQR_OBJ="$WORK/agent-gym-indirect-context-a-normal-moon-square.o"
+IND_A_NOR_MOON_SQR_ROM="$WORK/agent-gym-indirect-context-a-normal-moon-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_NOR_MOON_SQR_OBJ" "$IND_A_NOR_MOON_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_NOR_MOON_SQR_ROM" "$IND_A_NOR_MOON_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIANMOS" "$IND_A_NOR_MOON_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context a-swapped-star-triangle\n'
+IND_A_SWP_STAR_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-swapped-star-triangle/main.asm"
+IND_A_SWP_STAR_TRI_OBJ="$WORK/agent-gym-indirect-context-a-swapped-star-triangle.o"
+IND_A_SWP_STAR_TRI_ROM="$WORK/agent-gym-indirect-context-a-swapped-star-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_SWP_STAR_TRI_OBJ" "$IND_A_SWP_STAR_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_SWP_STAR_TRI_ROM" "$IND_A_SWP_STAR_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIASSTT" "$IND_A_SWP_STAR_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context a-swapped-star-square\n'
+IND_A_SWP_STAR_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-swapped-star-square/main.asm"
+IND_A_SWP_STAR_SQR_OBJ="$WORK/agent-gym-indirect-context-a-swapped-star-square.o"
+IND_A_SWP_STAR_SQR_ROM="$WORK/agent-gym-indirect-context-a-swapped-star-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_SWP_STAR_SQR_OBJ" "$IND_A_SWP_STAR_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_SWP_STAR_SQR_ROM" "$IND_A_SWP_STAR_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIASSTS" "$IND_A_SWP_STAR_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context a-swapped-moon-triangle\n'
+IND_A_SWP_MOON_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-swapped-moon-triangle/main.asm"
+IND_A_SWP_MOON_TRI_OBJ="$WORK/agent-gym-indirect-context-a-swapped-moon-triangle.o"
+IND_A_SWP_MOON_TRI_ROM="$WORK/agent-gym-indirect-context-a-swapped-moon-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_SWP_MOON_TRI_OBJ" "$IND_A_SWP_MOON_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_SWP_MOON_TRI_ROM" "$IND_A_SWP_MOON_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIASMOT" "$IND_A_SWP_MOON_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context a-swapped-moon-square\n'
+IND_A_SWP_MOON_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-a-swapped-moon-square/main.asm"
+IND_A_SWP_MOON_SQR_OBJ="$WORK/agent-gym-indirect-context-a-swapped-moon-square.o"
+IND_A_SWP_MOON_SQR_ROM="$WORK/agent-gym-indirect-context-a-swapped-moon-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_A_SWP_MOON_SQR_OBJ" "$IND_A_SWP_MOON_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_A_SWP_MOON_SQR_ROM" "$IND_A_SWP_MOON_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIASMOS" "$IND_A_SWP_MOON_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context b-normal-star-triangle\n'
+IND_B_NOR_STAR_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-normal-star-triangle/main.asm"
+IND_B_NOR_STAR_TRI_OBJ="$WORK/agent-gym-indirect-context-b-normal-star-triangle.o"
+IND_B_NOR_STAR_TRI_ROM="$WORK/agent-gym-indirect-context-b-normal-star-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_NOR_STAR_TRI_OBJ" "$IND_B_NOR_STAR_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_NOR_STAR_TRI_ROM" "$IND_B_NOR_STAR_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBNSTT" "$IND_B_NOR_STAR_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context b-normal-star-square\n'
+IND_B_NOR_STAR_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-normal-star-square/main.asm"
+IND_B_NOR_STAR_SQR_OBJ="$WORK/agent-gym-indirect-context-b-normal-star-square.o"
+IND_B_NOR_STAR_SQR_ROM="$WORK/agent-gym-indirect-context-b-normal-star-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_NOR_STAR_SQR_OBJ" "$IND_B_NOR_STAR_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_NOR_STAR_SQR_ROM" "$IND_B_NOR_STAR_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBNSTS" "$IND_B_NOR_STAR_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context b-normal-moon-triangle\n'
+IND_B_NOR_MOON_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-normal-moon-triangle/main.asm"
+IND_B_NOR_MOON_TRI_OBJ="$WORK/agent-gym-indirect-context-b-normal-moon-triangle.o"
+IND_B_NOR_MOON_TRI_ROM="$WORK/agent-gym-indirect-context-b-normal-moon-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_NOR_MOON_TRI_OBJ" "$IND_B_NOR_MOON_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_NOR_MOON_TRI_ROM" "$IND_B_NOR_MOON_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBNMOT" "$IND_B_NOR_MOON_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context b-normal-moon-square\n'
+IND_B_NOR_MOON_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-normal-moon-square/main.asm"
+IND_B_NOR_MOON_SQR_OBJ="$WORK/agent-gym-indirect-context-b-normal-moon-square.o"
+IND_B_NOR_MOON_SQR_ROM="$WORK/agent-gym-indirect-context-b-normal-moon-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_NOR_MOON_SQR_OBJ" "$IND_B_NOR_MOON_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_NOR_MOON_SQR_ROM" "$IND_B_NOR_MOON_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBNMOS" "$IND_B_NOR_MOON_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context b-swapped-star-triangle\n'
+IND_B_SWP_STAR_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-swapped-star-triangle/main.asm"
+IND_B_SWP_STAR_TRI_OBJ="$WORK/agent-gym-indirect-context-b-swapped-star-triangle.o"
+IND_B_SWP_STAR_TRI_ROM="$WORK/agent-gym-indirect-context-b-swapped-star-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_SWP_STAR_TRI_OBJ" "$IND_B_SWP_STAR_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_SWP_STAR_TRI_ROM" "$IND_B_SWP_STAR_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBSSTT" "$IND_B_SWP_STAR_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context b-swapped-star-square\n'
+IND_B_SWP_STAR_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-swapped-star-square/main.asm"
+IND_B_SWP_STAR_SQR_OBJ="$WORK/agent-gym-indirect-context-b-swapped-star-square.o"
+IND_B_SWP_STAR_SQR_ROM="$WORK/agent-gym-indirect-context-b-swapped-star-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_SWP_STAR_SQR_OBJ" "$IND_B_SWP_STAR_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_SWP_STAR_SQR_ROM" "$IND_B_SWP_STAR_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBSSTS" "$IND_B_SWP_STAR_SQR_ROM"
+
+printf '==> assembling source-first Indirect Context b-swapped-moon-triangle\n'
+IND_B_SWP_MOON_TRI_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-swapped-moon-triangle/main.asm"
+IND_B_SWP_MOON_TRI_OBJ="$WORK/agent-gym-indirect-context-b-swapped-moon-triangle.o"
+IND_B_SWP_MOON_TRI_ROM="$WORK/agent-gym-indirect-context-b-swapped-moon-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_SWP_MOON_TRI_OBJ" "$IND_B_SWP_MOON_TRI_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_SWP_MOON_TRI_ROM" "$IND_B_SWP_MOON_TRI_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBSMOT" "$IND_B_SWP_MOON_TRI_ROM"
+
+printf '==> assembling source-first Indirect Context b-swapped-moon-square\n'
+IND_B_SWP_MOON_SQR_SRC="$ROOT/benchmarks/agent-gym-indirect-context-b-swapped-moon-square/main.asm"
+IND_B_SWP_MOON_SQR_OBJ="$WORK/agent-gym-indirect-context-b-swapped-moon-square.o"
+IND_B_SWP_MOON_SQR_ROM="$WORK/agent-gym-indirect-context-b-swapped-moon-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$IND_B_SWP_MOON_SQR_OBJ" "$IND_B_SWP_MOON_SQR_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$IND_B_SWP_MOON_SQR_ROM" "$IND_B_SWP_MOON_SQR_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBSMOS" "$IND_B_SWP_MOON_SQR_ROM"
+
+printf '==> verifying Indirect Context build-path uniqueness\n'
+IND_SOURCE_PATH_COUNT=$(printf '%s\n' "$IND_A_NOR_STAR_TRI_SRC" "$IND_A_NOR_STAR_SQR_SRC" "$IND_A_NOR_MOON_TRI_SRC" "$IND_A_NOR_MOON_SQR_SRC" "$IND_A_SWP_STAR_TRI_SRC" "$IND_A_SWP_STAR_SQR_SRC" "$IND_A_SWP_MOON_TRI_SRC" "$IND_A_SWP_MOON_SQR_SRC" "$IND_B_NOR_STAR_TRI_SRC" "$IND_B_NOR_STAR_SQR_SRC" "$IND_B_NOR_MOON_TRI_SRC" "$IND_B_NOR_MOON_SQR_SRC" "$IND_B_SWP_STAR_TRI_SRC" "$IND_B_SWP_STAR_SQR_SRC" "$IND_B_SWP_MOON_TRI_SRC" "$IND_B_SWP_MOON_SQR_SRC" | sort -u | wc -l)
+IND_ROM_PATH_COUNT=$(printf '%s\n' "$IND_A_NOR_STAR_TRI_ROM" "$IND_A_NOR_STAR_SQR_ROM" "$IND_A_NOR_MOON_TRI_ROM" "$IND_A_NOR_MOON_SQR_ROM" "$IND_A_SWP_STAR_TRI_ROM" "$IND_A_SWP_STAR_SQR_ROM" "$IND_A_SWP_MOON_TRI_ROM" "$IND_A_SWP_MOON_SQR_ROM" "$IND_B_NOR_STAR_TRI_ROM" "$IND_B_NOR_STAR_SQR_ROM" "$IND_B_NOR_MOON_TRI_ROM" "$IND_B_NOR_MOON_SQR_ROM" "$IND_B_SWP_STAR_TRI_ROM" "$IND_B_SWP_STAR_SQR_ROM" "$IND_B_SWP_MOON_TRI_ROM" "$IND_B_SWP_MOON_SQR_ROM" | sort -u | wc -l)
+if [ "$IND_SOURCE_PATH_COUNT" -ne 16 ] || [ "$IND_ROM_PATH_COUNT" -ne 16 ]; then
+  echo "Indirect Context provenance paths are not unique: sources=$IND_SOURCE_PATH_COUNT roms=$IND_ROM_PATH_COUNT" >&2
+  exit 1
+fi
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM" "$CTX_A_CIR_TM_SRC" "$CTX_A_CIR_TM_ROM" "$CTX_A_CIR_TF_SRC" "$CTX_A_CIR_TF_ROM" "$CTX_A_CIR_SM_SRC" "$CTX_A_CIR_SM_ROM" "$CTX_A_CIR_SF_SRC" "$CTX_A_CIR_SF_ROM" "$CTX_A_CRS_TM_SRC" "$CTX_A_CRS_TM_ROM" "$CTX_A_CRS_TF_SRC" "$CTX_A_CRS_TF_ROM" "$CTX_A_CRS_SM_SRC" "$CTX_A_CRS_SM_ROM" "$CTX_A_CRS_SF_SRC" "$CTX_A_CRS_SF_ROM" "$CTX_B_CIR_TM_SRC" "$CTX_B_CIR_TM_ROM" "$CTX_B_CIR_TF_SRC" "$CTX_B_CIR_TF_ROM" "$CTX_B_CIR_SM_SRC" "$CTX_B_CIR_SM_ROM" "$CTX_B_CIR_SF_SRC" "$CTX_B_CIR_SF_ROM" "$CTX_B_CRS_TM_SRC" "$CTX_B_CRS_TM_ROM" "$CTX_B_CRS_TF_SRC" "$CTX_B_CRS_TF_ROM" "$CTX_B_CRS_SM_SRC" "$CTX_B_CRS_SM_ROM" "$CTX_B_CRS_SF_SRC" "$CTX_B_CRS_SF_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM" "$CTX_A_CIR_TM_SRC" "$CTX_A_CIR_TM_ROM" "$CTX_A_CIR_TF_SRC" "$CTX_A_CIR_TF_ROM" "$CTX_A_CIR_SM_SRC" "$CTX_A_CIR_SM_ROM" "$CTX_A_CIR_SF_SRC" "$CTX_A_CIR_SF_ROM" "$CTX_A_CRS_TM_SRC" "$CTX_A_CRS_TM_ROM" "$CTX_A_CRS_TF_SRC" "$CTX_A_CRS_TF_ROM" "$CTX_A_CRS_SM_SRC" "$CTX_A_CRS_SM_ROM" "$CTX_A_CRS_SF_SRC" "$CTX_A_CRS_SF_ROM" "$CTX_B_CIR_TM_SRC" "$CTX_B_CIR_TM_ROM" "$CTX_B_CIR_TF_SRC" "$CTX_B_CIR_TF_ROM" "$CTX_B_CIR_SM_SRC" "$CTX_B_CIR_SM_ROM" "$CTX_B_CIR_SF_SRC" "$CTX_B_CIR_SF_ROM" "$CTX_B_CRS_TM_SRC" "$CTX_B_CRS_TM_ROM" "$CTX_B_CRS_TF_SRC" "$CTX_B_CRS_TF_ROM" "$CTX_B_CRS_SM_SRC" "$CTX_B_CRS_SM_ROM" "$CTX_B_CRS_SF_SRC" "$CTX_B_CRS_SF_ROM" "$IND_A_NOR_STAR_TRI_SRC" "$IND_A_NOR_STAR_TRI_ROM" "$IND_A_NOR_STAR_SQR_SRC" "$IND_A_NOR_STAR_SQR_ROM" "$IND_A_NOR_MOON_TRI_SRC" "$IND_A_NOR_MOON_TRI_ROM" "$IND_A_NOR_MOON_SQR_SRC" "$IND_A_NOR_MOON_SQR_ROM" "$IND_A_SWP_STAR_TRI_SRC" "$IND_A_SWP_STAR_TRI_ROM" "$IND_A_SWP_STAR_SQR_SRC" "$IND_A_SWP_STAR_SQR_ROM" "$IND_A_SWP_MOON_TRI_SRC" "$IND_A_SWP_MOON_TRI_ROM" "$IND_A_SWP_MOON_SQR_SRC" "$IND_A_SWP_MOON_SQR_ROM" "$IND_B_NOR_STAR_TRI_SRC" "$IND_B_NOR_STAR_TRI_ROM" "$IND_B_NOR_STAR_SQR_SRC" "$IND_B_NOR_STAR_SQR_ROM" "$IND_B_NOR_MOON_TRI_SRC" "$IND_B_NOR_MOON_TRI_ROM" "$IND_B_NOR_MOON_SQR_SRC" "$IND_B_NOR_MOON_SQR_ROM" "$IND_B_SWP_STAR_TRI_SRC" "$IND_B_SWP_STAR_TRI_ROM" "$IND_B_SWP_STAR_SQR_SRC" "$IND_B_SWP_STAR_SQR_ROM" "$IND_B_SWP_MOON_TRI_SRC" "$IND_B_SWP_MOON_TRI_ROM" "$IND_B_SWP_MOON_SQR_SRC" "$IND_B_SWP_MOON_SQR_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
