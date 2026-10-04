@@ -35,7 +35,6 @@ const CHECKPOINT_TOLERANCE: i32 = 2;
 // convergence. A 4px pad still allowed left/right approach residue from the
 // solid 8x8 player sprite to survive in the Stage 2 FAIL hash.
 const ACTOR_MASK_PAD: i32 = 8;
-const GATE_STOP_Y: i32 = 56;
 
 #[derive(Debug, Clone, Copy)]
 struct VariantPlan {
@@ -57,14 +56,14 @@ struct VariantEvidence {
     rom_sha256: String,
     initial_frame_sha256: String,
     failed_stage1_center_sha256: String,
-    failed_stage1_gate_player: PixelPoint,
+    failed_stage1_gate_sha256: String,
     stage2_revealed_center_sha256: String,
     failed_stage2_center_player: PixelPoint,
     failed_stage2_center_sha256: String,
     failed_stage2_world_sha256: String,
     failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
-    failed_stage2_gate_player: PixelPoint,
+    failed_stage2_gate_sha256: String,
     accepted_stage2_center_player: PixelPoint,
     accepted_stage2_center_sha256: String,
     accepted_stage2_world_sha256: String,
@@ -188,6 +187,29 @@ fn sha256_world_without_actor(video: &FrameBuffer, actor: PixelPoint) -> String 
         }
     }
     sha256_bytes(&rgba)
+}
+
+fn sha256_gate_region(video: &FrameBuffer) -> Result<String, String> {
+    let width = video.width as usize;
+    let height = video.height as usize;
+    let y0 = GATE_PLAYER.y as usize;
+    let gate_height = 8usize;
+    if y0 + gate_height > height {
+        return Err(format!(
+            "gate region y={}..{} exceeds framebuffer height {}",
+            y0,
+            y0 + gate_height,
+            height
+        ));
+    }
+
+    let mut bytes = Vec::with_capacity(width * gate_height * 4);
+    for y in y0..y0 + gate_height {
+        let start = y * width * 4;
+        let end = start + width * 4;
+        bytes.extend_from_slice(&video.rgba8[start..end]);
+    }
+    Ok(sha256_bytes(&bytes))
 }
 
 fn usage() -> ! {
@@ -347,6 +369,7 @@ fn qualify_variant(
     }
 
     let initial_frame_sha256 = sha256_bytes(&video.rgba8);
+    let closed_gate_sha256 = sha256_gate_region(&video)?;
     let start_state = core
         .serialize_state()
         .map_err(|error| format!("serialize {} start state: {error:?}", task.id))?;
@@ -420,11 +443,8 @@ fn qualify_variant(
         &mut audio,
         "probe closed gate after stage1 failure",
     )?;
-    let failed_stage1_gate_player =
-        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
-    let wrong_stage1_dead_end =
-        point_within_tolerance(failed_stage1_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE)
-            && !benchmark_task_success(task, failed_stage1_gate_player);
+    let failed_stage1_gate_sha256 = sha256_gate_region(&video)?;
+    let wrong_stage1_dead_end = failed_stage1_gate_sha256 == closed_gate_sha256;
 
     restore(
         &mut core,
@@ -592,11 +612,8 @@ fn qualify_variant(
         &mut audio,
         "probe failed stage2 gate",
     )?;
-    let failed_stage2_gate_player =
-        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
-    let wrong_stage2_dead_end =
-        point_within_tolerance(failed_stage2_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE)
-            && !benchmark_task_success(task, failed_stage2_gate_player);
+    let failed_stage2_gate_sha256 = sha256_gate_region(&video)?;
+    let wrong_stage2_dead_end = failed_stage2_gate_sha256 == closed_gate_sha256;
 
     restore(
         &mut core,
@@ -784,14 +801,14 @@ fn qualify_variant(
             rom_sha256: sha256_file(rom_path)?,
             initial_frame_sha256,
             failed_stage1_center_sha256,
-            failed_stage1_gate_player,
+            failed_stage1_gate_sha256,
             stage2_revealed_center_sha256,
             failed_stage2_center_player: failed_stage2_center,
             failed_stage2_center_sha256,
             failed_stage2_world_sha256,
             failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
-            failed_stage2_gate_player,
+            failed_stage2_gate_sha256,
             accepted_stage2_center_player: accepted_stage2_center,
             accepted_stage2_center_sha256,
             accepted_stage2_world_sha256,
@@ -1031,7 +1048,7 @@ fn run() -> Result<(), String> {
         && all_correct_paths_pass)
     {
         return Err(format!(
-            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} actor_bounds={actor_checkpoints_in_bounds_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
+            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} actor_bounds={actor_checkpoints_in_bounds_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass} closedGate={closed_gate_sha256}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
             triangle_circle.failed_stage2_center_player,
             triangle_circle.accepted_stage2_center_player,
             triangle_circle.final_player,
