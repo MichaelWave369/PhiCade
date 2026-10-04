@@ -181,7 +181,7 @@ fn qualify_variant(core_path: &Path, rom_path: &Path, plan: VariantPlan) -> Resu
     let stage1_player = locate_agent_gym_player(&video)?;
     let stage1_frame_sha256 = sha256_bytes(&video.rgba8);
 
-    tap_a(&mut core, &mut sequence, &mut video, &mut audio, "acknowledge and erase Stage 1")?;
+    hold_button(&mut core, &mut sequence, "A", 2, &mut video, &mut audio, "acknowledge and erase Stage 1")?;
     no_input(&mut core, STAGE_WAIT_FRAMES, &mut video, &mut audio, "wait for Stage 2")?;
     no_input(&mut core, 1, &mut video, &mut audio, "arm Stage 2")?;
     let stage2_player = locate_agent_gym_player(&video)?;
