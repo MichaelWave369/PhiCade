@@ -532,6 +532,83 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "binding-memory-swapped-square-v1" \
   --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
 
+printf '==> running Compositional Recall 2x2x2 qualification\n'
+cargo run -p phicade-libretro --bin compositional_recall_qualify -- \
+  --core "$CORE" \
+  --ntm-rom "$COMP_NTM_ROM" \
+  --ntf-rom "$COMP_NTF_ROM" \
+  --nsm-rom "$COMP_NSM_ROM" \
+  --nsf-rom "$COMP_NSF_ROM" \
+  --stm-rom "$COMP_STM_ROM" \
+  --stf-rom "$COMP_STF_ROM" \
+  --ssm-rom "$COMP_SSM_ROM" \
+  --ssf-rom "$COMP_SSF_ROM" \
+  --receipt "$ROOT/artifacts/compositional-recall-qualification.json"
+
+printf '==> running Phi-Agent Gym task V / Compositional Recall normal-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NTM_ROM" \
+  --source "$COMP_NTM_SRC" \
+  --task "compositional-recall-normal-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-triangle-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task W / Compositional Recall normal-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NTF_ROM" \
+  --source "$COMP_NTF_SRC" \
+  --task "compositional-recall-normal-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-triangle-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task X / Compositional Recall normal-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NSM_ROM" \
+  --source "$COMP_NSM_SRC" \
+  --task "compositional-recall-normal-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-square-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task Y / Compositional Recall normal-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_NSF_ROM" \
+  --source "$COMP_NSF_SRC" \
+  --task "compositional-recall-normal-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-normal-square-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task Z / Compositional Recall swapped-triangle-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_STM_ROM" \
+  --source "$COMP_STM_SRC" \
+  --task "compositional-recall-swapped-triangle-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-triangle-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task AA / Compositional Recall swapped-triangle-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_STF_ROM" \
+  --source "$COMP_STF_SRC" \
+  --task "compositional-recall-swapped-triangle-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-triangle-flip-qualification.json"
+
+printf '==> running Phi-Agent Gym task AB / Compositional Recall swapped-square-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_SSM_ROM" \
+  --source "$COMP_SSM_SRC" \
+  --task "compositional-recall-swapped-square-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-square-match-qualification.json"
+
+printf '==> running Phi-Agent Gym task AC / Compositional Recall swapped-square-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$COMP_SSF_ROM" \
+  --source "$COMP_SSF_SRC" \
+  --task "compositional-recall-swapped-square-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -566,3 +643,12 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qual
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/compositional-recall-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-normal-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
