@@ -404,8 +404,136 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_SSFF_OBJ" "$SEQ_SSFF_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_SSFF_ROM" "$SEQ_SSFF_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSSFF" "$SEQ_SSFF_ROM"
 
+printf '==> assembling source-first Selective Context a-circle-triangle-match\n'
+CTX_ACTM_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-circle-triangle-match/main.asm"
+CTX_ACTM_OBJ="$WORK/agent-gym-selective-context-a-circle-triangle-match.o"
+CTX_ACTM_ROM="$WORK/agent-gym-selective-context-a-circle-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACTM_OBJ" "$CTX_ACTM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACTM_ROM" "$CTX_ACTM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACTM" "$CTX_ACTM_ROM"
+
+printf '==> assembling source-first Selective Context a-circle-triangle-flip\n'
+CTX_ACTF_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-circle-triangle-flip/main.asm"
+CTX_ACTF_OBJ="$WORK/agent-gym-selective-context-a-circle-triangle-flip.o"
+CTX_ACTF_ROM="$WORK/agent-gym-selective-context-a-circle-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACTF_OBJ" "$CTX_ACTF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACTF_ROM" "$CTX_ACTF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACTF" "$CTX_ACTF_ROM"
+
+printf '==> assembling source-first Selective Context a-circle-square-match\n'
+CTX_ACSM_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-circle-square-match/main.asm"
+CTX_ACSM_OBJ="$WORK/agent-gym-selective-context-a-circle-square-match.o"
+CTX_ACSM_ROM="$WORK/agent-gym-selective-context-a-circle-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACSM_OBJ" "$CTX_ACSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACSM_ROM" "$CTX_ACSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACSM" "$CTX_ACSM_ROM"
+
+printf '==> assembling source-first Selective Context a-circle-square-flip\n'
+CTX_ACSF_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-circle-square-flip/main.asm"
+CTX_ACSF_OBJ="$WORK/agent-gym-selective-context-a-circle-square-flip.o"
+CTX_ACSF_ROM="$WORK/agent-gym-selective-context-a-circle-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACSF_OBJ" "$CTX_ACSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACSF_ROM" "$CTX_ACSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACSF" "$CTX_ACSF_ROM"
+
+printf '==> assembling source-first Selective Context a-cross-triangle-match\n'
+CTX_ACTM_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-cross-triangle-match/main.asm"
+CTX_ACTM_OBJ="$WORK/agent-gym-selective-context-a-cross-triangle-match.o"
+CTX_ACTM_ROM="$WORK/agent-gym-selective-context-a-cross-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACTM_OBJ" "$CTX_ACTM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACTM_ROM" "$CTX_ACTM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACTM" "$CTX_ACTM_ROM"
+
+printf '==> assembling source-first Selective Context a-cross-triangle-flip\n'
+CTX_ACTF_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-cross-triangle-flip/main.asm"
+CTX_ACTF_OBJ="$WORK/agent-gym-selective-context-a-cross-triangle-flip.o"
+CTX_ACTF_ROM="$WORK/agent-gym-selective-context-a-cross-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACTF_OBJ" "$CTX_ACTF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACTF_ROM" "$CTX_ACTF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACTF" "$CTX_ACTF_ROM"
+
+printf '==> assembling source-first Selective Context a-cross-square-match\n'
+CTX_ACSM_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-cross-square-match/main.asm"
+CTX_ACSM_OBJ="$WORK/agent-gym-selective-context-a-cross-square-match.o"
+CTX_ACSM_ROM="$WORK/agent-gym-selective-context-a-cross-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACSM_OBJ" "$CTX_ACSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACSM_ROM" "$CTX_ACSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACSM" "$CTX_ACSM_ROM"
+
+printf '==> assembling source-first Selective Context a-cross-square-flip\n'
+CTX_ACSF_SRC="$ROOT/benchmarks/agent-gym-selective-context-a-cross-square-flip/main.asm"
+CTX_ACSF_OBJ="$WORK/agent-gym-selective-context-a-cross-square-flip.o"
+CTX_ACSF_ROM="$WORK/agent-gym-selective-context-a-cross-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_ACSF_OBJ" "$CTX_ACSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_ACSF_ROM" "$CTX_ACSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICACSF" "$CTX_ACSF_ROM"
+
+printf '==> assembling source-first Selective Context b-circle-triangle-match\n'
+CTX_BCTM_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-circle-triangle-match/main.asm"
+CTX_BCTM_OBJ="$WORK/agent-gym-selective-context-b-circle-triangle-match.o"
+CTX_BCTM_ROM="$WORK/agent-gym-selective-context-b-circle-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCTM_OBJ" "$CTX_BCTM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCTM_ROM" "$CTX_BCTM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCTM" "$CTX_BCTM_ROM"
+
+printf '==> assembling source-first Selective Context b-circle-triangle-flip\n'
+CTX_BCTF_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-circle-triangle-flip/main.asm"
+CTX_BCTF_OBJ="$WORK/agent-gym-selective-context-b-circle-triangle-flip.o"
+CTX_BCTF_ROM="$WORK/agent-gym-selective-context-b-circle-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCTF_OBJ" "$CTX_BCTF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCTF_ROM" "$CTX_BCTF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCTF" "$CTX_BCTF_ROM"
+
+printf '==> assembling source-first Selective Context b-circle-square-match\n'
+CTX_BCSM_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-circle-square-match/main.asm"
+CTX_BCSM_OBJ="$WORK/agent-gym-selective-context-b-circle-square-match.o"
+CTX_BCSM_ROM="$WORK/agent-gym-selective-context-b-circle-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCSM_OBJ" "$CTX_BCSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCSM_ROM" "$CTX_BCSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCSM" "$CTX_BCSM_ROM"
+
+printf '==> assembling source-first Selective Context b-circle-square-flip\n'
+CTX_BCSF_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-circle-square-flip/main.asm"
+CTX_BCSF_OBJ="$WORK/agent-gym-selective-context-b-circle-square-flip.o"
+CTX_BCSF_ROM="$WORK/agent-gym-selective-context-b-circle-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCSF_OBJ" "$CTX_BCSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCSF_ROM" "$CTX_BCSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCSF" "$CTX_BCSF_ROM"
+
+printf '==> assembling source-first Selective Context b-cross-triangle-match\n'
+CTX_BCTM_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-cross-triangle-match/main.asm"
+CTX_BCTM_OBJ="$WORK/agent-gym-selective-context-b-cross-triangle-match.o"
+CTX_BCTM_ROM="$WORK/agent-gym-selective-context-b-cross-triangle-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCTM_OBJ" "$CTX_BCTM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCTM_ROM" "$CTX_BCTM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCTM" "$CTX_BCTM_ROM"
+
+printf '==> assembling source-first Selective Context b-cross-triangle-flip\n'
+CTX_BCTF_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-cross-triangle-flip/main.asm"
+CTX_BCTF_OBJ="$WORK/agent-gym-selective-context-b-cross-triangle-flip.o"
+CTX_BCTF_ROM="$WORK/agent-gym-selective-context-b-cross-triangle-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCTF_OBJ" "$CTX_BCTF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCTF_ROM" "$CTX_BCTF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCTF" "$CTX_BCTF_ROM"
+
+printf '==> assembling source-first Selective Context b-cross-square-match\n'
+CTX_BCSM_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-cross-square-match/main.asm"
+CTX_BCSM_OBJ="$WORK/agent-gym-selective-context-b-cross-square-match.o"
+CTX_BCSM_ROM="$WORK/agent-gym-selective-context-b-cross-square-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCSM_OBJ" "$CTX_BCSM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCSM_ROM" "$CTX_BCSM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCSM" "$CTX_BCSM_ROM"
+
+printf '==> assembling source-first Selective Context b-cross-square-flip\n'
+CTX_BCSF_SRC="$ROOT/benchmarks/agent-gym-selective-context-b-cross-square-flip/main.asm"
+CTX_BCSF_OBJ="$WORK/agent-gym-selective-context-b-cross-square-flip.o"
+CTX_BCSF_ROM="$WORK/agent-gym-selective-context-b-cross-square-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$CTX_BCSF_OBJ" "$CTX_BCSF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$CTX_BCSF_ROM" "$CTX_BCSF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICBCSF" "$CTX_BCSF_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM" "$CTX_ACTM_SRC" "$CTX_ACTM_ROM" "$CTX_ACTF_SRC" "$CTX_ACTF_ROM" "$CTX_ACSM_SRC" "$CTX_ACSM_ROM" "$CTX_ACSF_SRC" "$CTX_ACSF_ROM" "$CTX_ACTM_SRC" "$CTX_ACTM_ROM" "$CTX_ACTF_SRC" "$CTX_ACTF_ROM" "$CTX_ACSM_SRC" "$CTX_ACSM_ROM" "$CTX_ACSF_SRC" "$CTX_ACSF_ROM" "$CTX_BCTM_SRC" "$CTX_BCTM_ROM" "$CTX_BCTF_SRC" "$CTX_BCTF_ROM" "$CTX_BCSM_SRC" "$CTX_BCSM_ROM" "$CTX_BCSF_SRC" "$CTX_BCSF_ROM" "$CTX_BCTM_SRC" "$CTX_BCTM_ROM" "$CTX_BCTF_SRC" "$CTX_BCTF_ROM" "$CTX_BCSM_SRC" "$CTX_BCSM_ROM" "$CTX_BCSF_SRC" "$CTX_BCSF_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
