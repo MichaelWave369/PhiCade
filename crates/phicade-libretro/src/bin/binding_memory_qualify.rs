@@ -39,8 +39,9 @@ struct VariantEvidence {
     correct_final_player: PixelPoint,
     wrong_final_player: PixelPoint,
     post_recovery_probe_player: PixelPoint,
-    wrong_frame_sha256: String,
-    post_recovery_frame_sha256: String,
+    neutral_terminal_frame_sha256: String,
+    recovery_probe_frame_sha256: String,
+    neutral_terminal_player: PixelPoint,
     correct_path_pass: bool,
     wrong_commit_refused: bool,
     wrong_commit_terminal: bool,
@@ -312,14 +313,43 @@ fn qualify_variant(
         "move to wrong binding door",
     )?;
     let wrong_commit_refused = !benchmark_task_success(task, wrong_final_player);
-    let wrong_frame_sha256 = sha256_bytes(&video.rgba8);
 
-    // Try to recover after terminal failure. The ROM must ignore this.
+    // Freeze the terminal FAIL state, then compare two equal-duration futures:
+    // neutral control versus an attempted correct-door recovery.
+    let failed_state = core
+        .serialize_state()
+        .map_err(|error| format!("serialize {} failed state: {error:?}", task.id))?;
+    let failed_mask = core.input_mask_snapshot();
+    let failed_frame = core.frame_count();
+
+    // hold_button(24) = 25 simulated frames including release;
+    // tap_a(1) = 2 frames including release; settle = 4. Total = 31.
+    no_input(
+        &mut core,
+        CHOICE_MOVE_FRAMES + 1 + 2 + SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "advance neutral terminal control",
+    )?;
+    let neutral_terminal_player = locate_agent_gym_player(&video)?;
+    let neutral_terminal_frame_sha256 = sha256_bytes(&video.rgba8);
+
+    restore(
+        &mut core,
+        &failed_state,
+        failed_frame,
+        failed_mask,
+        &mut video,
+        &mut audio,
+        "restore failed state before recovery probe",
+    )?;
+    // restore() advances one neutral frame, so use one fewer held-direction frame
+    // to keep the compared futures matched in total elapsed emulated frames.
     hold_button(
         &mut core,
         &mut sequence,
         plan.correct,
-        CHOICE_MOVE_FRAMES,
+        CHOICE_MOVE_FRAMES.saturating_sub(1),
         &mut video,
         &mut audio,
         "probe recovery after wrong binding commitment",
@@ -339,9 +369,10 @@ fn qualify_variant(
         "settle binding recovery probe",
     )?;
     let post_recovery_probe_player = locate_agent_gym_player(&video)?;
-    let post_recovery_frame_sha256 = sha256_bytes(&video.rgba8);
+    let recovery_probe_frame_sha256 = sha256_bytes(&video.rgba8);
     let wrong_commit_terminal =
-        post_recovery_frame_sha256 == wrong_frame_sha256
+        recovery_probe_frame_sha256 == neutral_terminal_frame_sha256
+            && post_recovery_probe_player == neutral_terminal_player
             && !benchmark_task_success(task, post_recovery_probe_player);
 
     Ok((
@@ -355,8 +386,9 @@ fn qualify_variant(
             correct_final_player,
             wrong_final_player,
             post_recovery_probe_player,
-            wrong_frame_sha256,
-            post_recovery_frame_sha256,
+            neutral_terminal_frame_sha256,
+            recovery_probe_frame_sha256,
+            neutral_terminal_player,
             correct_path_pass,
             wrong_commit_refused,
             wrong_commit_terminal,
