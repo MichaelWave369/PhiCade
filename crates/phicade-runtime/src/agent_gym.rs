@@ -11,6 +11,7 @@ pub const BENCHMARK_SUITE_V7_ID: &str = "phicade-agent-gym-suite-v7";
 pub const BENCHMARK_SUITE_V8_ID: &str = "phicade-agent-gym-suite-v8";
 pub const BENCHMARK_SUITE_V9_ID: &str = "phicade-agent-gym-suite-v9";
 pub const BENCHMARK_SUITE_V10_ID: &str = "phicade-agent-gym-suite-v10";
+pub const BENCHMARK_SUITE_V11_ID: &str = "phicade-agent-gym-suite-v11";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -186,6 +187,102 @@ pub const AGENT_GYM_COMP_SSF_ROM_SHA256: &str =
 pub const AGENT_GYM_COMP_SSF_SOURCE_SHA256: &str =
     "1e1f8380981896ddca16fa5f89ab7915175e94476e2c3cf2fdd425fb895f2613";
 
+pub const AGENT_GYM_SEQ_NTMM_ID: &str = "sequential-rule-normal-triangle-match-match-v1";
+pub const AGENT_GYM_SEQ_NTMM_ROM_SHA256: &str =
+    "0cee85d2c39a9c37ac530a7c1b73c0de9afb43040eb94153efa4edbcefe778cc";
+pub const AGENT_GYM_SEQ_NTMM_SOURCE_SHA256: &str =
+    "79a5fcd7a3c503b00dbff2b59c1eb31f45f42c4c24fde0bf66ec26090de4ddc9";
+
+pub const AGENT_GYM_SEQ_NTMF_ID: &str = "sequential-rule-normal-triangle-match-flip-v1";
+pub const AGENT_GYM_SEQ_NTMF_ROM_SHA256: &str =
+    "8d382853a99a38b967a397cb166733c49fa3df87d9364c5bbb0d6816d77dbe13";
+pub const AGENT_GYM_SEQ_NTMF_SOURCE_SHA256: &str =
+    "4c13efc70adef3322a243dc41bb7d6c185f00282d02917a3712a574366f0051f";
+
+pub const AGENT_GYM_SEQ_NTFM_ID: &str = "sequential-rule-normal-triangle-flip-match-v1";
+pub const AGENT_GYM_SEQ_NTFM_ROM_SHA256: &str =
+    "3f9055e1feefda8325c08dddcb311955de013f237dcc55e49603eefa21d8eca9";
+pub const AGENT_GYM_SEQ_NTFM_SOURCE_SHA256: &str =
+    "c25a6b5158629209a4fd524e88f9af0d2b1681216b8e0237cbba8604519f01ad";
+
+pub const AGENT_GYM_SEQ_NTFF_ID: &str = "sequential-rule-normal-triangle-flip-flip-v1";
+pub const AGENT_GYM_SEQ_NTFF_ROM_SHA256: &str =
+    "8f1ef5abac3100f688b1fa13adee4ff89db74b7906f30f27d9829d2dfd2e1b8e";
+pub const AGENT_GYM_SEQ_NTFF_SOURCE_SHA256: &str =
+    "b0b7ad42bbdba665ee74c233ee0895f69fc73da3e3d6b04e10218881ec815d1d";
+
+pub const AGENT_GYM_SEQ_NSMM_ID: &str = "sequential-rule-normal-square-match-match-v1";
+pub const AGENT_GYM_SEQ_NSMM_ROM_SHA256: &str =
+    "460ddc6e00b5b29384a784acd162d6b1142348bfbe81544d784c16e57c4e3623";
+pub const AGENT_GYM_SEQ_NSMM_SOURCE_SHA256: &str =
+    "e0d8739aa1dbdd853c42c5c8fa09ffbec6e7a4bd7bb0958759ace04570f9b58d";
+
+pub const AGENT_GYM_SEQ_NSMF_ID: &str = "sequential-rule-normal-square-match-flip-v1";
+pub const AGENT_GYM_SEQ_NSMF_ROM_SHA256: &str =
+    "b91d69651b6b6644f5d4b5bb9b186145e3ae442731bdb88197a8263b8785839f";
+pub const AGENT_GYM_SEQ_NSMF_SOURCE_SHA256: &str =
+    "09ef1f71a27b95413175b5fc36b1672042ec6985800804beb53df3e42ea2fef1";
+
+pub const AGENT_GYM_SEQ_NSFM_ID: &str = "sequential-rule-normal-square-flip-match-v1";
+pub const AGENT_GYM_SEQ_NSFM_ROM_SHA256: &str =
+    "fce4ccce7c7ad284ba5abab7dead5e59efaad21135878301a63576fe19d47422";
+pub const AGENT_GYM_SEQ_NSFM_SOURCE_SHA256: &str =
+    "ae45b59057ffc4a94de22f76acf8e2f8fd8a3158966a07e77add53ee812092d4";
+
+pub const AGENT_GYM_SEQ_NSFF_ID: &str = "sequential-rule-normal-square-flip-flip-v1";
+pub const AGENT_GYM_SEQ_NSFF_ROM_SHA256: &str =
+    "20a2946cce09f78c4a9c74b01ce53ae13479775faed017479b18227bf2be4da6";
+pub const AGENT_GYM_SEQ_NSFF_SOURCE_SHA256: &str =
+    "7dacaff82f558d91407b876233847af2e729d37485660096db49792f53ed63e2";
+
+pub const AGENT_GYM_SEQ_STMM_ID: &str = "sequential-rule-swapped-triangle-match-match-v1";
+pub const AGENT_GYM_SEQ_STMM_ROM_SHA256: &str =
+    "2b49b2a09d73d8c3670ffb3a16fc1e91f5360c24c2f8efaeb9e842dfbf46a739";
+pub const AGENT_GYM_SEQ_STMM_SOURCE_SHA256: &str =
+    "7d43e44c60f88b53657efb2a98cf96fe839ada5da267c398014ab88adc115882";
+
+pub const AGENT_GYM_SEQ_STMF_ID: &str = "sequential-rule-swapped-triangle-match-flip-v1";
+pub const AGENT_GYM_SEQ_STMF_ROM_SHA256: &str =
+    "d3298c31db90ec1e920b2fb085d8ed686759266bc8625348c15850bff6795780";
+pub const AGENT_GYM_SEQ_STMF_SOURCE_SHA256: &str =
+    "eef19eea18ea136862c9c1184e9a5e3da884ed7314a5e4122ca6e9f48c4ff484";
+
+pub const AGENT_GYM_SEQ_STFM_ID: &str = "sequential-rule-swapped-triangle-flip-match-v1";
+pub const AGENT_GYM_SEQ_STFM_ROM_SHA256: &str =
+    "8ae8396bf1deeb7c686b8bcf75a6351f55693942ee91bb18465f0e95606d7cbc";
+pub const AGENT_GYM_SEQ_STFM_SOURCE_SHA256: &str =
+    "30c7e6788393596b9cafe0b62e7c080c775d0d76c6238393f333ff636cbb3edc";
+
+pub const AGENT_GYM_SEQ_STFF_ID: &str = "sequential-rule-swapped-triangle-flip-flip-v1";
+pub const AGENT_GYM_SEQ_STFF_ROM_SHA256: &str =
+    "165160108ffd735a0aab52d1252d61520969821261ec16a839391e92b1ea3aed";
+pub const AGENT_GYM_SEQ_STFF_SOURCE_SHA256: &str =
+    "6c0496ed6107124cb39bc6c96293ba50971bbfac7084bcfc7f4dd5cf5561599c";
+
+pub const AGENT_GYM_SEQ_SSMM_ID: &str = "sequential-rule-swapped-square-match-match-v1";
+pub const AGENT_GYM_SEQ_SSMM_ROM_SHA256: &str =
+    "91a505ff8c2c1c17e4796c878873636c4ceaa36aa19f57d9c9d37a44a60ff61f";
+pub const AGENT_GYM_SEQ_SSMM_SOURCE_SHA256: &str =
+    "e58497c3410e8c16711b05c48725c4e866e0953d326f070846a6e11acaaee733";
+
+pub const AGENT_GYM_SEQ_SSMF_ID: &str = "sequential-rule-swapped-square-match-flip-v1";
+pub const AGENT_GYM_SEQ_SSMF_ROM_SHA256: &str =
+    "fe2546aba524ff82f89a03b7b67e162108ee58863c1ba960c427c1d03ddf6929";
+pub const AGENT_GYM_SEQ_SSMF_SOURCE_SHA256: &str =
+    "468d5e1a2b7a7f4f2fc248ad123e88ae4d966a24032d610403fcf9dc695a3c91";
+
+pub const AGENT_GYM_SEQ_SSFM_ID: &str = "sequential-rule-swapped-square-flip-match-v1";
+pub const AGENT_GYM_SEQ_SSFM_ROM_SHA256: &str =
+    "e94ef007dd822ec1c6921df6e534b724d0e5268ca9fcaf06d7ed7e161d677068";
+pub const AGENT_GYM_SEQ_SSFM_SOURCE_SHA256: &str =
+    "6145ada1bdb22ac3e3e3fead6893e08cd31df4edab0d62cf5dd1b3b667fb061b";
+
+pub const AGENT_GYM_SEQ_SSFF_ID: &str = "sequential-rule-swapped-square-flip-flip-v1";
+pub const AGENT_GYM_SEQ_SSFF_ROM_SHA256: &str =
+    "c707db53b771b2a13a0cade7975db0d95ff13b4e8e065d0da3af16f4a0894014";
+pub const AGENT_GYM_SEQ_SSFF_SOURCE_SHA256: &str =
+    "eedf017f31d079a2e796b8c12e95d33bb2c3ea0233b95dc7cc5abb1fd3a1cd55";
+
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_START_X: i32 = 16;
@@ -260,6 +357,7 @@ pub static AGENT_GYM_BRANCH_SELECTOR_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "L
 pub static AGENT_GYM_NESTED_BUTTONS: [&str; 5] = ["A", "UP", "DOWN", "LEFT", "RIGHT"];
 pub static AGENT_GYM_BINDING_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_COMPOSITIONAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
+pub static AGENT_GYM_SEQUENTIAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -491,6 +589,24 @@ pub static AGENT_GYM_BINDING_LEFT_ORACLE: [OracleLeg; 4] = [
 ];
 
 pub static AGENT_GYM_BINDING_RIGHT_ORACLE: [OracleLeg; 4] = [
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 101 },
+    OracleLeg { button: "RIGHT", frames: 24 },
+    OracleLeg { button: "A", frames: 1 },
+];
+
+pub static AGENT_GYM_SEQUENTIAL_LEFT_ORACLE: [OracleLeg; 6] = [
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 101 },
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 101 },
+    OracleLeg { button: "LEFT", frames: 24 },
+    OracleLeg { button: "A", frames: 1 },
+];
+
+pub static AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE: [OracleLeg; 6] = [
+    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "WAIT", frames: 101 },
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 101 },
     OracleLeg { button: "RIGHT", frames: 24 },
@@ -1127,7 +1243,263 @@ pub const AGENT_GYM_COMP_SSF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 29] = [
+pub const AGENT_GYM_SEQ_NTMM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NTMM_ID,
+    title: "Sequential Rule: Normal / Triangle / MATCH / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_NTMM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NTMM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: "Benchmark task: memorize where TRIANGLE and SQUARE appear, press A to erase the briefing, and wait. Stage 1 shows a query symbol plus operator 1. Apply MATCH (=) by preserving the remembered side or FLIP (X) by inverting it, retain that intermediate side, then press A to erase Stage 1. After the next delay, Stage 2 shows operator 2 only. Apply it to the hidden intermediate side, choose the final identical door, and press A. A wrong commitment is irreversible.",
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NTMF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NTMF_ID,
+    title: "Sequential Rule: Normal / Triangle / MATCH / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_NTMF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NTMF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NTFM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NTFM_ID,
+    title: "Sequential Rule: Normal / Triangle / FLIP / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_NTFM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NTFM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NTFF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NTFF_ID,
+    title: "Sequential Rule: Normal / Triangle / FLIP / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_NTFF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NTFF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NSMM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NSMM_ID,
+    title: "Sequential Rule: Normal / Square / MATCH / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_NSMM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NSMM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NSMF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NSMF_ID,
+    title: "Sequential Rule: Normal / Square / MATCH / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_NSMF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NSMF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NSFM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NSFM_ID,
+    title: "Sequential Rule: Normal / Square / FLIP / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_NSFM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NSFM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_NSFF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_NSFF_ID,
+    title: "Sequential Rule: Normal / Square / FLIP / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_NSFF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_NSFF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_STMM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_STMM_ID,
+    title: "Sequential Rule: Swapped / Triangle / MATCH / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_STMM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_STMM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_STMF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_STMF_ID,
+    title: "Sequential Rule: Swapped / Triangle / MATCH / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_STMF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_STMF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_STFM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_STFM_ID,
+    title: "Sequential Rule: Swapped / Triangle / FLIP / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_STFM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_STFM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_STFF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_STFF_ID,
+    title: "Sequential Rule: Swapped / Triangle / FLIP / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_STFF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_STFF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_SSMM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_SSMM_ID,
+    title: "Sequential Rule: Swapped / Square / MATCH / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_SSMM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_SSMM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_SSMF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_SSMF_ID,
+    title: "Sequential Rule: Swapped / Square / MATCH / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_SSMF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_SSMF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_SSFM_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_SSFM_ID,
+    title: "Sequential Rule: Swapped / Square / FLIP / MATCH",
+    rom_sha256: AGENT_GYM_SEQ_SSFM_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_SSFM_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_SEQ_SSFF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V11_ID,
+    id: AGENT_GYM_SEQ_SSFF_ID,
+    title: "Sequential Rule: Swapped / Square / FLIP / FLIP",
+    rom_sha256: AGENT_GYM_SEQ_SSFF_ROM_SHA256,
+    source_sha256: AGENT_GYM_SEQ_SSFF_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_SEQUENTIAL_BUTTONS,
+    prompt: AGENT_GYM_SEQ_NTMM_TASK.prompt,
+    oracle: &AGENT_GYM_SEQUENTIAL_LEFT_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 45] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -1157,6 +1529,22 @@ pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 29] = [
     AGENT_GYM_COMP_STF_TASK,
     AGENT_GYM_COMP_SSM_TASK,
     AGENT_GYM_COMP_SSF_TASK,
+    AGENT_GYM_SEQ_NTMM_TASK,
+    AGENT_GYM_SEQ_NTMF_TASK,
+    AGENT_GYM_SEQ_NTFM_TASK,
+    AGENT_GYM_SEQ_NTFF_TASK,
+    AGENT_GYM_SEQ_NSMM_TASK,
+    AGENT_GYM_SEQ_NSMF_TASK,
+    AGENT_GYM_SEQ_NSFM_TASK,
+    AGENT_GYM_SEQ_NSFF_TASK,
+    AGENT_GYM_SEQ_STMM_TASK,
+    AGENT_GYM_SEQ_STMF_TASK,
+    AGENT_GYM_SEQ_STFM_TASK,
+    AGENT_GYM_SEQ_STFF_TASK,
+    AGENT_GYM_SEQ_SSMM_TASK,
+    AGENT_GYM_SEQ_SSMF_TASK,
+    AGENT_GYM_SEQ_SSFM_TASK,
+    AGENT_GYM_SEQ_SSFF_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
@@ -1301,6 +1689,55 @@ pub static BENCHMARK_SUITE_V10_TASKS: [BenchmarkTaskSpec; 29] = [
     AGENT_GYM_COMP_SSF_TASK,
 ];
 
+pub static BENCHMARK_SUITE_V11_TASKS: [BenchmarkTaskSpec; 45] = [
+
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+    AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
+    AGENT_GYM_POWER_CHAIN_LEFT_TASK,
+    AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CROSS_TASK,
+    AGENT_GYM_NESTED_SQUARE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_SQUARE_CROSS_TASK,
+    AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+    AGENT_GYM_COMP_NTM_TASK,
+    AGENT_GYM_COMP_NTF_TASK,
+    AGENT_GYM_COMP_NSM_TASK,
+    AGENT_GYM_COMP_NSF_TASK,
+    AGENT_GYM_COMP_STM_TASK,
+    AGENT_GYM_COMP_STF_TASK,
+    AGENT_GYM_COMP_SSM_TASK,
+    AGENT_GYM_COMP_SSF_TASK,
+    AGENT_GYM_SEQ_NTMM_TASK,
+    AGENT_GYM_SEQ_NTMF_TASK,
+    AGENT_GYM_SEQ_NTFM_TASK,
+    AGENT_GYM_SEQ_NTFF_TASK,
+    AGENT_GYM_SEQ_NSMM_TASK,
+    AGENT_GYM_SEQ_NSMF_TASK,
+    AGENT_GYM_SEQ_NSFM_TASK,
+    AGENT_GYM_SEQ_NSFF_TASK,
+    AGENT_GYM_SEQ_STMM_TASK,
+    AGENT_GYM_SEQ_STMF_TASK,
+    AGENT_GYM_SEQ_STFM_TASK,
+    AGENT_GYM_SEQ_STFF_TASK,
+    AGENT_GYM_SEQ_SSMM_TASK,
+    AGENT_GYM_SEQ_SSMF_TASK,
+    AGENT_GYM_SEQ_SSFM_TASK,
+    AGENT_GYM_SEQ_SSFF_TASK,
+];
+
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     id: BENCHMARK_SUITE_V1_ID,
     title: "Phi-Agent Gym Suite v1",
@@ -1371,7 +1808,14 @@ pub static BENCHMARK_SUITE_V10: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V10_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 10] = [
+pub static BENCHMARK_SUITE_V11: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V11_ID,
+    title: "Phi-Agent Gym Suite v11",
+    version: 11,
+    tasks: &BENCHMARK_SUITE_V11_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 11] = [
     &BENCHMARK_SUITE_V1,
     &BENCHMARK_SUITE_V2,
     &BENCHMARK_SUITE_V3,
@@ -1382,6 +1826,7 @@ pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 10] = [
     &BENCHMARK_SUITE_V8,
     &BENCHMARK_SUITE_V9,
     &BENCHMARK_SUITE_V10,
+    &BENCHMARK_SUITE_V11,
 ];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
@@ -1430,6 +1875,10 @@ pub fn benchmark_suite_v9_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v10_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V10_TASKS
+}
+
+pub fn benchmark_suite_v11_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V11_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -1787,9 +2236,39 @@ mod tests {
     }
 
     #[test]
+    fn suite_v11_preserves_v10_and_adds_sequential_rule_factorial() {
+        let tasks = benchmark_suite_v11_tasks();
+        assert_eq!(tasks.len(), 45);
+        assert_eq!(tasks[..29], BENCHMARK_SUITE_V10_TASKS);
+        let ids = [AGENT_GYM_SEQ_NTMM_ID, AGENT_GYM_SEQ_NTMF_ID, AGENT_GYM_SEQ_NTFM_ID, AGENT_GYM_SEQ_NTFF_ID, AGENT_GYM_SEQ_NSMM_ID, AGENT_GYM_SEQ_NSMF_ID, AGENT_GYM_SEQ_NSFM_ID, AGENT_GYM_SEQ_NSFF_ID, AGENT_GYM_SEQ_STMM_ID, AGENT_GYM_SEQ_STMF_ID, AGENT_GYM_SEQ_STFM_ID, AGENT_GYM_SEQ_STFF_ID, AGENT_GYM_SEQ_SSMM_ID, AGENT_GYM_SEQ_SSMF_ID, AGENT_GYM_SEQ_SSFM_ID, AGENT_GYM_SEQ_SSFF_ID];
+        for (offset, id) in ids.iter().enumerate() {
+            assert_eq!(tasks[29 + offset].id, *id);
+        }
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V11_ID).unwrap().version, 11);
+
+        let seq = [AGENT_GYM_SEQ_NTMM_TASK, AGENT_GYM_SEQ_NTMF_TASK, AGENT_GYM_SEQ_NTFM_TASK, AGENT_GYM_SEQ_NTFF_TASK, AGENT_GYM_SEQ_NSMM_TASK, AGENT_GYM_SEQ_NSMF_TASK, AGENT_GYM_SEQ_NSFM_TASK, AGENT_GYM_SEQ_NSFF_TASK, AGENT_GYM_SEQ_STMM_TASK, AGENT_GYM_SEQ_STMF_TASK, AGENT_GYM_SEQ_STFM_TASK, AGENT_GYM_SEQ_STFF_TASK, AGENT_GYM_SEQ_SSMM_TASK, AGENT_GYM_SEQ_SSMF_TASK, AGENT_GYM_SEQ_SSFM_TASK, AGENT_GYM_SEQ_SSFF_TASK];
+        for task in &seq[1..] {
+            assert_eq!(task.prompt, seq[0].prompt);
+            assert_eq!(task.allowed_buttons, seq[0].allowed_buttons);
+        }
+        let prompt = seq[0].prompt.to_ascii_lowercase();
+        for leak in [
+            "normal /", "swapped /", "normal-triangle", "swapped-triangle",
+            "normal-square", "swapped-square", "correct door is", "answer is left",
+            "answer is right",
+        ] {
+            assert!(!prompt.contains(leak), "provider prompt leaked variant detail: {leak}");
+        }
+        assert!(prompt.contains("operator 1"));
+        assert!(prompt.contains("operator 2"));
+        assert!(prompt.contains("intermediate"));
+        assert!(seq.iter().all(|task| task.oracle.len() == 6));
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
         let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 10);
+        assert_eq!(memberships.len(), 11);
         assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
         assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
@@ -1800,9 +2279,10 @@ mod tests {
         assert_eq!(memberships[7].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(memberships[8].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(memberships[9].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(memberships[10].id, BENCHMARK_SUITE_V11_ID);
 
         let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 9);
+        assert_eq!(wall_memberships.len(), 10);
         assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
         assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
@@ -1812,9 +2292,10 @@ mod tests {
         assert_eq!(wall_memberships[6].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(wall_memberships[7].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(wall_memberships[8].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(wall_memberships[9].id, BENCHMARK_SUITE_V11_ID);
 
         let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 8);
+        assert_eq!(temporal_memberships.len(), 9);
         assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
         assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
@@ -1823,9 +2304,10 @@ mod tests {
         assert_eq!(temporal_memberships[5].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(temporal_memberships[6].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(temporal_memberships[7].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(temporal_memberships[8].id, BENCHMARK_SUITE_V11_ID);
 
         let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 7);
+        assert_eq!(relay_memberships.len(), 8);
         assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
         assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(relay_memberships[2].id, BENCHMARK_SUITE_V6_ID);
@@ -1833,38 +2315,43 @@ mod tests {
         assert_eq!(relay_memberships[4].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(relay_memberships[5].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(relay_memberships[6].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(relay_memberships[7].id, BENCHMARK_SUITE_V11_ID);
 
         let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
-        assert_eq!(key_gate_memberships.len(), 6);
+        assert_eq!(key_gate_memberships.len(), 7);
         assert_eq!(key_gate_memberships[0].id, BENCHMARK_SUITE_V5_ID);
         assert_eq!(key_gate_memberships[1].id, BENCHMARK_SUITE_V6_ID);
         assert_eq!(key_gate_memberships[2].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(key_gate_memberships[3].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(key_gate_memberships[4].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(key_gate_memberships[5].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(key_gate_memberships[6].id, BENCHMARK_SUITE_V11_ID);
 
         let power_memberships = benchmark_suites_for_task(AGENT_GYM_POWER_CHAIN_LEFT_ID);
-        assert_eq!(power_memberships.len(), 5);
+        assert_eq!(power_memberships.len(), 6);
         assert_eq!(power_memberships[0].id, BENCHMARK_SUITE_V6_ID);
         assert_eq!(power_memberships[1].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(power_memberships[2].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(power_memberships[3].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(power_memberships[4].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(power_memberships[5].id, BENCHMARK_SUITE_V11_ID);
 
         let branch_memberships =
             benchmark_suites_for_task(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID);
-        assert_eq!(branch_memberships.len(), 4);
+        assert_eq!(branch_memberships.len(), 5);
         assert_eq!(branch_memberships[0].id, BENCHMARK_SUITE_V7_ID);
         assert_eq!(branch_memberships[1].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(branch_memberships[2].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(branch_memberships[3].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(branch_memberships[4].id, BENCHMARK_SUITE_V11_ID);
 
         let nested_memberships =
             benchmark_suites_for_task(AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ID);
-        assert_eq!(nested_memberships.len(), 3);
+        assert_eq!(nested_memberships.len(), 4);
         assert_eq!(nested_memberships[0].id, BENCHMARK_SUITE_V8_ID);
         assert_eq!(nested_memberships[1].id, BENCHMARK_SUITE_V9_ID);
         assert_eq!(nested_memberships[2].id, BENCHMARK_SUITE_V10_ID);
+        assert_eq!(nested_memberships[3].id, BENCHMARK_SUITE_V11_ID);
     }
 
     #[test]
@@ -1996,9 +2483,10 @@ mod tests {
         ] {
             assert_eq!(benchmark_task_by_id(id).map(|task| task.id), Some(id));
             let memberships = benchmark_suites_for_task(id);
-            assert_eq!(memberships.len(), 2);
+            assert_eq!(memberships.len(), 3);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V9_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V10_ID);
+            assert_eq!(memberships[2].id, BENCHMARK_SUITE_V11_ID);
         }
         assert_eq!(AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_NORMAL_SQUARE_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -2018,8 +2506,9 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships.len(), 2);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V10_ID);
+            assert_eq!(memberships[1].id, BENCHMARK_SUITE_V11_ID);
         }
         assert_eq!(AGENT_GYM_COMP_NTM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_COMP_NTF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -2029,6 +2518,20 @@ mod tests {
         assert_eq!(AGENT_GYM_COMP_STF_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_COMP_SSM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_COMP_SSF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
+    }
+
+    #[test]
+    fn registry_resolves_sequential_rule_tasks_by_id_and_hash() {
+        let tasks = [AGENT_GYM_SEQ_NTMM_TASK, AGENT_GYM_SEQ_NTMF_TASK, AGENT_GYM_SEQ_NTFM_TASK, AGENT_GYM_SEQ_NTFF_TASK, AGENT_GYM_SEQ_NSMM_TASK, AGENT_GYM_SEQ_NSMF_TASK, AGENT_GYM_SEQ_NSFM_TASK, AGENT_GYM_SEQ_NSFF_TASK, AGENT_GYM_SEQ_STMM_TASK, AGENT_GYM_SEQ_STMF_TASK, AGENT_GYM_SEQ_STFM_TASK, AGENT_GYM_SEQ_STFF_TASK, AGENT_GYM_SEQ_SSMM_TASK, AGENT_GYM_SEQ_SSMF_TASK, AGENT_GYM_SEQ_SSFM_TASK, AGENT_GYM_SEQ_SSFF_TASK];
+        for task in tasks {
+            assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
+            assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
+            let memberships = benchmark_suites_for_task(task.id);
+            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships[0].id, BENCHMARK_SUITE_V11_ID);
+            assert_eq!(task.rom_sha256.len(), 64);
+            assert_eq!(task.source_sha256.len(), 64);
+        }
     }
 
     #[test]
