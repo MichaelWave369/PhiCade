@@ -29,8 +29,12 @@ DEF STAGE2_MIN_Y      EQU STAGE2_Y - 2
 DEF STAGE2_MAX_Y      EQU STAGE2_Y + 3
 DEF GENERATOR_X       EQU 80
 DEF GENERATOR_Y       EQU 80
+DEF GENERATOR_MIN_Y   EQU GENERATOR_Y - 2
+DEF GENERATOR_MAX_Y   EQU GENERATOR_Y + 3
 DEF GATE_CENTER_X     EQU 80
 DEF GATE_STOP_Y       EQU 72
+DEF GATE_MIN_Y        EQU GATE_STOP_Y - 2
+DEF GATE_MAX_Y        EQU GATE_STOP_Y + 3
 DEF TARGET_X          EQU 80
 DEF TARGET_Y          EQU 40
 
@@ -40,7 +44,7 @@ DEF STAGE2_LEFT_MAP   EQU $9800 + 10 * 32 + 3
 DEF STAGE2_RIGHT_MAP  EQU $9800 + 10 * 32 + 15
 DEF SELECTOR_MAP      EQU $9800 + 4 * 32 + 9
 DEF BADGE_MAP         EQU $9800 + 1 * 32 + 1
-DEF GENERATOR_MAP     EQU $9800 + 8 * 32 + 9
+DEF GENERATOR_MAP     EQU $9800 + 9 * 32 + 9
 DEF GATE_ROW          EQU $9800 + 7 * 32
 DEF STAGE1_SELECTOR_TILE EQU 3
 DEF STAGE2_SELECTOR_TILE EQU 11
@@ -313,17 +317,22 @@ ReadAction:
     cp GENERATOR_X
     jp nz, .done
     ld a, [wPlayerY]
-    cp GENERATOR_Y
-    jp nz, .done
+    cp GENERATOR_MIN_Y
+    jp c, .done
+    cp GENERATOR_MAX_Y
+    jp nc, .done
 
+    ; A successful generator interaction owns the boundary. Normalize the
+    ; actor and lock movement for this frame before mutating power state.
+    ld a, GENERATOR_X
+    ld [wPlayerX], a
+    ld [$FE01], a
+    ld a, GENERATOR_Y
+    ld [wPlayerY], a
+    ld [$FE00], a
     ld a, 1
     ld [wPowerOn], a
-    xor a
-    ld hl, BADGE_MAP
-    ld [hl], a
-    ld hl, GENERATOR_MAP
-    ld a, 6
-    ld [hl], a
+    ld [wMoveLock], a
     jp .done
 
 .tryGate:
@@ -334,18 +343,21 @@ ReadAction:
     cp GATE_CENTER_X
     jp nz, .done
     ld a, [wPlayerY]
-    cp GATE_STOP_Y
-    jp nz, .done
+    cp GATE_MIN_Y
+    jp c, .done
+    cp GATE_MAX_Y
+    jp nc, .done
 
+    ; Gate activation is another authoritative convergence boundary.
+    ld a, GATE_CENTER_X
+    ld [wPlayerX], a
+    ld [$FE01], a
+    ld a, GATE_STOP_Y
+    ld [wPlayerY], a
+    ld [$FE00], a
     ld a, 1
     ld [wGateOpen], a
-    ld hl, GATE_ROW
-    ld b, 20
-.clearGate:
-    xor a
-    ld [hli], a
-    dec b
-    jr nz, .clearGate
+    ld [wMoveLock], a
 
 .done:
     ld a, $30
