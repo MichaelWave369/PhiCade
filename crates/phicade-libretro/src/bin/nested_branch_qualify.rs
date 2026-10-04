@@ -60,7 +60,7 @@ struct VariantEvidence {
     stage2_revealed_center_sha256: String,
     failed_stage2_center_player: PixelPoint,
     failed_stage2_center_sha256: String,
-    failed_stage2_world_sha256: String,
+    failed_stage2_projection_sha256: String,
     failed_stage2_generator_before_sha256: String,
     failed_stage2_generator_sha256: String,
     failed_stage2_gate_sha256: String,
@@ -189,26 +189,76 @@ fn sha256_world_without_actor(video: &FrameBuffer, actor: PixelPoint) -> String 
     sha256_bytes(&rgba)
 }
 
-fn sha256_gate_region(video: &FrameBuffer) -> Result<String, String> {
-    let width = video.width as usize;
-    let height = video.height as usize;
-    let y0 = GATE_PLAYER.y as usize;
-    let gate_height = 8usize;
-    if y0 + gate_height > height {
+fn append_region(
+    out: &mut Vec<u8>,
+    video: &FrameBuffer,
+    x0: usize,
+    y0: usize,
+    width: usize,
+    height: usize,
+) -> Result<(), String> {
+    let frame_width = video.width as usize;
+    let frame_height = video.height as usize;
+    if x0 + width > frame_width || y0 + height > frame_height {
         return Err(format!(
-            "gate region y={}..{} exceeds framebuffer height {}",
+            "region x={}..{} y={}..{} exceeds framebuffer {}x{}",
+            x0,
+            x0 + width,
             y0,
-            y0 + gate_height,
-            height
+            y0 + height,
+            frame_width,
+            frame_height
         ));
     }
-
-    let mut bytes = Vec::with_capacity(width * gate_height * 4);
-    for y in y0..y0 + gate_height {
-        let start = y * width * 4;
+    for y in y0..y0 + height {
+        let start = (y * frame_width + x0) * 4;
         let end = start + width * 4;
-        bytes.extend_from_slice(&video.rgba8[start..end]);
+        out.extend_from_slice(&video.rgba8[start..end]);
     }
+    Ok(())
+}
+
+fn sha256_gate_region(video: &FrameBuffer) -> Result<String, String> {
+    // The actor stands over the center of the closed gate during refusal
+    // probes. Hash the left and right barrier strips only, so the proof asks
+    // whether the barrier changed rather than whether the sprite was visible.
+    let width = video.width as usize;
+    let y0 = GATE_PLAYER.y as usize;
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, 0, y0, 56.min(width), 8)?;
+    if width > 104 {
+        append_region(&mut bytes, video, 104, y0, width - 104, 8)?;
+    }
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_failed_state_projection(video: &FrameBuffer) -> Result<String, String> {
+    // Frozen Nested Branch v1 task-critical surfaces. This deliberately
+    // excludes the actor and unrelated framebuffer pixels while preserving
+    // every rendered object that defines terminal failure semantics.
+    let mut bytes = Vec::new();
+
+    // carried badge
+    append_region(&mut bytes, video, 8, 8, 8, 8)?;
+    // selector / FAIL marker
+    append_region(&mut bytes, video, 72, 32, 8, 8)?;
+    // Stage 1 candidate slots
+    append_region(&mut bytes, video, 24, 112, 8, 8)?;
+    append_region(&mut bytes, video, 120, 112, 8, 8)?;
+    // Stage 2 candidate slots
+    append_region(&mut bytes, video, 24, 80, 8, 8)?;
+    append_region(&mut bytes, video, 120, 80, 8, 8)?;
+    // generator render tile
+    append_region(&mut bytes, video, 88, 72, 8, 8)?;
+
+    // actor-free gate strips
+    let frame_width = video.width as usize;
+    let gate_y = GATE_PLAYER.y as usize;
+    append_region(&mut bytes, video, 0, gate_y, 56.min(frame_width), 8)?;
+    if frame_width > 104 {
+        append_region(&mut bytes, video, 104, gate_y, frame_width - 104, 8)?;
+    }
+
     Ok(sha256_bytes(&bytes))
 }
 
@@ -558,8 +608,8 @@ fn qualify_variant(
         ));
     }
     let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
-    let failed_stage2_world_sha256 =
-        sha256_world_without_actor(&video, STAGE2_CENTER);
+    let failed_stage2_projection_sha256 =
+        sha256_failed_state_projection(&video)?;
 
     no_input(
         &mut core,
@@ -805,7 +855,7 @@ fn qualify_variant(
             stage2_revealed_center_sha256,
             failed_stage2_center_player: failed_stage2_center,
             failed_stage2_center_sha256,
-            failed_stage2_world_sha256,
+            failed_stage2_projection_sha256,
             failed_stage2_generator_before_sha256,
             failed_stage2_generator_sha256,
             failed_stage2_gate_sha256,
@@ -960,11 +1010,13 @@ fn run() -> Result<(), String> {
         &square_circle.failed_stage1_center_sha256,
         &square_cross.failed_stage1_center_sha256,
     ]);
+    // Compare the explicit failure-state projection rather than incidental
+    // actor/approach pixels. Raw frames remain recorded per variant.
     let stage2_fail_converges_all = all_equal([
-        &triangle_circle.failed_stage2_world_sha256,
-        &triangle_cross.failed_stage2_world_sha256,
-        &square_circle.failed_stage2_world_sha256,
-        &square_cross.failed_stage2_world_sha256,
+        &triangle_circle.failed_stage2_projection_sha256,
+        &triangle_cross.failed_stage2_projection_sha256,
+        &square_circle.failed_stage2_projection_sha256,
+        &square_cross.failed_stage2_projection_sha256,
     ]);
     let accepted_stage2_converges_all = all_equal([
         &triangle_circle.accepted_stage2_world_sha256,
@@ -1052,28 +1104,28 @@ fn run() -> Result<(), String> {
             triangle_circle.failed_stage2_center_player,
             triangle_circle.accepted_stage2_center_player,
             triangle_circle.final_player,
-            format!("{} / world={}", triangle_circle.failed_stage2_center_sha256, triangle_circle.failed_stage2_world_sha256),
+            format!("{} / world={}", triangle_circle.failed_stage2_center_sha256, triangle_circle.failed_stage2_projection_sha256),
             triangle_circle.accepted_stage2_center_sha256,
             triangle_circle.powered_frame_sha256,
             triangle_circle.open_gate_frame_sha256,
             triangle_cross.failed_stage2_center_player,
             triangle_cross.accepted_stage2_center_player,
             triangle_cross.final_player,
-            format!("{} / world={}", triangle_cross.failed_stage2_center_sha256, triangle_cross.failed_stage2_world_sha256),
+            format!("{} / world={}", triangle_cross.failed_stage2_center_sha256, triangle_cross.failed_stage2_projection_sha256),
             triangle_cross.accepted_stage2_center_sha256,
             triangle_cross.powered_frame_sha256,
             triangle_cross.open_gate_frame_sha256,
             square_circle.failed_stage2_center_player,
             square_circle.accepted_stage2_center_player,
             square_circle.final_player,
-            format!("{} / world={}", square_circle.failed_stage2_center_sha256, square_circle.failed_stage2_world_sha256),
+            format!("{} / world={}", square_circle.failed_stage2_center_sha256, square_circle.failed_stage2_projection_sha256),
             square_circle.accepted_stage2_center_sha256,
             square_circle.powered_frame_sha256,
             square_circle.open_gate_frame_sha256,
             square_cross.failed_stage2_center_player,
             square_cross.accepted_stage2_center_player,
             square_cross.final_player,
-            format!("{} / world={}", square_cross.failed_stage2_center_sha256, square_cross.failed_stage2_world_sha256),
+            format!("{} / world={}", square_cross.failed_stage2_center_sha256, square_cross.failed_stage2_projection_sha256),
             square_cross.accepted_stage2_center_sha256,
             square_cross.powered_frame_sha256,
             square_cross.open_gate_frame_sha256,
