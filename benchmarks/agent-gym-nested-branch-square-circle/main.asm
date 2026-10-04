@@ -296,6 +296,10 @@ ReadAction:
     ld [wMoveLock], a
 
     ; Any wrong commitment collapses onto one terminal FAIL world.
+    ; Write the canonical FAIL marker first so it wins the VBlank budget.
+    ld hl, SELECTOR_MAP
+    ld a, 9
+    ld [hl], a
     xor a
     ld hl, STAGE1_LEFT_MAP
     ld [hl], a
@@ -306,9 +310,6 @@ ReadAction:
     ld hl, STAGE2_RIGHT_MAP
     ld [hl], a
     ld hl, BADGE_MAP
-    ld [hl], a
-    ld hl, SELECTOR_MAP
-    ld a, 9
     ld [hl], a
     jp .done
 
@@ -686,6 +687,10 @@ RenderState:
     jr .gate
 
 .failed:
+    ; FAIL selector is the highest-priority projection write.
+    ld hl, SELECTOR_MAP
+    ld a, 9
+    ld [hl], a
     ld hl, STAGE1_LEFT_MAP
     xor a
     ld [hl], a
@@ -696,9 +701,6 @@ RenderState:
     ld hl, STAGE2_RIGHT_MAP
     ld [hl], a
     ld hl, BADGE_MAP
-    ld [hl], a
-    ld hl, SELECTOR_MAP
-    ld a, 9
     ld [hl], a
     ld hl, GENERATOR_MAP
     ld a, 5
