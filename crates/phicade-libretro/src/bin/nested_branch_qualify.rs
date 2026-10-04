@@ -31,7 +31,10 @@ const STAGE2_CENTER: PixelPoint = PixelPoint { x: 72, y: 80 };
 const GENERATOR_PLAYER: PixelPoint = STAGE2_CENTER;
 const GATE_PLAYER: PixelPoint = PixelPoint { x: 72, y: 56 };
 const CHECKPOINT_TOLERANCE: i32 = 2;
-const ACTOR_MASK_PAD: i32 = 4;
+// Mask the complete local actor-render neighborhood when comparing world
+// convergence. A 4px pad still allowed left/right approach residue from the
+// solid 8x8 player sprite to survive in the Stage 2 FAIL hash.
+const ACTOR_MASK_PAD: i32 = 8;
 const GATE_STOP_Y: i32 = 56;
 
 #[derive(Debug, Clone, Copy)]
@@ -417,9 +420,11 @@ fn qualify_variant(
         &mut audio,
         "probe closed gate after stage1 failure",
     )?;
-    let failed_stage1_gate_player = locate_agent_gym_player(&video)?;
-    let wrong_stage1_dead_end = failed_stage1_gate_player.y == GATE_STOP_Y
-        && !benchmark_task_success(task, failed_stage1_gate_player);
+    let failed_stage1_gate_player =
+        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
+    let wrong_stage1_dead_end =
+        point_within_tolerance(failed_stage1_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE)
+            && !benchmark_task_success(task, failed_stage1_gate_player);
 
     restore(
         &mut core,
@@ -587,9 +592,11 @@ fn qualify_variant(
         &mut audio,
         "probe failed stage2 gate",
     )?;
-    let failed_stage2_gate_player = locate_agent_gym_player(&video)?;
-    let wrong_stage2_dead_end = failed_stage2_gate_player.y == GATE_STOP_Y
-        && !benchmark_task_success(task, failed_stage2_gate_player);
+    let failed_stage2_gate_player =
+        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
+    let wrong_stage2_dead_end =
+        point_within_tolerance(failed_stage2_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE)
+            && !benchmark_task_success(task, failed_stage2_gate_player);
 
     restore(
         &mut core,
@@ -1028,28 +1035,28 @@ fn run() -> Result<(), String> {
             triangle_circle.failed_stage2_center_player,
             triangle_circle.accepted_stage2_center_player,
             triangle_circle.final_player,
-            triangle_circle.failed_stage2_center_sha256,
+            format!("{} / world={}", triangle_circle.failed_stage2_center_sha256, triangle_circle.failed_stage2_world_sha256),
             triangle_circle.accepted_stage2_center_sha256,
             triangle_circle.powered_frame_sha256,
             triangle_circle.open_gate_frame_sha256,
             triangle_cross.failed_stage2_center_player,
             triangle_cross.accepted_stage2_center_player,
             triangle_cross.final_player,
-            triangle_cross.failed_stage2_center_sha256,
+            format!("{} / world={}", triangle_cross.failed_stage2_center_sha256, triangle_cross.failed_stage2_world_sha256),
             triangle_cross.accepted_stage2_center_sha256,
             triangle_cross.powered_frame_sha256,
             triangle_cross.open_gate_frame_sha256,
             square_circle.failed_stage2_center_player,
             square_circle.accepted_stage2_center_player,
             square_circle.final_player,
-            square_circle.failed_stage2_center_sha256,
+            format!("{} / world={}", square_circle.failed_stage2_center_sha256, square_circle.failed_stage2_world_sha256),
             square_circle.accepted_stage2_center_sha256,
             square_circle.powered_frame_sha256,
             square_circle.open_gate_frame_sha256,
             square_cross.failed_stage2_center_player,
             square_cross.accepted_stage2_center_player,
             square_cross.final_player,
-            square_cross.failed_stage2_center_sha256,
+            format!("{} / world={}", square_cross.failed_stage2_center_sha256, square_cross.failed_stage2_world_sha256),
             square_cross.accepted_stage2_center_sha256,
             square_cross.powered_frame_sha256,
             square_cross.open_gate_frame_sha256,
