@@ -737,6 +737,155 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "compositional-recall-swapped-square-flip-v1" \
   --receipt "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
 
+printf '==> running Sequential Rule 2x2x2x2 qualification\n'
+cargo run -p phicade-libretro --bin sequential_rule_qualify -- \
+  --core "$CORE" \
+  --rom "sequential-rule-normal-triangle-match-match-v1=$SEQ_NTMM_ROM" \
+  --rom "sequential-rule-normal-triangle-match-flip-v1=$SEQ_NTMF_ROM" \
+  --rom "sequential-rule-normal-triangle-flip-match-v1=$SEQ_NTFM_ROM" \
+  --rom "sequential-rule-normal-triangle-flip-flip-v1=$SEQ_NTFF_ROM" \
+  --rom "sequential-rule-normal-square-match-match-v1=$SEQ_NSMM_ROM" \
+  --rom "sequential-rule-normal-square-match-flip-v1=$SEQ_NSMF_ROM" \
+  --rom "sequential-rule-normal-square-flip-match-v1=$SEQ_NSFM_ROM" \
+  --rom "sequential-rule-normal-square-flip-flip-v1=$SEQ_NSFF_ROM" \
+  --rom "sequential-rule-swapped-triangle-match-match-v1=$SEQ_STMM_ROM" \
+  --rom "sequential-rule-swapped-triangle-match-flip-v1=$SEQ_STMF_ROM" \
+  --rom "sequential-rule-swapped-triangle-flip-match-v1=$SEQ_STFM_ROM" \
+  --rom "sequential-rule-swapped-triangle-flip-flip-v1=$SEQ_STFF_ROM" \
+  --rom "sequential-rule-swapped-square-match-match-v1=$SEQ_SSMM_ROM" \
+  --rom "sequential-rule-swapped-square-match-flip-v1=$SEQ_SSMF_ROM" \
+  --rom "sequential-rule-swapped-square-flip-match-v1=$SEQ_SSFM_ROM" \
+  --rom "sequential-rule-swapped-square-flip-flip-v1=$SEQ_SSFF_ROM" \
+  --receipt "$ROOT/artifacts/sequential-rule-qualification.json"
+
+printf '==> running Sequential Rule normal-triangle-match-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NTMM_ROM" \
+  --source "$SEQ_NTMM_SRC" \
+  --task "sequential-rule-normal-triangle-match-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-match-match-qualification.json"
+
+printf '==> running Sequential Rule normal-triangle-match-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NTMF_ROM" \
+  --source "$SEQ_NTMF_SRC" \
+  --task "sequential-rule-normal-triangle-match-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-match-flip-qualification.json"
+
+printf '==> running Sequential Rule normal-triangle-flip-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NTFM_ROM" \
+  --source "$SEQ_NTFM_SRC" \
+  --task "sequential-rule-normal-triangle-flip-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-flip-match-qualification.json"
+
+printf '==> running Sequential Rule normal-triangle-flip-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NTFF_ROM" \
+  --source "$SEQ_NTFF_SRC" \
+  --task "sequential-rule-normal-triangle-flip-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-flip-flip-qualification.json"
+
+printf '==> running Sequential Rule normal-square-match-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NSMM_ROM" \
+  --source "$SEQ_NSMM_SRC" \
+  --task "sequential-rule-normal-square-match-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-match-match-qualification.json"
+
+printf '==> running Sequential Rule normal-square-match-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NSMF_ROM" \
+  --source "$SEQ_NSMF_SRC" \
+  --task "sequential-rule-normal-square-match-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-match-flip-qualification.json"
+
+printf '==> running Sequential Rule normal-square-flip-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NSFM_ROM" \
+  --source "$SEQ_NSFM_SRC" \
+  --task "sequential-rule-normal-square-flip-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-flip-match-qualification.json"
+
+printf '==> running Sequential Rule normal-square-flip-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_NSFF_ROM" \
+  --source "$SEQ_NSFF_SRC" \
+  --task "sequential-rule-normal-square-flip-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-flip-flip-qualification.json"
+
+printf '==> running Sequential Rule swapped-triangle-match-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_STMM_ROM" \
+  --source "$SEQ_STMM_SRC" \
+  --task "sequential-rule-swapped-triangle-match-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-match-match-qualification.json"
+
+printf '==> running Sequential Rule swapped-triangle-match-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_STMF_ROM" \
+  --source "$SEQ_STMF_SRC" \
+  --task "sequential-rule-swapped-triangle-match-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-match-flip-qualification.json"
+
+printf '==> running Sequential Rule swapped-triangle-flip-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_STFM_ROM" \
+  --source "$SEQ_STFM_SRC" \
+  --task "sequential-rule-swapped-triangle-flip-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-flip-match-qualification.json"
+
+printf '==> running Sequential Rule swapped-triangle-flip-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_STFF_ROM" \
+  --source "$SEQ_STFF_SRC" \
+  --task "sequential-rule-swapped-triangle-flip-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-flip-flip-qualification.json"
+
+printf '==> running Sequential Rule swapped-square-match-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_SSMM_ROM" \
+  --source "$SEQ_SSMM_SRC" \
+  --task "sequential-rule-swapped-square-match-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-match-match-qualification.json"
+
+printf '==> running Sequential Rule swapped-square-match-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_SSMF_ROM" \
+  --source "$SEQ_SSMF_SRC" \
+  --task "sequential-rule-swapped-square-match-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-match-flip-qualification.json"
+
+printf '==> running Sequential Rule swapped-square-flip-match\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_SSFM_ROM" \
+  --source "$SEQ_SSFM_SRC" \
+  --task "sequential-rule-swapped-square-flip-match-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-match-qualification.json"
+
+printf '==> running Sequential Rule swapped-square-flip-flip\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$SEQ_SSFF_ROM" \
+  --source "$SEQ_SSFF_SRC" \
+  --task "sequential-rule-swapped-square-flip-flip-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-flip-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -780,3 +929,20 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-match-qualificatio
 printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-triangle-flip-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-match-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-swapped-square-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/sequential-rule-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-match-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-match-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-flip-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-triangle-flip-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-match-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-match-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-flip-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-normal-square-flip-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-match-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-match-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-flip-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-triangle-flip-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-match-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-match-flip-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-match-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-sequential-rule-swapped-square-flip-flip-qualification.json"
