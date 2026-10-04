@@ -486,6 +486,20 @@ ReadMove:
     jr z, .down
 
 .upGateCheck:
+    ; After Stage 2 succeeds, the unpowered generator becomes the next
+    ; authoritative vertical interaction stop. Deliberate oracle overrun
+    ; therefore resolves to exact generator geometry instead of timing luck.
+    ld a, [wStage2Done]
+    and a
+    jr z, .upGateBarrier
+    ld a, [wPowerOn]
+    and a
+    jr nz, .upGateBarrier
+    ld a, [wPlayerY]
+    cp GENERATOR_Y
+    jr z, .down
+
+.upGateBarrier:
     ld a, [wGateOpen]
     and a
     jr nz, .upBounds
