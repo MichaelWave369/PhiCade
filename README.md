@@ -5,13 +5,14 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 26
+## Current status — Rung 27
 
-PhiCade now has a two-level factorial branch benchmark. Stage 1 requires a
-TRIANGLE/SQUARE family choice. Only a correct first commitment reveals an
-independent CIRCLE/CROSS Stage 2 choice. Wrong commitment at either depth is
-irreversible; two correct choices converge onto one shared generator → gate →
-target chain. Suite v8 preserves every Suite v7 task and adds all four 2×2 variants.
+PhiCade now has a relational binding-memory benchmark. A briefing places
+TRIANGLE and SQUARE on opposite sides, then erases that position-bearing
+evidence. After a delay, a newly revealed query symbol asks the controller to
+choose the identical door where that symbol appeared earlier. Arrangement ×
+query forms a full 2×2 factorial, so no fixed symbol→side shortcut survives.
+Suite v9 preserves every Suite v8 task and adds all four binding-memory variants.
 
 Benchmark suites:
 
@@ -23,6 +24,7 @@ Benchmark suites:
 - **Suite v6** — the exact v5 tasks + **Power Chain: Left** + **Power Chain: Right**
 - **Suite v7** — the exact v6 tasks + **Branch Selector: Triangle** + **Branch Selector: Square**
 - **Suite v8** — the exact v7 tasks + the four **Nested Branch** 2×2 factorial variants
+- **Suite v9** — the exact v8 tasks + the four **Relational Binding Memory** 2×2 factorial variants
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -37,6 +39,8 @@ Benchmark suites:
   chooses the valid branch, and a wrong commitment irreversibly dead-ends
 - **Nested Branch quartet** — Stage 2 remains hidden until Stage 1 succeeds;
   four factorial variants prevent the second answer from being inferred from the first
+- **Relational Binding Memory quartet** — briefing arrangement is erased before
+  a later symbol query; identical doors force retrieval of the earlier symbol→position relation
 
 Current evidence stack includes:
 
@@ -81,6 +85,12 @@ Current evidence stack includes:
 - irreversible failure controls at both decision depths
 - four-way accepted/powered/open-gate convergence controls
 - Benchmark Suite v8 with exact 17-task membership
+- four-way arrangement × query relational binding-memory factorial
+- post-briefing position evidence erased before the query decision
+- same-query choice-frame convergence across opposite earlier arrangements
+- fixed-left and fixed-right controls each capped at exactly 2/4
+- irreversible wrong-door commitment and recovery refusal
+- Benchmark Suite v9 with exact 21-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -106,6 +116,25 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Relational binding-memory benchmark
+
+Suite v9 adds four source-first Game Boy tasks covering the full
+NORMAL/SWAPPED arrangement × TRIANGLE/SQUARE query factorial.
+
+The briefing shows both symbols and their positions. Pressing A removes every
+position-bearing briefing pixel, waits through a lockout, then reveals one
+query symbol above two identical doors. The controller must remember where that
+symbol appeared earlier and press A at the matching door. A wrong commitment is
+terminal.
+
+The joint qualifier proves that same-query choice frames converge across
+opposite briefing arrangements, that query symbols remain visibly distinct,
+that fixed-left and fixed-right policies each solve only two of four variants,
+and that wrong commitment cannot recover.
+
+See `docs/RELATIONAL_BINDING_MEMORY_BENCHMARK.md` and
+`docs/BENCHMARK_SUITE_V9.md`.
 
 ## Nested branch-graph benchmark
 
@@ -286,7 +315,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select the desired frozen suite version, including **Suite v8**,
+2. select the desired frozen suite version, including **Suite v9**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -352,14 +381,16 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all seventeen registered benchmark ROMs from source,
+CI assembles and qualifies all twenty-one registered benchmark ROMs from source,
 jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, Branch
-Selector, and Nested Branch Graph controls, tests prior-suite preservation,
-Suite v8 13/17 → 14/17 → 15/17 → 16/17 → 17/17 coverage, digest splitting, and
-trial-tamper refusal.
+Selector, Nested Branch Graph, and Relational Binding Memory controls, tests
+prior-suite preservation, Suite v9 17/21 → 18/21 → 19/21 → 20/21 → 21/21
+coverage, digest splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/RELATIONAL_BINDING_MEMORY_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V9.md`
 - `docs/NESTED_BRANCH_GRAPH_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V8.md`
 - `docs/CONDITIONAL_BRANCH_SELECTOR_BENCHMARK.md`

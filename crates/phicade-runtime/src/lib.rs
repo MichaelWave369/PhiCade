@@ -23,7 +23,7 @@ pub use action_bus::{
 pub use authority::{AgentGrant, AuthorityDecision, AuthorityPolicy, ControlMode};
 pub use agent_gym::{
     agent_gym_distance, agent_gym_score_1000, agent_gym_success, benchmark_suite_by_id,
-    benchmark_suite_v1_tasks, benchmark_suite_v2_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suites,
+    benchmark_suite_v1_tasks, benchmark_suite_v2_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suite_v9_tasks, benchmark_suites,
     benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
     benchmark_task_distance, benchmark_task_success, locate_agent_gym_player,
     score_agent_gym_frame, score_benchmark_task_frame, AgentGymScore, BenchmarkSuiteSpec,
@@ -82,9 +82,19 @@ pub use agent_gym::{
     AGENT_GYM_NESTED_SQUARE_CROSS_ORACLE, AGENT_GYM_NESTED_SQUARE_CROSS_ROM_SHA256,
     AGENT_GYM_NESTED_SQUARE_CROSS_SOURCE_SHA256, AGENT_GYM_NESTED_SQUARE_CROSS_TASK,
     AGENT_GYM_NESTED_START, AGENT_GYM_NESTED_TARGET, AGENT_GYM_NESTED_INITIAL_DISTANCE,
+    AGENT_GYM_BINDING_NORMAL_TRIANGLE_ID, AGENT_GYM_BINDING_NORMAL_TRIANGLE_ROM_SHA256,
+    AGENT_GYM_BINDING_NORMAL_TRIANGLE_SOURCE_SHA256, AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_NORMAL_SQUARE_ID, AGENT_GYM_BINDING_NORMAL_SQUARE_ROM_SHA256,
+    AGENT_GYM_BINDING_NORMAL_SQUARE_SOURCE_SHA256, AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_TRIANGLE_ID, AGENT_GYM_BINDING_SWAPPED_TRIANGLE_ROM_SHA256,
+    AGENT_GYM_BINDING_SWAPPED_TRIANGLE_SOURCE_SHA256, AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_SQUARE_ID, AGENT_GYM_BINDING_SWAPPED_SQUARE_ROM_SHA256,
+    AGENT_GYM_BINDING_SWAPPED_SQUARE_SOURCE_SHA256, AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+    AGENT_GYM_BINDING_LEFT_ORACLE, AGENT_GYM_BINDING_RIGHT_ORACLE, AGENT_GYM_BINDING_START,
+    AGENT_GYM_BINDING_LEFT_TARGET, AGENT_GYM_BINDING_RIGHT_TARGET, AGENT_GYM_BINDING_INITIAL_DISTANCE,
     BENCHMARK_SUITE_V1_ID, BENCHMARK_SUITE_V2_ID, BENCHMARK_SUITE_V3_ID,
     BENCHMARK_SUITE_V4_ID, BENCHMARK_SUITE_V5_ID, BENCHMARK_SUITE_V6_ID,
-    BENCHMARK_SUITE_V7_ID, BENCHMARK_SUITE_V8_ID, BENCHMARK_TASKS,
+    BENCHMARK_SUITE_V7_ID, BENCHMARK_SUITE_V8_ID, BENCHMARK_SUITE_V9_ID, BENCHMARK_TASKS,
 };
 pub use autodrive::{
     AutodrivePolicy, AutodriveReceipt, AutodriveStatus, AutodriveStopReason,

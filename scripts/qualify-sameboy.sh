@@ -180,8 +180,40 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$NESTED_SX_OBJ" "$NESTED_SX_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$NESTED_SX_ROM" "$NESTED_SX_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHINSCROSS" "$NESTED_SX_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task R / Binding Memory NORMAL-TRIANGLE\n'
+BIND_NT_SRC="$ROOT/benchmarks/agent-gym-binding-memory-normal-triangle/main.asm"
+BIND_NT_OBJ="$WORK/phi-agent-gym-binding-memory-normal-triangle.o"
+BIND_NT_ROM="$WORK/phi-agent-gym-binding-memory-normal-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BIND_NT_OBJ" "$BIND_NT_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BIND_NT_ROM" "$BIND_NT_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBINDNT" "$BIND_NT_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task S / Binding Memory NORMAL-SQUARE\n'
+BIND_NS_SRC="$ROOT/benchmarks/agent-gym-binding-memory-normal-square/main.asm"
+BIND_NS_OBJ="$WORK/phi-agent-gym-binding-memory-normal-square.o"
+BIND_NS_ROM="$WORK/phi-agent-gym-binding-memory-normal-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BIND_NS_OBJ" "$BIND_NS_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BIND_NS_ROM" "$BIND_NS_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBINDNS" "$BIND_NS_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task T / Binding Memory SWAPPED-TRIANGLE\n'
+BIND_ST_SRC="$ROOT/benchmarks/agent-gym-binding-memory-swapped-triangle/main.asm"
+BIND_ST_OBJ="$WORK/phi-agent-gym-binding-memory-swapped-triangle.o"
+BIND_ST_ROM="$WORK/phi-agent-gym-binding-memory-swapped-triangle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BIND_ST_OBJ" "$BIND_ST_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BIND_ST_ROM" "$BIND_ST_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBINDST" "$BIND_ST_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task U / Binding Memory SWAPPED-SQUARE\n'
+BIND_SS_SRC="$ROOT/benchmarks/agent-gym-binding-memory-swapped-square/main.asm"
+BIND_SS_OBJ="$WORK/phi-agent-gym-binding-memory-swapped-square.o"
+BIND_SS_ROM="$WORK/phi-agent-gym-binding-memory-swapped-square.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BIND_SS_OBJ" "$BIND_SS_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BIND_SS_ROM" "$BIND_SS_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBINDSS" "$BIND_SS_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -395,6 +427,47 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "nested-branch-square-cross-v1" \
   --receipt "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"
 
+printf '==> running Relational Binding Memory factorial qualification\n'
+cargo run -p phicade-libretro --bin binding_memory_qualify -- \
+  --core "$CORE" \
+  --normal-triangle-rom "$BIND_NT_ROM" \
+  --normal-square-rom "$BIND_NS_ROM" \
+  --swapped-triangle-rom "$BIND_ST_ROM" \
+  --swapped-square-rom "$BIND_SS_ROM" \
+  --receipt "$ROOT/artifacts/binding-memory-qualification.json"
+
+printf '==> running Phi-Agent Gym task R / Binding Memory NORMAL-TRIANGLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_NT_ROM" \
+  --source "$BIND_NT_SRC" \
+  --task "binding-memory-normal-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qualification.json"
+
+printf '==> running Phi-Agent Gym task S / Binding Memory NORMAL-SQUARE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_NS_ROM" \
+  --source "$BIND_NS_SRC" \
+  --task "binding-memory-normal-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
+
+printf '==> running Phi-Agent Gym task T / Binding Memory SWAPPED-TRIANGLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_ST_ROM" \
+  --source "$BIND_ST_SRC" \
+  --task "binding-memory-swapped-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
+
+printf '==> running Phi-Agent Gym task U / Binding Memory SWAPPED-SQUARE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$BIND_SS_ROM" \
+  --source "$BIND_SS_SRC" \
+  --task "binding-memory-swapped-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -424,3 +497,8 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-circle-quali
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-circle-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/binding-memory-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-normal-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-binding-memory-swapped-square-qualification.json"
