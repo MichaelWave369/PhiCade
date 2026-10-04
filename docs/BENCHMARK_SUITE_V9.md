@@ -18,20 +18,20 @@ geometry, or suite origin is mutated.
 ## Frozen provenance
 
 ### Normal / Triangle
-- source SHA-256: `d54a7e830f5350494ac6993dea7145d9fafff48d5819e6e6bac8b2f8ea111e25`
-- ROM SHA-256: `5fe04089950b0e0d1e0c4d322ff2642bb6ec6588817ea9586dbb9de8929e16ad`
+- source SHA-256: `1a0b386a2cfa4a8e6caf93e58e40620dd8913f068cf6a90bb09159cafbf506da`
+- ROM SHA-256: `5f96edb28dbc65ae6f37d2f0bc740ef2ce9e2c2b8b9191a8e1a9882eaffd1a95`
 
 ### Normal / Square
-- source SHA-256: `869d2352255828154f8e11a375084c249d490118e5b905964456e8b1bddbbed1`
-- ROM SHA-256: `b80e22322e12c86a36b476e437ee17e0f2b0d499a9d6b08b6f3942263c70f90f`
+- source SHA-256: `d2607daadac805fe27901ff1840639293f5cadb06b40e86ff5fdb477cd148faa`
+- ROM SHA-256: `ee5eeac96f5073605014ad2e709331d96c7771a0b076f332f38ec5ec6356270d`
 
 ### Swapped / Triangle
-- source SHA-256: `62d7e26a2347dc60826fc7bddd2e172b358a567d76bf2da85a29f49672633e2f`
-- ROM SHA-256: `1e14a0cc826011690d2fe1c22e11490d426eee4c4a2c7a529ef3d3f0da8a84c2`
+- source SHA-256: `41f8b37237832f824275f307beacabbd3731e86c507ac3098ec206b4b4cdbf2e`
+- ROM SHA-256: `31cfb105608c2e33c0cf1f43be7c8c037f0a56a4401aa4abfd43ecc6ff694300`
 
 ### Swapped / Square
-- source SHA-256: `96a2c22a4294185e3c6066ebceffe76f69939bf6f52d3f33d68d7449bfe687f9`
-- ROM SHA-256: `a1f5a1413ba4d19f9f6781613dbe56f35e624b0edc05209e0489ec83454b3add`
+- source SHA-256: `e1773c96b87e92f51e9129ed54f6cb60ca3cd4d03f35d1ed287edba915460c4d`
+- ROM SHA-256: `c6f9a0d73187dbec822753c026405199c6d278dee19b4343de524e6fd4568492`
 
 These hashes were observed from the pinned RGBDS v1.0.3 CI build before registry
 freeze.
