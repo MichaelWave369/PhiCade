@@ -145,7 +145,7 @@ ReadInput:
     cp STATE_STAGE1
     jr z, ReadStage1
     cp STATE_STAGE2
-    jr z, ReadStage2
+    jp z, ReadStage2
     ret
 
 ReadBrief:
