@@ -23,7 +23,11 @@ DEF STAGE1_LEFT_X     EQU 32
 DEF STAGE1_RIGHT_X    EQU 128
 DEF STAGE1_Y          EQU 128
 DEF STAGE2_LEFT_X     EQU 32
+DEF STAGE2_LEFT_MIN_X EQU STAGE2_LEFT_X - 2
+DEF STAGE2_LEFT_MAX_X EQU STAGE2_LEFT_X + 3
 DEF STAGE2_RIGHT_X    EQU 128
+DEF STAGE2_RIGHT_MIN_X EQU STAGE2_RIGHT_X - 2
+DEF STAGE2_RIGHT_MAX_X EQU STAGE2_RIGHT_X + 3
 DEF STAGE2_Y          EQU 96
 DEF STAGE2_MIN_Y      EQU STAGE2_Y - 2
 DEF STAGE2_MAX_Y      EQU STAGE2_Y + 3
@@ -241,10 +245,16 @@ ReadAction:
     cp STAGE2_MAX_Y
     jp nc, .done
     ld a, [wPlayerX]
-    cp STAGE2_LEFT_X
-    jr z, .acceptStage2
-    cp STAGE2_RIGHT_X
-    jr z, .fail
+    cp STAGE2_LEFT_MIN_X
+    jr c, .checkStage2Wrong
+    cp STAGE2_LEFT_MAX_X
+    jr c, .acceptStage2
+.checkStage2Wrong:
+    ld a, [wPlayerX]
+    cp STAGE2_RIGHT_MIN_X
+    jp c, .done
+    cp STAGE2_RIGHT_MAX_X
+    jr c, .fail
     jp .done
 
 .acceptStage2:
