@@ -598,7 +598,7 @@ pub static AGENT_GYM_BINDING_RIGHT_ORACLE: [OracleLeg; 4] = [
 pub static AGENT_GYM_SEQUENTIAL_LEFT_ORACLE: [OracleLeg; 6] = [
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 101 },
-    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "A", frames: 2 },
     OracleLeg { button: "WAIT", frames: 101 },
     OracleLeg { button: "LEFT", frames: 24 },
     OracleLeg { button: "A", frames: 1 },
@@ -607,7 +607,7 @@ pub static AGENT_GYM_SEQUENTIAL_LEFT_ORACLE: [OracleLeg; 6] = [
 pub static AGENT_GYM_SEQUENTIAL_RIGHT_ORACLE: [OracleLeg; 6] = [
     OracleLeg { button: "A", frames: 1 },
     OracleLeg { button: "WAIT", frames: 101 },
-    OracleLeg { button: "A", frames: 1 },
+    OracleLeg { button: "A", frames: 2 },
     OracleLeg { button: "WAIT", frames: 101 },
     OracleLeg { button: "RIGHT", frames: 24 },
     OracleLeg { button: "A", frames: 1 },
