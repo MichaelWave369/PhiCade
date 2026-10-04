@@ -371,7 +371,7 @@
 - [x] v7 READY at 13/13 while v8 remains INCOMPLETE at 13/17
 - [x] v8 remains INCOMPLETE at 14/17, 15/17, and 16/17
 - [x] v8 READY only at 17/17
-- [ ] Freeze canonical Nested Branch source + ROM SHA-256 after qualification
+- [x] Freeze canonical Nested Branch source + ROM SHA-256 after qualification
 
 ## Later
 
