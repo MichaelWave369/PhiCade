@@ -536,15 +536,6 @@ fn qualify_variant(
     let failed_stage2_world_sha256 =
         sha256_world_without_actor(&video, STAGE2_CENTER);
 
-    hold_button(
-        &mut core,
-        &mut sequence,
-        "UP",
-        GENERATOR_UP_FRAMES,
-        &mut video,
-        &mut audio,
-        "move failed stage2 to generator",
-    )?;
     no_input(
         &mut core,
         SETTLE_FRAMES,
