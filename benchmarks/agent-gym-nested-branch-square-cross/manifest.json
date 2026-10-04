@@ -51,11 +51,15 @@
   },
   "generator": {
     "screen": [
-      72,
-      64
+      88,
+      72
     ],
     "installButton": "A",
-    "requiresStage2Acceptance": true
+    "requiresStage2Acceptance": true,
+    "interactionPlayerScreen": [
+      72,
+      64
+    ]
   },
   "gate": {
     "playerStopScreenY": 56,
