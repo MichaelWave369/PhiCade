@@ -148,8 +148,40 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$BRANCH_SQ_OBJ" "$BRANCH_SQ_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$BRANCH_SQ_ROM" "$BRANCH_SQ_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHIBRANCHSQ" "$BRANCH_SQ_ROM"
 
+printf '==> assembling source-first Phi-Agent Gym task N / Nested TRIANGLE-CIRCLE\n'
+NESTED_TC_SRC="$ROOT/benchmarks/agent-gym-nested-branch-triangle-circle/main.asm"
+NESTED_TC_OBJ="$WORK/phi-agent-gym-nested-triangle-circle.o"
+NESTED_TC_ROM="$WORK/phi-agent-gym-nested-triangle-circle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$NESTED_TC_OBJ" "$NESTED_TC_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$NESTED_TC_ROM" "$NESTED_TC_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHINTCIRCLE" "$NESTED_TC_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task O / Nested TRIANGLE-CROSS\n'
+NESTED_TX_SRC="$ROOT/benchmarks/agent-gym-nested-branch-triangle-cross/main.asm"
+NESTED_TX_OBJ="$WORK/phi-agent-gym-nested-triangle-cross.o"
+NESTED_TX_ROM="$WORK/phi-agent-gym-nested-triangle-cross.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$NESTED_TX_OBJ" "$NESTED_TX_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$NESTED_TX_ROM" "$NESTED_TX_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHINTCROSS" "$NESTED_TX_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task P / Nested SQUARE-CIRCLE\n'
+NESTED_SC_SRC="$ROOT/benchmarks/agent-gym-nested-branch-square-circle/main.asm"
+NESTED_SC_OBJ="$WORK/phi-agent-gym-nested-square-circle.o"
+NESTED_SC_ROM="$WORK/phi-agent-gym-nested-square-circle.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$NESTED_SC_OBJ" "$NESTED_SC_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$NESTED_SC_ROM" "$NESTED_SC_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHINSCIRCLE" "$NESTED_SC_ROM"
+
+printf '==> assembling source-first Phi-Agent Gym task Q / Nested SQUARE-CROSS\n'
+NESTED_SX_SRC="$ROOT/benchmarks/agent-gym-nested-branch-square-cross/main.asm"
+NESTED_SX_OBJ="$WORK/phi-agent-gym-nested-square-cross.o"
+NESTED_SX_ROM="$WORK/phi-agent-gym-nested-square-cross.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$NESTED_SX_OBJ" "$NESTED_SX_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$NESTED_SX_ROM" "$NESTED_SX_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHINSCROSS" "$NESTED_SX_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
@@ -322,6 +354,47 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "branch-selector-square-v1" \
   --receipt "$ROOT/artifacts/agent-gym-branch-selector-square-qualification.json"
 
+printf '==> running Nested Branch Graph factorial qualification\n'
+cargo run -p phicade-libretro --bin nested_branch_qualify -- \
+  --core "$CORE" \
+  --triangle-circle-rom "$NESTED_TC_ROM" \
+  --triangle-cross-rom "$NESTED_TX_ROM" \
+  --square-circle-rom "$NESTED_SC_ROM" \
+  --square-cross-rom "$NESTED_SX_ROM" \
+  --receipt "$ROOT/artifacts/nested-branch-qualification.json"
+
+printf '==> running Phi-Agent Gym task N / Nested TRIANGLE-CIRCLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$NESTED_TC_ROM" \
+  --source "$NESTED_TC_SRC" \
+  --task "nested-branch-triangle-circle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-nested-branch-triangle-circle-qualification.json"
+
+printf '==> running Phi-Agent Gym task O / Nested TRIANGLE-CROSS qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$NESTED_TX_ROM" \
+  --source "$NESTED_TX_SRC" \
+  --task "nested-branch-triangle-cross-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
+
+printf '==> running Phi-Agent Gym task P / Nested SQUARE-CIRCLE qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$NESTED_SC_ROM" \
+  --source "$NESTED_SC_SRC" \
+  --task "nested-branch-square-circle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-nested-branch-square-circle-qualification.json"
+
+printf '==> running Phi-Agent Gym task Q / Nested SQUARE-CROSS qualification\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$NESTED_SX_ROM" \
+  --source "$NESTED_SX_SRC" \
+  --task "nested-branch-square-cross-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -346,3 +419,8 @@ printf '    %s\n' "$ROOT/artifacts/power-chain-pair-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/branch-selector-pair-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-branch-selector-triangle-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-branch-selector-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/nested-branch-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-circle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-circle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-nested-branch-square-cross-qualification.json"

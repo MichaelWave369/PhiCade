@@ -1,0 +1,127 @@
+{
+  "schema": "phicade.agent-gym-manifest.v1",
+  "id": "nested-branch-square-cross-v1",
+  "title": "Nested Branch: Square → Cross",
+  "system": "GB",
+  "source": "main.asm",
+  "license": "MIT",
+  "observation": "rendered-framebuffer-only",
+  "controls": [
+    "A",
+    "UP",
+    "DOWN",
+    "LEFT",
+    "RIGHT"
+  ],
+  "movementPixelsPerFrame": 2,
+  "player": {
+    "startScreen": [
+      72,
+      112
+    ]
+  },
+  "stage1": {
+    "selector": "square",
+    "candidates": {
+      "triangle": [
+        24,
+        112
+      ],
+      "square": [
+        120,
+        112
+      ]
+    },
+    "wrongSelectionIrreversible": true
+  },
+  "stage2": {
+    "reveal": "only-after-correct-stage1",
+    "selector": "cross",
+    "candidates": {
+      "circle": [
+        24,
+        80
+      ],
+      "cross": [
+        120,
+        80
+      ]
+    },
+    "wrongSelectionIrreversible": true
+  },
+  "generator": {
+    "screen": [
+      88,
+      72
+    ],
+    "installButton": "A",
+    "requiresStage2Acceptance": true,
+    "interactionPlayerScreen": [
+      72,
+      80
+    ]
+  },
+  "gate": {
+    "playerStopScreenY": 56,
+    "unlockButton": "A",
+    "requiresPower": true
+  },
+  "target": {
+    "screen": [
+      72,
+      24
+    ]
+  },
+  "score": {
+    "metric": "manhattan-distance-progress-to-target",
+    "initialDistancePixels": 88,
+    "range": [
+      0,
+      1000
+    ],
+    "successDistancePixels": 4
+  },
+  "controlsQualification": {
+    "oracle": [
+      "RIGHT",
+      "A",
+      "LEFT",
+      "WAIT",
+      "UP",
+      "RIGHT",
+      "A",
+      "LEFT",
+      "WAIT",
+      "WAIT",
+      "A",
+      "WAIT",
+      "UP",
+      "WAIT",
+      "A",
+      "WAIT",
+      "UP"
+    ],
+    "oracleFrames": [
+      32,
+      1,
+      32,
+      2,
+      16,
+      32,
+      1,
+      32,
+      2,
+      2,
+      1,
+      2,
+      12,
+      2,
+      1,
+      2,
+      20
+    ],
+    "noInputExpectedProgress": 0,
+    "oracleMinimumScore": 980,
+    "deterministicReplayRequired": true
+  }
+}

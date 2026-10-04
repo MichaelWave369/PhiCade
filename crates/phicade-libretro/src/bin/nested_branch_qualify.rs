@@ -1,0 +1,1253 @@
+use phicade_libretro::LibretroCore;
+use phicade_runtime::{
+    benchmark_task_by_id, benchmark_task_success, locate_agent_gym_player, ActionEnvelope,
+    ActionKind, ActionSource, AudioBuffer, BenchmarkTaskSpec, EmulatorCore, FrameBuffer,
+    GameImage, PixelPoint, SystemId, AGENT_GYM_NESTED_SQUARE_CIRCLE_ID,
+    AGENT_GYM_NESTED_SQUARE_CROSS_ID, AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ID,
+    AGENT_GYM_NESTED_TRIANGLE_CROSS_ID,
+};
+use serde::Serialize;
+use sha2::{Digest, Sha256};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process,
+};
+
+const WARMUP_FRAMES: u64 = 120;
+const SIDE_FRAMES: u64 = 32;
+// hold_button performs a separate release step. SameBoy observes one final
+// Hold durations match the canonical Agent Gym oracle. The release event
+// neutralizes the button before the release frame is simulated, so it does
+// not contribute an extra movement tick.
+const STAGE2_UP_FRAMES: u64 = 16;
+const GATE_UP_FRAMES: u64 = 12;
+const TARGET_UP_FRAMES: u64 = 20;
+const BLOCK_PROBE_FRAMES: u64 = 8;
+const SETTLE_FRAMES: u64 = 2;
+
+const START: PixelPoint = PixelPoint { x: 72, y: 112 };
+const STAGE2_CENTER: PixelPoint = PixelPoint { x: 72, y: 80 };
+const GENERATOR_PLAYER: PixelPoint = STAGE2_CENTER;
+const GATE_PLAYER: PixelPoint = PixelPoint { x: 72, y: 56 };
+const CHECKPOINT_TOLERANCE: i32 = 2;
+// Mask the complete local actor-render neighborhood when comparing world
+// convergence. A 4px pad still allowed left/right approach residue from the
+// solid 8x8 player sprite to survive in the Stage 2 FAIL hash.
+const ACTOR_MASK_PAD: i32 = 8;
+
+#[derive(Debug, Clone, Copy)]
+struct VariantPlan {
+    task_id: &'static str,
+    stage1_correct: &'static str,
+    stage1_wrong: &'static str,
+    stage1_back_correct: &'static str,
+    stage1_back_wrong: &'static str,
+    stage2_correct: &'static str,
+    stage2_wrong: &'static str,
+    stage2_back_correct: &'static str,
+    stage2_back_wrong: &'static str,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VariantEvidence {
+    task_id: String,
+    rom_sha256: String,
+    initial_frame_sha256: String,
+    failed_stage1_center_sha256: String,
+    failed_stage1_gate_sha256: String,
+    stage2_revealed_center_sha256: String,
+    failed_stage2_center_player: PixelPoint,
+    failed_stage2_center_sha256: String,
+    failed_stage2_projection_sha256: String,
+    failed_stage2_badge_sha256: String,
+    failed_stage2_selector_sha256: String,
+    failed_stage2_stage1_slots_sha256: String,
+    failed_stage2_stage2_slots_sha256: String,
+    failed_stage2_generator_tile_sha256: String,
+    failed_stage2_gate_strips_sha256: String,
+    failed_stage2_generator_before_sha256: String,
+    failed_stage2_generator_sha256: String,
+    failed_stage2_gate_sha256: String,
+    accepted_stage2_center_player: PixelPoint,
+    accepted_stage2_center_sha256: String,
+    accepted_stage2_world_sha256: String,
+    powered_player: PixelPoint,
+    powered_frame_sha256: String,
+    powered_world_sha256: String,
+    open_gate_player: PixelPoint,
+    open_gate_frame_sha256: String,
+    open_gate_world_sha256: String,
+    final_player: PixelPoint,
+    wrong_stage1_dead_end: bool,
+    wrong_stage2_generator_refused: bool,
+    wrong_stage2_dead_end: bool,
+    correct_branch_pass: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct NestedBranchQualificationReceipt {
+    schema: &'static str,
+    result: &'static str,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    triangle_circle: VariantEvidence,
+    triangle_cross: VariantEvidence,
+    square_circle: VariantEvidence,
+    square_cross: VariantEvidence,
+    stage2_hidden_before_stage1: bool,
+    stage1_family_visible: bool,
+    circle_stage2_converges_across_stage1_history: bool,
+    cross_stage2_converges_across_stage1_history: bool,
+    stage2_conditions_are_distinct: bool,
+    stage1_fail_converges_all: bool,
+    stage2_fail_converges_all: bool,
+    accepted_stage2_converges_all: bool,
+    powered_converges_all: bool,
+    open_gate_converges_all: bool,
+    actor_checkpoints_in_bounds_all: bool,
+    both_failure_depths_dead_end: bool,
+    all_correct_paths_pass: bool,
+}
+
+fn point_within_tolerance(point: PixelPoint, expected: PixelPoint, tolerance: i32) -> bool {
+    (point.x - expected.x).abs() <= tolerance
+        && (point.y - expected.y).abs() <= tolerance
+}
+
+fn checkpoint_dark(pixel: &[u8]) -> bool {
+    if pixel.len() < 4 {
+        return false;
+    }
+    let r = u16::from(pixel[0]);
+    let g = u16::from(pixel[1]);
+    let b = u16::from(pixel[2]);
+    (r + g + b) / 3 < 112
+}
+
+fn locate_player_near(
+    video: &FrameBuffer,
+    expected: PixelPoint,
+    radius: i32,
+) -> Result<PixelPoint, String> {
+    let width = i32::try_from(video.width).map_err(|_| "video width overflow")?;
+    let height = i32::try_from(video.height).map_err(|_| "video height overflow")?;
+    if video.rgba8.len() != (width as usize) * (height as usize) * 4 {
+        return Err("nested checkpoint framebuffer byte length mismatch".into());
+    }
+
+    let x0 = (expected.x - radius).max(0);
+    let y0 = (expected.y - radius).max(0);
+    let x1 = (expected.x + radius).min(width - 8);
+    let y1 = (expected.y + radius).min(height - 8);
+    let mut best: Option<(i32, i32, usize)> = None;
+
+    for y in y0..=y1 {
+        for x in x0..=x1 {
+            let mut dark_count = 0usize;
+            for py in y..y + 8 {
+                for px in x..x + 8 {
+                    let offset = ((py * width + px) * 4) as usize;
+                    if checkpoint_dark(&video.rgba8[offset..offset + 4]) {
+                        dark_count += 1;
+                    }
+                }
+            }
+            if best.is_none_or(|(_, _, count)| dark_count > count) {
+                best = Some((x, y, dark_count));
+            }
+        }
+    }
+
+    let (x, y, count) = best.ok_or_else(|| "no local player candidate found".to_owned())?;
+    if count < 52 {
+        return Err(format!(
+            "local player patch not found near {:?}: best 8x8 dark-pixel count was {count}",
+            expected
+        ));
+    }
+    Ok(PixelPoint { x, y })
+}
+
+fn sha256_world_without_actor(video: &FrameBuffer, actor: PixelPoint) -> String {
+    let mut rgba = video.rgba8.clone();
+    let width = video.width as i32;
+    let height = video.height as i32;
+    let x0 = (actor.x - ACTOR_MASK_PAD).max(0);
+    let y0 = (actor.y - ACTOR_MASK_PAD).max(0);
+    let x1 = (actor.x + 8 + ACTOR_MASK_PAD).min(width);
+    let y1 = (actor.y + 8 + ACTOR_MASK_PAD).min(height);
+
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let index = ((y * width + x) * 4) as usize;
+            if index + 3 < rgba.len() {
+                rgba[index] = 0;
+                rgba[index + 1] = 0;
+                rgba[index + 2] = 0;
+                rgba[index + 3] = 0;
+            }
+        }
+    }
+    sha256_bytes(&rgba)
+}
+
+fn append_region(
+    out: &mut Vec<u8>,
+    video: &FrameBuffer,
+    x0: usize,
+    y0: usize,
+    width: usize,
+    height: usize,
+) -> Result<(), String> {
+    let frame_width = video.width as usize;
+    let frame_height = video.height as usize;
+    if x0 + width > frame_width || y0 + height > frame_height {
+        return Err(format!(
+            "region x={}..{} y={}..{} exceeds framebuffer {}x{}",
+            x0,
+            x0 + width,
+            y0,
+            y0 + height,
+            frame_width,
+            frame_height
+        ));
+    }
+    for y in y0..y0 + height {
+        let start = (y * frame_width + x0) * 4;
+        let end = start + width * 4;
+        out.extend_from_slice(&video.rgba8[start..end]);
+    }
+    Ok(())
+}
+
+fn sha256_region(
+    video: &FrameBuffer,
+    x0: usize,
+    y0: usize,
+    width: usize,
+    height: usize,
+) -> Result<String, String> {
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, x0, y0, width, height)?;
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_two_regions(
+    video: &FrameBuffer,
+    first: (usize, usize, usize, usize),
+    second: (usize, usize, usize, usize),
+) -> Result<String, String> {
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, first.0, first.1, first.2, first.3)?;
+    append_region(&mut bytes, video, second.0, second.1, second.2, second.3)?;
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_gate_region(video: &FrameBuffer) -> Result<String, String> {
+    // The actor stands over the center of the closed gate during refusal
+    // probes. Hash the left and right barrier strips only, so the proof asks
+    // whether the barrier changed rather than whether the sprite was visible.
+    let width = video.width as usize;
+    let y0 = GATE_PLAYER.y as usize;
+    let mut bytes = Vec::new();
+    append_region(&mut bytes, video, 0, y0, 56.min(width), 8)?;
+    if width > 104 {
+        append_region(&mut bytes, video, 104, y0, width - 104, 8)?;
+    }
+    Ok(sha256_bytes(&bytes))
+}
+
+fn sha256_failed_state_projection(video: &FrameBuffer) -> Result<String, String> {
+    // Frozen Nested Branch v1 task-critical surfaces. This deliberately
+    // excludes the actor and unrelated framebuffer pixels while preserving
+    // every rendered object that defines terminal failure semantics.
+    let mut bytes = Vec::new();
+
+    // carried badge
+    append_region(&mut bytes, video, 8, 8, 8, 8)?;
+    // selector / FAIL marker
+    append_region(&mut bytes, video, 72, 32, 8, 8)?;
+    // Stage 1 candidate slots
+    append_region(&mut bytes, video, 24, 112, 8, 8)?;
+    append_region(&mut bytes, video, 120, 112, 8, 8)?;
+    // Stage 2 candidate slots
+    append_region(&mut bytes, video, 24, 80, 8, 8)?;
+    append_region(&mut bytes, video, 120, 80, 8, 8)?;
+    // generator render tile
+    append_region(&mut bytes, video, 88, 72, 8, 8)?;
+
+    // actor-free gate strips
+    let frame_width = video.width as usize;
+    let gate_y = GATE_PLAYER.y as usize;
+    append_region(&mut bytes, video, 0, gate_y, 56.min(frame_width), 8)?;
+    if frame_width > 104 {
+        append_region(&mut bytes, video, 104, gate_y, frame_width - 104, 8)?;
+    }
+
+    Ok(sha256_bytes(&bytes))
+}
+
+fn usage() -> ! {
+    eprintln!(
+        "usage: nested_branch_qualify --core <sameboy_libretro> --triangle-circle-rom <rom> --triangle-cross-rom <rom> --square-circle-rom <rom> --square-cross-rom <rom> --receipt <path>"
+    );
+    process::exit(2);
+}
+
+fn sha256_bytes(bytes: &[u8]) -> String {
+    hex::encode(Sha256::digest(bytes))
+}
+
+fn sha256_file(path: &Path) -> Result<String, String> {
+    fs::read(path)
+        .map(|bytes| sha256_bytes(&bytes))
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))
+}
+
+fn button_event(sequence: u64, frame: u64, button: &str, pressed: bool) -> ActionEnvelope {
+    ActionEnvelope {
+        sequence,
+        frame,
+        source: ActionSource::Script {
+            name: "nested-branch-qualifier".into(),
+        },
+        action: ActionKind::Button {
+            button: button.into(),
+            pressed,
+        },
+    }
+}
+
+fn step(
+    core: &mut LibretroCore,
+    events: &[ActionEnvelope],
+    video: &mut FrameBuffer,
+    audio: &mut AudioBuffer,
+    context: &str,
+) -> Result<(), String> {
+    core.step_frame(events, video, audio)
+        .map_err(|error| format!("{context}: {error:?}"))
+}
+
+fn no_input(
+    core: &mut LibretroCore,
+    frames: u64,
+    video: &mut FrameBuffer,
+    audio: &mut AudioBuffer,
+    context: &str,
+) -> Result<(), String> {
+    for _ in 0..frames {
+        step(core, &[], video, audio, context)?;
+    }
+    Ok(())
+}
+
+fn hold_button(
+    core: &mut LibretroCore,
+    sequence: &mut u64,
+    button: &str,
+    frames: u64,
+    video: &mut FrameBuffer,
+    audio: &mut AudioBuffer,
+    context: &str,
+) -> Result<(), String> {
+    if frames == 0 {
+        return Ok(());
+    }
+    let frame = core.frame_count();
+    step(
+        core,
+        &[button_event(*sequence, frame, button, true)],
+        video,
+        audio,
+        context,
+    )?;
+    *sequence = sequence.saturating_add(1);
+    for _ in 1..frames {
+        step(core, &[], video, audio, context)?;
+    }
+    let frame = core.frame_count();
+    step(
+        core,
+        &[button_event(*sequence, frame, button, false)],
+        video,
+        audio,
+        context,
+    )?;
+    *sequence = sequence.saturating_add(1);
+    Ok(())
+}
+
+fn tap_a(
+    core: &mut LibretroCore,
+    sequence: &mut u64,
+    video: &mut FrameBuffer,
+    audio: &mut AudioBuffer,
+    context: &str,
+) -> Result<(), String> {
+    hold_button(core, sequence, "A", 1, video, audio, context)
+}
+
+fn restore(
+    core: &mut LibretroCore,
+    state: &[u8],
+    frame: u64,
+    mask: u16,
+    video: &mut FrameBuffer,
+    audio: &mut AudioBuffer,
+    context: &str,
+) -> Result<(), String> {
+    core.restore_state(state, frame)
+        .map_err(|error| format!("{context}: restore state: {error:?}"))?;
+    core.restore_input_mask(mask);
+    no_input(core, 1, video, audio, context)
+}
+
+fn qualify_variant(
+    core_path: &Path,
+    rom_path: &Path,
+    plan: VariantPlan,
+) -> Result<(VariantEvidence, String, String), String> {
+    let task: &'static BenchmarkTaskSpec = benchmark_task_by_id(plan.task_id)
+        .ok_or_else(|| format!("{} missing from benchmark registry", plan.task_id))?;
+
+    let temp = env::temp_dir().join(format!("phicade-nested-branch-{}", task.id));
+    let system_dir = temp.join("system");
+    let save_dir = temp.join("save");
+    fs::create_dir_all(&system_dir).map_err(|error| error.to_string())?;
+    fs::create_dir_all(&save_dir).map_err(|error| error.to_string())?;
+
+    let mut core = LibretroCore::open(core_path, &system_dir, &save_dir)
+        .map_err(|error| format!("open SameBoy for {}: {error:?}", task.id))?;
+    core.load_game(&GameImage::new(rom_path, SystemId::GameBoy, task.id))
+        .map_err(|error| format!("load {}: {error:?}", task.id))?;
+
+    let core_name = core.identity().library_name.clone();
+    let core_version = core.identity().library_version.clone();
+    let mut video = FrameBuffer::default();
+    let mut audio = AudioBuffer::default();
+    let mut sequence = 0u64;
+
+    no_input(
+        &mut core,
+        WARMUP_FRAMES,
+        &mut video,
+        &mut audio,
+        "warm nested-branch start",
+    )?;
+    let start_player = locate_agent_gym_player(&video)?;
+    if start_player != START || start_player != task.start {
+        return Err(format!(
+            "{} start drifted: registry={:?} expected={:?} got={:?}",
+            task.id, task.start, START, start_player
+        ));
+    }
+
+    let initial_frame_sha256 = sha256_bytes(&video.rgba8);
+    let closed_gate_sha256 = sha256_gate_region(&video)?;
+    let start_state = core
+        .serialize_state()
+        .map_err(|error| format!("serialize {} start state: {error:?}", task.id))?;
+    let start_mask = core.input_mask_snapshot();
+    let start_frame = core.frame_count();
+
+    // Negative depth 1: wrong family must commit the whole run to failure.
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage1_wrong,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "move to wrong stage1 family",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "commit wrong stage1 family",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage1_back_wrong,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "return from wrong stage1 family",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle stage1 fail center",
+    )?;
+    let failed_stage1_center = locate_agent_gym_player(&video)?;
+    if failed_stage1_center != START {
+        return Err(format!(
+            "{} stage1 fail did not return to center: {:?}",
+            task.id, failed_stage1_center
+        ));
+    }
+    let failed_stage1_center_sha256 = sha256_bytes(&video.rgba8);
+
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        40,
+        &mut video,
+        &mut audio,
+        "probe gate after stage1 failure",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "try gate after stage1 failure",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        BLOCK_PROBE_FRAMES,
+        &mut video,
+        &mut audio,
+        "probe closed gate after stage1 failure",
+    )?;
+    let failed_stage1_gate_sha256 = sha256_gate_region(&video)?;
+    let wrong_stage1_dead_end = failed_stage1_gate_sha256 == closed_gate_sha256;
+
+    restore(
+        &mut core,
+        &start_state,
+        start_frame,
+        start_mask,
+        &mut video,
+        &mut audio,
+        "restore before correct stage1",
+    )?;
+
+    // Positive depth 1: correct family reveals a new, previously hidden selector.
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage1_correct,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "move to correct stage1 family",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "commit correct stage1 family",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage1_back_correct,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "return from correct stage1 family",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle revealed stage2",
+    )?;
+    let stage2_center = locate_agent_gym_player(&video)?;
+    if stage2_center != START {
+        return Err(format!(
+            "{} stage2 reveal did not settle at stage1 center: {:?}",
+            task.id, stage2_center
+        ));
+    }
+    let stage2_revealed_center_sha256 = sha256_bytes(&video.rgba8);
+    let stage1_state = core
+        .serialize_state()
+        .map_err(|error| format!("serialize {} stage1 state: {error:?}", task.id))?;
+    let stage1_mask = core.input_mask_snapshot();
+    let stage1_frame = core.frame_count();
+
+    // Negative depth 2: wrong submodule must also be terminal.
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        STAGE2_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "enter stage2 row",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage2_wrong,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "move to wrong stage2 submodule",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "commit wrong stage2 submodule",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage2_back_wrong,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "return from wrong stage2 submodule",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle stage2 fail center",
+    )?;
+    let failed_stage2_center =
+        locate_player_near(&video, STAGE2_CENTER, CHECKPOINT_TOLERANCE)?;
+    if !point_within_tolerance(
+        failed_stage2_center,
+        STAGE2_CENTER,
+        CHECKPOINT_TOLERANCE,
+    ) {
+        return Err(format!(
+            "{} stage2 fail left the center neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, STAGE2_CENTER, CHECKPOINT_TOLERANCE, failed_stage2_center
+        ));
+    }
+    let failed_stage2_center_sha256 = sha256_bytes(&video.rgba8);
+    let failed_stage2_projection_sha256 =
+        sha256_failed_state_projection(&video)?;
+    let failed_stage2_badge_sha256 = sha256_region(&video, 8, 8, 8, 8)?;
+    let failed_stage2_selector_sha256 = sha256_region(&video, 72, 32, 8, 8)?;
+    let failed_stage2_stage1_slots_sha256 =
+        sha256_two_regions(&video, (24, 112, 8, 8), (120, 112, 8, 8))?;
+    let failed_stage2_stage2_slots_sha256 =
+        sha256_two_regions(&video, (24, 80, 8, 8), (120, 80, 8, 8))?;
+    let failed_stage2_generator_tile_sha256 = sha256_region(&video, 88, 72, 8, 8)?;
+    let failed_stage2_gate_strips_sha256 = sha256_gate_region(&video)?;
+
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle at failed generator",
+    )?;
+    let failed_stage2_generator_before_sha256 = sha256_bytes(&video.rgba8);
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "try generator after stage2 failure",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle refused failed generator",
+    )?;
+    let failed_stage2_generator_sha256 = sha256_bytes(&video.rgba8);
+    let wrong_stage2_generator_refused =
+        failed_stage2_generator_sha256 == failed_stage2_generator_before_sha256;
+
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        GATE_UP_FRAMES + BLOCK_PROBE_FRAMES,
+        &mut video,
+        &mut audio,
+        "move failed stage2 to gate",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "try gate after stage2 failure",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        BLOCK_PROBE_FRAMES,
+        &mut video,
+        &mut audio,
+        "probe failed stage2 gate",
+    )?;
+    let failed_stage2_gate_sha256 = sha256_gate_region(&video)?;
+    let wrong_stage2_dead_end = failed_stage2_gate_sha256 == closed_gate_sha256;
+
+    restore(
+        &mut core,
+        &stage1_state,
+        stage1_frame,
+        stage1_mask,
+        &mut video,
+        &mut audio,
+        "restore before correct stage2",
+    )?;
+
+    // Positive depth 2: correct submodule collapses all four variants together.
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        STAGE2_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "enter correct stage2 row",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage2_correct,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "move to correct stage2 submodule",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "commit correct stage2 submodule",
+    )?;
+    hold_button(
+        &mut core,
+        &mut sequence,
+        plan.stage2_back_correct,
+        SIDE_FRAMES,
+        &mut video,
+        &mut audio,
+        "return from correct stage2 submodule",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle accepted stage2 center",
+    )?;
+    let accepted_stage2_center =
+        locate_player_near(&video, STAGE2_CENTER, CHECKPOINT_TOLERANCE)?;
+    if !point_within_tolerance(
+        accepted_stage2_center,
+        STAGE2_CENTER,
+        CHECKPOINT_TOLERANCE,
+    ) {
+        return Err(format!(
+            "{} accepted stage2 left the center neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, STAGE2_CENTER, CHECKPOINT_TOLERANCE, accepted_stage2_center
+        ));
+    }
+    let accepted_stage2_center_sha256 = sha256_bytes(&video.rgba8);
+    let accepted_stage2_world_sha256 =
+        sha256_world_without_actor(&video, STAGE2_CENTER);
+
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "neutralize before generator interaction",
+    )?;
+    let generator_before_a = locate_agent_gym_player(&video).map_err(|error| {
+        format!(
+            "{} could not resolve player before generator A: {error}",
+            task.id
+        )
+    })?;
+    if !point_within_tolerance(generator_before_a, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} reached wrong pre-generator checkpoint: expected {:?} ±{}px, got {:?}",
+            task.id, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE, generator_before_a
+        ));
+    }
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "power shared generator",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle powered generator",
+    )?;
+    let powered_player = locate_player_near(
+        &video,
+        GENERATOR_PLAYER,
+        CHECKPOINT_TOLERANCE,
+    )
+    .map_err(|local_error| {
+        let global = locate_agent_gym_player(&video)
+            .map(|point| format!("{point:?}"))
+            .unwrap_or_else(|error| format!("unresolved ({error})"));
+        format!(
+            "{} powered checkpoint locator failed near {:?}: {local_error}; global detector={global}",
+            task.id, GENERATOR_PLAYER
+        )
+    })?;
+    if !point_within_tolerance(powered_player, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} powered checkpoint left generator neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE, powered_player
+        ));
+    }
+    let powered_frame_sha256 = sha256_bytes(&video.rgba8);
+    let powered_world_sha256 =
+        sha256_world_without_actor(&video, GENERATOR_PLAYER);
+
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        GATE_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "move to shared gate",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "neutralize before gate interaction",
+    )?;
+    tap_a(
+        &mut core,
+        &mut sequence,
+        &mut video,
+        &mut audio,
+        "open shared gate",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "settle open gate",
+    )?;
+    let open_gate_player =
+        locate_player_near(&video, GATE_PLAYER, CHECKPOINT_TOLERANCE)?;
+    if !point_within_tolerance(open_gate_player, GATE_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} open-gate checkpoint left gate neighborhood: expected {:?} ±{}px, got {:?}",
+            task.id, GATE_PLAYER, CHECKPOINT_TOLERANCE, open_gate_player
+        ));
+    }
+    let open_gate_frame_sha256 = sha256_bytes(&video.rgba8);
+    let open_gate_world_sha256 =
+        sha256_world_without_actor(&video, GATE_PLAYER);
+
+    hold_button(
+        &mut core,
+        &mut sequence,
+        "UP",
+        TARGET_UP_FRAMES,
+        &mut video,
+        &mut audio,
+        "reach nested-branch target",
+    )?;
+    no_input(&mut core, SETTLE_FRAMES, &mut video, &mut audio, "settle target")?;
+    let final_player = locate_agent_gym_player(&video)?;
+    let correct_branch_pass = benchmark_task_success(task, final_player);
+
+    Ok((
+        VariantEvidence {
+            task_id: task.id.into(),
+            rom_sha256: sha256_file(rom_path)?,
+            initial_frame_sha256,
+            failed_stage1_center_sha256,
+            failed_stage1_gate_sha256,
+            stage2_revealed_center_sha256,
+            failed_stage2_center_player: failed_stage2_center,
+            failed_stage2_center_sha256,
+            failed_stage2_projection_sha256,
+            failed_stage2_badge_sha256,
+            failed_stage2_selector_sha256,
+            failed_stage2_stage1_slots_sha256,
+            failed_stage2_stage2_slots_sha256,
+            failed_stage2_generator_tile_sha256,
+            failed_stage2_gate_strips_sha256,
+            failed_stage2_generator_before_sha256,
+            failed_stage2_generator_sha256,
+            failed_stage2_gate_sha256,
+            accepted_stage2_center_player: accepted_stage2_center,
+            accepted_stage2_center_sha256,
+            accepted_stage2_world_sha256,
+            powered_player,
+            powered_frame_sha256,
+            powered_world_sha256,
+            open_gate_player,
+            open_gate_frame_sha256,
+            open_gate_world_sha256,
+            final_player,
+            wrong_stage1_dead_end,
+            wrong_stage2_generator_refused,
+            wrong_stage2_dead_end,
+            correct_branch_pass,
+        },
+        core_name,
+        core_version,
+    ))
+}
+
+fn all_equal(values: [&str; 4]) -> bool {
+    values[1..].iter().all(|candidate| *candidate == values[0])
+}
+
+fn main() {
+    if let Err(error) = run() {
+        eprintln!("Nested Branch Graph qualification failed: {error}");
+        process::exit(1);
+    }
+}
+
+fn run() -> Result<(), String> {
+    let mut args = env::args().skip(1);
+    let mut core_path: Option<PathBuf> = None;
+    let mut triangle_circle_rom: Option<PathBuf> = None;
+    let mut triangle_cross_rom: Option<PathBuf> = None;
+    let mut square_circle_rom: Option<PathBuf> = None;
+    let mut square_cross_rom: Option<PathBuf> = None;
+    let mut receipt_path: Option<PathBuf> = None;
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--core" => core_path = args.next().map(PathBuf::from),
+            "--triangle-circle-rom" => triangle_circle_rom = args.next().map(PathBuf::from),
+            "--triangle-cross-rom" => triangle_cross_rom = args.next().map(PathBuf::from),
+            "--square-circle-rom" => square_circle_rom = args.next().map(PathBuf::from),
+            "--square-cross-rom" => square_cross_rom = args.next().map(PathBuf::from),
+            "--receipt" => receipt_path = args.next().map(PathBuf::from),
+            _ => usage(),
+        }
+    }
+
+    let core_path = core_path.unwrap_or_else(|| usage());
+    let triangle_circle_rom = triangle_circle_rom.unwrap_or_else(|| usage());
+    let triangle_cross_rom = triangle_cross_rom.unwrap_or_else(|| usage());
+    let square_circle_rom = square_circle_rom.unwrap_or_else(|| usage());
+    let square_cross_rom = square_cross_rom.unwrap_or_else(|| usage());
+    let receipt_path = receipt_path.unwrap_or_else(|| usage());
+
+    let (triangle_circle, core_name, core_version) = qualify_variant(
+        &core_path,
+        &triangle_circle_rom,
+        VariantPlan {
+            task_id: AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ID,
+            stage1_correct: "LEFT",
+            stage1_wrong: "RIGHT",
+            stage1_back_correct: "RIGHT",
+            stage1_back_wrong: "LEFT",
+            stage2_correct: "LEFT",
+            stage2_wrong: "RIGHT",
+            stage2_back_correct: "RIGHT",
+            stage2_back_wrong: "LEFT",
+        },
+    )?;
+    let (triangle_cross, n1, v1) = qualify_variant(
+        &core_path,
+        &triangle_cross_rom,
+        VariantPlan {
+            task_id: AGENT_GYM_NESTED_TRIANGLE_CROSS_ID,
+            stage1_correct: "LEFT",
+            stage1_wrong: "RIGHT",
+            stage1_back_correct: "RIGHT",
+            stage1_back_wrong: "LEFT",
+            stage2_correct: "RIGHT",
+            stage2_wrong: "LEFT",
+            stage2_back_correct: "LEFT",
+            stage2_back_wrong: "RIGHT",
+        },
+    )?;
+    let (square_circle, n2, v2) = qualify_variant(
+        &core_path,
+        &square_circle_rom,
+        VariantPlan {
+            task_id: AGENT_GYM_NESTED_SQUARE_CIRCLE_ID,
+            stage1_correct: "RIGHT",
+            stage1_wrong: "LEFT",
+            stage1_back_correct: "LEFT",
+            stage1_back_wrong: "RIGHT",
+            stage2_correct: "LEFT",
+            stage2_wrong: "RIGHT",
+            stage2_back_correct: "RIGHT",
+            stage2_back_wrong: "LEFT",
+        },
+    )?;
+    let (square_cross, n3, v3) = qualify_variant(
+        &core_path,
+        &square_cross_rom,
+        VariantPlan {
+            task_id: AGENT_GYM_NESTED_SQUARE_CROSS_ID,
+            stage1_correct: "RIGHT",
+            stage1_wrong: "LEFT",
+            stage1_back_correct: "LEFT",
+            stage1_back_wrong: "RIGHT",
+            stage2_correct: "RIGHT",
+            stage2_wrong: "LEFT",
+            stage2_back_correct: "LEFT",
+            stage2_back_wrong: "RIGHT",
+        },
+    )?;
+
+    if [(&n1, &v1), (&n2, &v2), (&n3, &v3)]
+        .iter()
+        .any(|(name, version)| {
+            name.as_str() != core_name.as_str() || version.as_str() != core_version.as_str()
+        })
+    {
+        return Err("nested-branch variants did not run under identical core identity".into());
+    }
+
+    let stage2_hidden_before_stage1 =
+        triangle_circle.initial_frame_sha256 == triangle_cross.initial_frame_sha256
+            && square_circle.initial_frame_sha256 == square_cross.initial_frame_sha256;
+    let stage1_family_visible =
+        triangle_circle.initial_frame_sha256 != square_circle.initial_frame_sha256;
+
+    let circle_stage2_converges_across_stage1_history =
+        triangle_circle.stage2_revealed_center_sha256
+            == square_circle.stage2_revealed_center_sha256;
+    let cross_stage2_converges_across_stage1_history =
+        triangle_cross.stage2_revealed_center_sha256
+            == square_cross.stage2_revealed_center_sha256;
+    let stage2_conditions_are_distinct =
+        triangle_circle.stage2_revealed_center_sha256
+            != triangle_cross.stage2_revealed_center_sha256;
+
+    let stage1_fail_converges_all = all_equal([
+        &triangle_circle.failed_stage1_center_sha256,
+        &triangle_cross.failed_stage1_center_sha256,
+        &square_circle.failed_stage1_center_sha256,
+        &square_cross.failed_stage1_center_sha256,
+    ]);
+    // Compare the explicit failure-state projection rather than incidental
+    // actor/approach pixels. Raw frames remain recorded per variant.
+    let stage2_fail_converges_all = all_equal([
+        &triangle_circle.failed_stage2_projection_sha256,
+        &triangle_cross.failed_stage2_projection_sha256,
+        &square_circle.failed_stage2_projection_sha256,
+        &square_cross.failed_stage2_projection_sha256,
+    ]);
+    let accepted_stage2_converges_all = all_equal([
+        &triangle_circle.accepted_stage2_world_sha256,
+        &triangle_cross.accepted_stage2_world_sha256,
+        &square_circle.accepted_stage2_world_sha256,
+        &square_cross.accepted_stage2_world_sha256,
+    ]);
+    let powered_converges_all = all_equal([
+        &triangle_circle.powered_world_sha256,
+        &triangle_cross.powered_world_sha256,
+        &square_circle.powered_world_sha256,
+        &square_cross.powered_world_sha256,
+    ]);
+    let open_gate_converges_all = all_equal([
+        &triangle_circle.open_gate_world_sha256,
+        &triangle_cross.open_gate_world_sha256,
+        &square_circle.open_gate_world_sha256,
+        &square_cross.open_gate_world_sha256,
+    ]);
+
+    let actor_checkpoints_in_bounds_all = [
+        &triangle_circle,
+        &triangle_cross,
+        &square_circle,
+        &square_cross,
+    ]
+    .iter()
+    .all(|evidence| {
+        point_within_tolerance(
+            evidence.failed_stage2_center_player,
+            STAGE2_CENTER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.accepted_stage2_center_player,
+            STAGE2_CENTER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.powered_player,
+            GENERATOR_PLAYER,
+            CHECKPOINT_TOLERANCE,
+        ) && point_within_tolerance(
+            evidence.open_gate_player,
+            GATE_PLAYER,
+            CHECKPOINT_TOLERANCE,
+        )
+    });
+
+    let both_failure_depths_dead_end = [
+        &triangle_circle,
+        &triangle_cross,
+        &square_circle,
+        &square_cross,
+    ]
+    .iter()
+    .all(|evidence| {
+        evidence.wrong_stage1_dead_end
+            && evidence.wrong_stage2_generator_refused
+            && evidence.wrong_stage2_dead_end
+    });
+    let all_correct_paths_pass = [
+        &triangle_circle,
+        &triangle_cross,
+        &square_circle,
+        &square_cross,
+    ]
+    .iter()
+    .all(|evidence| evidence.correct_branch_pass);
+
+    if !(stage2_hidden_before_stage1
+        && stage1_family_visible
+        && circle_stage2_converges_across_stage1_history
+        && cross_stage2_converges_across_stage1_history
+        && stage2_conditions_are_distinct
+        && stage1_fail_converges_all
+        && stage2_fail_converges_all
+        && accepted_stage2_converges_all
+        && powered_converges_all
+        && open_gate_converges_all
+        && actor_checkpoints_in_bounds_all
+        && both_failure_depths_dead_end
+        && all_correct_paths_pass)
+    {
+        return Err(format!(
+            "nested-branch controls failed: hidden={stage2_hidden_before_stage1} stage1_visible={stage1_family_visible} circle_rejoin={circle_stage2_converges_across_stage1_history} cross_rejoin={cross_stage2_converges_across_stage1_history} stage2_distinct={stage2_conditions_are_distinct} fail1={stage1_fail_converges_all} fail2={stage2_fail_converges_all} accepted={accepted_stage2_converges_all} powered={powered_converges_all} gate={open_gate_converges_all} actor_bounds={actor_checkpoints_in_bounds_all} dead_end={both_failure_depths_dead_end} pass={all_correct_paths_pass}; tc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] tx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sc=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}] sx=[fail={:?} accepted={:?} final={:?} failHash={} acceptedHash={} poweredHash={} gateHash={}]",
+            triangle_circle.failed_stage2_center_player,
+            triangle_circle.accepted_stage2_center_player,
+            triangle_circle.final_player,
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                triangle_circle.failed_stage2_center_sha256,
+                triangle_circle.failed_stage2_projection_sha256,
+                triangle_circle.failed_stage2_badge_sha256,
+                triangle_circle.failed_stage2_selector_sha256,
+                triangle_circle.failed_stage2_stage1_slots_sha256,
+                triangle_circle.failed_stage2_stage2_slots_sha256,
+                triangle_circle.failed_stage2_generator_tile_sha256,
+                triangle_circle.failed_stage2_gate_strips_sha256
+            ),
+            triangle_circle.accepted_stage2_center_sha256,
+            triangle_circle.powered_frame_sha256,
+            triangle_circle.open_gate_frame_sha256,
+            triangle_cross.failed_stage2_center_player,
+            triangle_cross.accepted_stage2_center_player,
+            triangle_cross.final_player,
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                triangle_cross.failed_stage2_center_sha256,
+                triangle_cross.failed_stage2_projection_sha256,
+                triangle_cross.failed_stage2_badge_sha256,
+                triangle_cross.failed_stage2_selector_sha256,
+                triangle_cross.failed_stage2_stage1_slots_sha256,
+                triangle_cross.failed_stage2_stage2_slots_sha256,
+                triangle_cross.failed_stage2_generator_tile_sha256,
+                triangle_cross.failed_stage2_gate_strips_sha256
+            ),
+            triangle_cross.accepted_stage2_center_sha256,
+            triangle_cross.powered_frame_sha256,
+            triangle_cross.open_gate_frame_sha256,
+            square_circle.failed_stage2_center_player,
+            square_circle.accepted_stage2_center_player,
+            square_circle.final_player,
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                square_circle.failed_stage2_center_sha256,
+                square_circle.failed_stage2_projection_sha256,
+                square_circle.failed_stage2_badge_sha256,
+                square_circle.failed_stage2_selector_sha256,
+                square_circle.failed_stage2_stage1_slots_sha256,
+                square_circle.failed_stage2_stage2_slots_sha256,
+                square_circle.failed_stage2_generator_tile_sha256,
+                square_circle.failed_stage2_gate_strips_sha256
+            ),
+            square_circle.accepted_stage2_center_sha256,
+            square_circle.powered_frame_sha256,
+            square_circle.open_gate_frame_sha256,
+            square_cross.failed_stage2_center_player,
+            square_cross.accepted_stage2_center_player,
+            square_cross.final_player,
+            format!(
+                "{} / proj={} / regions=[badge:{} sel:{} s1:{} s2:{} gen:{} gate:{}]",
+                square_cross.failed_stage2_center_sha256,
+                square_cross.failed_stage2_projection_sha256,
+                square_cross.failed_stage2_badge_sha256,
+                square_cross.failed_stage2_selector_sha256,
+                square_cross.failed_stage2_stage1_slots_sha256,
+                square_cross.failed_stage2_stage2_slots_sha256,
+                square_cross.failed_stage2_generator_tile_sha256,
+                square_cross.failed_stage2_gate_strips_sha256
+            ),
+            square_cross.accepted_stage2_center_sha256,
+            square_cross.powered_frame_sha256,
+            square_cross.open_gate_frame_sha256,
+        ));
+    }
+
+    let receipt = NestedBranchQualificationReceipt {
+        schema: "phicade.nested-branch-qualification.v1",
+        result: "PASS",
+        core_sha256: sha256_file(&core_path)?,
+        core_name,
+        core_version,
+        triangle_circle,
+        triangle_cross,
+        square_circle,
+        square_cross,
+        stage2_hidden_before_stage1,
+        stage1_family_visible,
+        circle_stage2_converges_across_stage1_history,
+        cross_stage2_converges_across_stage1_history,
+        stage2_conditions_are_distinct,
+        stage1_fail_converges_all,
+        stage2_fail_converges_all,
+        accepted_stage2_converges_all,
+        powered_converges_all,
+        open_gate_converges_all,
+        actor_checkpoints_in_bounds_all,
+        both_failure_depths_dead_end,
+        all_correct_paths_pass,
+    };
+
+    let json = serde_json::to_string_pretty(&receipt)
+        .map_err(|error| format!("serialize Nested Branch receipt: {error}"))?;
+    println!("{json}");
+    if let Some(parent) = receipt_path.parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    fs::write(&receipt_path, format!("{json}\n"))
+        .map_err(|error| format!("write {}: {error}", receipt_path.display()))?;
+
+    Ok(())
+}

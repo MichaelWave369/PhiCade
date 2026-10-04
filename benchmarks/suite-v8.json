@@ -1,0 +1,327 @@
+{
+  "schema": "phicade.benchmark-suite-manifest.v1",
+  "id": "phicade-agent-gym-suite-v8",
+  "system": "GB",
+  "coreQualification": "SameBoy 1.0.3 / pinned source revision",
+  "observation": "rendered-framebuffer-only",
+  "taskCount": 17,
+  "tasks": [
+    {
+      "id": "move-block-to-x-v1",
+      "title": "Move the Block to the X",
+      "source": "benchmarks/agent-gym/main.asm",
+      "sourceSha256": "0c82f65532030d64bf022539002f334716a5aae822672b3cdfca511906e51e6f",
+      "romSha256": "353e69e859f50f5ef14f0221e386b18b8194f771cc603696530a59617593c59e",
+      "oracle": [
+        "RIGHT",
+        "DOWN"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-qualification.json"
+    },
+    {
+      "id": "move-block-to-x-mirror-v1",
+      "title": "Mirror Dash",
+      "source": "benchmarks/agent-gym-mirror/main.asm",
+      "sourceSha256": "fc10866cf7166f74f1ae41f8957f3b6057d8bf710731e42a02cbdb9087feb658",
+      "romSha256": "278a8106343fe1688a1370c0575578417744c96ae52568ab1e97f446dc222bfb",
+      "oracle": [
+        "LEFT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-mirror-qualification.json"
+    },
+    {
+      "id": "wall-detour-v1",
+      "title": "Wall Detour",
+      "source": "benchmarks/agent-gym-wall-detour/main.asm",
+      "sourceSha256": "02fc444e7ffc6f9de819f7462685448268b41a641592332918f972e17fd0fc96",
+      "romSha256": "c8bfbe95b368635370a61abf004d0efd4135b96c8fa9e4fb510582e25534c4f8",
+      "oracle": [
+        "DOWN",
+        "RIGHT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-wall-detour-qualification.json"
+    },
+    {
+      "id": "temporal-cue-left-v1",
+      "title": "Temporal Cue: Left",
+      "source": "benchmarks/agent-gym-temporal-left/main.asm",
+      "sourceSha256": "450ecadadb3ed51e1e613e4edd06007880309c4841fbae313bb45f0a75932a4c",
+      "romSha256": "da16bdda571bd2f3d5581097e1643ce7496ae3ea586f3b1756330a2b3fc171f5",
+      "oracle": [
+        "A",
+        "WAIT",
+        "LEFT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-left-qualification.json"
+    },
+    {
+      "id": "temporal-cue-right-v1",
+      "title": "Temporal Cue: Right",
+      "source": "benchmarks/agent-gym-temporal-right/main.asm",
+      "sourceSha256": "8c814246cb6948d50d5242ef2e01369c90a5965cb2151da5b9e4f27fff5e282f",
+      "romSha256": "eefb364a47b68267138d35b402d2d6f5de1d70940318cac947fb400d6e210337",
+      "oracle": [
+        "A",
+        "WAIT",
+        "RIGHT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-temporal-right-qualification.json"
+    },
+    {
+      "id": "relay-rooms-left-v1",
+      "title": "Relay Rooms: Left",
+      "source": "benchmarks/agent-gym-relay-left/main.asm",
+      "sourceSha256": "75011896544ab2a2c1285d5fa667af22fbc329334e7d96601642577cf4d73bac",
+      "romSha256": "563a0b902f9e93d8887be830302e938f5ad394bf30c052f926511765486dae7e",
+      "oracle": [
+        "A",
+        "WAIT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "WAIT",
+        "LEFT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-relay-left-qualification.json"
+    },
+    {
+      "id": "relay-rooms-right-v1",
+      "title": "Relay Rooms: Right",
+      "source": "benchmarks/agent-gym-relay-right/main.asm",
+      "sourceSha256": "0408d7f1d8325e9e12564a33aa45b8814e889c689e53116a77b13c685657b739",
+      "romSha256": "83beb9b0c08754aaefa2f4d2598cba8548d4e56d7139487ae7fb84c3dd75f242",
+      "oracle": [
+        "A",
+        "WAIT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "WAIT",
+        "RIGHT"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-relay-right-qualification.json"
+    },
+    {
+      "id": "key-gate-left-v1",
+      "title": "Key Gate: Left",
+      "source": "benchmarks/agent-gym-key-gate-left/main.asm",
+      "sourceSha256": "d9fcf741c4c5b78faa7276b61829321950384ada58a69f5ab07ed53fe982fa5c",
+      "romSha256": "904492aa3be9ebfca1f02ff220417eb94ee3f12332dfa4e2263e20c4009094db",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "UP",
+        "A",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-key-gate-left-qualification.json"
+    },
+    {
+      "id": "key-gate-right-v1",
+      "title": "Key Gate: Right",
+      "source": "benchmarks/agent-gym-key-gate-right/main.asm",
+      "sourceSha256": "e22c6d8f9b42105a5c6d4cb706631736c9cc61738ea8e94a8162c7761435961c",
+      "romSha256": "72553ffab515b83e9548b454e85491246b6260474bdddb8d3011c0be1b631442",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "UP",
+        "A",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-key-gate-right-qualification.json"
+    },
+    {
+      "id": "power-chain-left-v1",
+      "title": "Power Chain: Left",
+      "source": "benchmarks/agent-gym-power-chain-left/main.asm",
+      "sourceSha256": "59a619dc42500e8ee1488474869252df41533d58159da247e0df2793222b4afe",
+      "romSha256": "fd84eb10474a0834817101b99a5efc8b233d9b13a4c8d6d784c9394320636e40",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-power-chain-left-qualification.json"
+    },
+    {
+      "id": "power-chain-right-v1",
+      "title": "Power Chain: Right",
+      "source": "benchmarks/agent-gym-power-chain-right/main.asm",
+      "sourceSha256": "687f150dbf82bb634c8975362d02b967f1aa26299ac36380bbfa0eb99d4e68eb",
+      "romSha256": "33026212377de8c08dec00dbc7d6bc4852902c093d87624916bfcc3bc69e9b9f",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-power-chain-right-qualification.json"
+    },
+    {
+      "id": "branch-selector-triangle-v1",
+      "title": "Branch Selector: Triangle",
+      "source": "benchmarks/agent-gym-branch-selector-triangle/main.asm",
+      "sourceSha256": "b58ad96706d25724f85d6802afc499353419aeb09bd0f421b02e764f08d6e071",
+      "romSha256": "80c1dbd415f14a16823a7903b7117564b352ee2fe7d151d9c41c9f51fef20505",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-branch-selector-triangle-qualification.json"
+    },
+    {
+      "id": "branch-selector-square-v1",
+      "title": "Branch Selector: Square",
+      "source": "benchmarks/agent-gym-branch-selector-square/main.asm",
+      "sourceSha256": "0dc8ba01a974cc467349058cd92e0a50e2168a67bcbff3dea36f64ddfc376a35",
+      "romSha256": "300d827be392f9859fe85e0b0eb06a0af329b3148ba222295ee47dcd5290e10a",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-branch-selector-square-qualification.json"
+    },
+    {
+      "id": "nested-branch-triangle-circle-v1",
+      "title": "Nested Branch: Triangle → Circle",
+      "source": "benchmarks/agent-gym-nested-branch-triangle-circle/main.asm",
+      "sourceSha256": "2bb724ae134c2e7ec31c24b3096ac08e3f94158f24e75c50ff37b871fdce7a82",
+      "romSha256": "85bebe2dca1974b87c434abde755ec138a6f398f2e33b9cfcf81fae1db4914f5",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "UP",
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-triangle-circle-qualification.json"
+    },
+    {
+      "id": "nested-branch-triangle-cross-v1",
+      "title": "Nested Branch: Triangle → Cross",
+      "source": "benchmarks/agent-gym-nested-branch-triangle-cross/main.asm",
+      "sourceSha256": "d65fbb5339300243d33de0d1544eb1abc8c87ec626fa126b33b56f91657dcde6",
+      "romSha256": "5e96ec33e6b5a33776bebef68a63a311087cd51bca5976a60ef3aad55ca3e5b2",
+      "oracle": [
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "UP",
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-triangle-cross-qualification.json"
+    },
+    {
+      "id": "nested-branch-square-circle-v1",
+      "title": "Nested Branch: Square → Circle",
+      "source": "benchmarks/agent-gym-nested-branch-square-circle/main.asm",
+      "sourceSha256": "051ffafd163aa65c310145c999c76bedbf90978e74503901a6ed82d1aa8a7137",
+      "romSha256": "7779a57acf881c39709e1b31f561a361ab6539f1aed36ab875cacab094726f0f",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "UP",
+        "LEFT",
+        "A",
+        "RIGHT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-square-circle-qualification.json"
+    },
+    {
+      "id": "nested-branch-square-cross-v1",
+      "title": "Nested Branch: Square → Cross",
+      "source": "benchmarks/agent-gym-nested-branch-square-cross/main.asm",
+      "sourceSha256": "eb915d89c6241f71150854d32c1f768079865a895e8f62137c8bdf76409994fd",
+      "romSha256": "9ca574ca0c55540ccc734146f8230c2f26bb6b1b98f87c43f3b186f9d57e80d6",
+      "oracle": [
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "UP",
+        "RIGHT",
+        "A",
+        "LEFT",
+        "WAIT",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP",
+        "WAIT",
+        "A",
+        "WAIT",
+        "UP"
+      ],
+      "qualificationReceipt": "artifacts/agent-gym-nested-branch-square-cross-qualification.json"
+    }
+  ]
+}
