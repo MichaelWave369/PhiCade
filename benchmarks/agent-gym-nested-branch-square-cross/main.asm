@@ -143,6 +143,7 @@ Start:
     ld [wFailed], a
     ld [wPowerOn], a
     ld [wGateOpen], a
+    ld [wMoveLock], a
 
     ld a, %10010011
     ldh [rLCDC], a
@@ -241,6 +242,10 @@ ReadAction:
     ; onto the shared center before erasing variant-specific evidence.
     ld a, CENTER_X
     ld [wPlayerX], a
+    ld a, STAGE2_Y
+    ld [wPlayerY], a
+    ld a, 1
+    ld [wMoveLock], a
 
     ; Erase second-level evidence and converge every variant.
     xor a
@@ -263,6 +268,8 @@ ReadAction:
     ; position is discarded before entering the shared terminal FAIL world.
     ld a, CENTER_X
     ld [wPlayerX], a
+    ld a, 1
+    ld [wMoveLock], a
 
     ; Any wrong commitment collapses onto one terminal FAIL world.
     xor a
@@ -334,6 +341,32 @@ ReadMove:
     and $0F
     ld b, a
 
+    ; Branch commitment and failure transitions own this frame. Suppress any
+    ; stale directional state that the host may still expose during the same
+    ; emulated frame, then normalize converged worlds onto the shared x seam.
+    ld a, [wMoveLock]
+    and a
+    jr z, .checkConverged
+    xor a
+    ld [wMoveLock], a
+    ld a, $30
+    ldh [rP1], a
+    ret
+
+.checkConverged:
+    ld a, [wFailed]
+    and a
+    jr nz, .forceCenter
+    ld a, [wStage2Done]
+    and a
+    jr z, .horizontal
+
+.forceCenter:
+    ld a, CENTER_X
+    ld [wPlayerX], a
+    jr .up
+
+.horizontal:
     bit 0, b
     jr z, .left
 
@@ -594,3 +627,4 @@ wStage2Done: ds 1
 wFailed:     ds 1
 wPowerOn:    ds 1
 wGateOpen:   ds 1
+wMoveLock:   ds 1
