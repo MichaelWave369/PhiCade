@@ -585,6 +585,13 @@ fn qualify_variant(
         &mut audio,
         "move accepted stage2 to generator",
     )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "neutralize before generator interaction",
+    )?;
     tap_a(
         &mut core,
         &mut sequence,
@@ -609,6 +616,13 @@ fn qualify_variant(
         &mut video,
         &mut audio,
         "move to shared gate",
+    )?;
+    no_input(
+        &mut core,
+        SETTLE_FRAMES,
+        &mut video,
+        &mut audio,
+        "neutralize before gate interaction",
     )?;
     tap_a(
         &mut core,
