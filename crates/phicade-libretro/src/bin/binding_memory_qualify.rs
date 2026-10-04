@@ -39,6 +39,8 @@ struct VariantEvidence {
     correct_final_player: PixelPoint,
     wrong_final_player: PixelPoint,
     post_recovery_probe_player: PixelPoint,
+    wrong_frame_sha256: String,
+    post_recovery_frame_sha256: String,
     correct_path_pass: bool,
     wrong_commit_refused: bool,
     wrong_commit_terminal: bool,
@@ -310,6 +312,7 @@ fn qualify_variant(
         "move to wrong binding door",
     )?;
     let wrong_commit_refused = !benchmark_task_success(task, wrong_final_player);
+    let wrong_frame_sha256 = sha256_bytes(&video.rgba8);
 
     // Try to recover after terminal failure. The ROM must ignore this.
     hold_button(
@@ -336,8 +339,9 @@ fn qualify_variant(
         "settle binding recovery probe",
     )?;
     let post_recovery_probe_player = locate_agent_gym_player(&video)?;
+    let post_recovery_frame_sha256 = sha256_bytes(&video.rgba8);
     let wrong_commit_terminal =
-        post_recovery_probe_player == wrong_final_player
+        post_recovery_frame_sha256 == wrong_frame_sha256
             && !benchmark_task_success(task, post_recovery_probe_player);
 
     Ok((
@@ -351,6 +355,8 @@ fn qualify_variant(
             correct_final_player,
             wrong_final_player,
             post_recovery_probe_player,
+            wrong_frame_sha256,
+            post_recovery_frame_sha256,
             correct_path_pass,
             wrong_commit_refused,
             wrong_commit_terminal,
