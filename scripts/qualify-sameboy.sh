@@ -276,8 +276,136 @@ PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$COMP_SSF_OBJ" "$COMP_SSF_SRC"
 PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$COMP_SSF_ROM" "$COMP_SSF_OBJ"
 PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHICRSSF" "$COMP_SSF_ROM"
 
+printf '==> assembling source-first Sequential Rule normal-triangle-match-match\n'
+SEQ_NTMM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-triangle-match-match/main.asm"
+SEQ_NTMM_OBJ="$WORK/agent-gym-sequential-rule-normal-triangle-match-match.o"
+SEQ_NTMM_ROM="$WORK/agent-gym-sequential-rule-normal-triangle-match-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NTMM_OBJ" "$SEQ_NTMM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NTMM_ROM" "$SEQ_NTMM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNTMM" "$SEQ_NTMM_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-triangle-match-flip\n'
+SEQ_NTMF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-triangle-match-flip/main.asm"
+SEQ_NTMF_OBJ="$WORK/agent-gym-sequential-rule-normal-triangle-match-flip.o"
+SEQ_NTMF_ROM="$WORK/agent-gym-sequential-rule-normal-triangle-match-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NTMF_OBJ" "$SEQ_NTMF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NTMF_ROM" "$SEQ_NTMF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNTMF" "$SEQ_NTMF_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-triangle-flip-match\n'
+SEQ_NTFM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-triangle-flip-match/main.asm"
+SEQ_NTFM_OBJ="$WORK/agent-gym-sequential-rule-normal-triangle-flip-match.o"
+SEQ_NTFM_ROM="$WORK/agent-gym-sequential-rule-normal-triangle-flip-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NTFM_OBJ" "$SEQ_NTFM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NTFM_ROM" "$SEQ_NTFM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNTFM" "$SEQ_NTFM_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-triangle-flip-flip\n'
+SEQ_NTFF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-triangle-flip-flip/main.asm"
+SEQ_NTFF_OBJ="$WORK/agent-gym-sequential-rule-normal-triangle-flip-flip.o"
+SEQ_NTFF_ROM="$WORK/agent-gym-sequential-rule-normal-triangle-flip-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NTFF_OBJ" "$SEQ_NTFF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NTFF_ROM" "$SEQ_NTFF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNTFF" "$SEQ_NTFF_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-square-match-match\n'
+SEQ_NSMM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-square-match-match/main.asm"
+SEQ_NSMM_OBJ="$WORK/agent-gym-sequential-rule-normal-square-match-match.o"
+SEQ_NSMM_ROM="$WORK/agent-gym-sequential-rule-normal-square-match-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NSMM_OBJ" "$SEQ_NSMM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NSMM_ROM" "$SEQ_NSMM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNSMM" "$SEQ_NSMM_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-square-match-flip\n'
+SEQ_NSMF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-square-match-flip/main.asm"
+SEQ_NSMF_OBJ="$WORK/agent-gym-sequential-rule-normal-square-match-flip.o"
+SEQ_NSMF_ROM="$WORK/agent-gym-sequential-rule-normal-square-match-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NSMF_OBJ" "$SEQ_NSMF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NSMF_ROM" "$SEQ_NSMF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNSMF" "$SEQ_NSMF_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-square-flip-match\n'
+SEQ_NSFM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-square-flip-match/main.asm"
+SEQ_NSFM_OBJ="$WORK/agent-gym-sequential-rule-normal-square-flip-match.o"
+SEQ_NSFM_ROM="$WORK/agent-gym-sequential-rule-normal-square-flip-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NSFM_OBJ" "$SEQ_NSFM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NSFM_ROM" "$SEQ_NSFM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNSFM" "$SEQ_NSFM_ROM"
+
+printf '==> assembling source-first Sequential Rule normal-square-flip-flip\n'
+SEQ_NSFF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-normal-square-flip-flip/main.asm"
+SEQ_NSFF_OBJ="$WORK/agent-gym-sequential-rule-normal-square-flip-flip.o"
+SEQ_NSFF_ROM="$WORK/agent-gym-sequential-rule-normal-square-flip-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_NSFF_OBJ" "$SEQ_NSFF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_NSFF_ROM" "$SEQ_NSFF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISNSFF" "$SEQ_NSFF_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-triangle-match-match\n'
+SEQ_STMM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-triangle-match-match/main.asm"
+SEQ_STMM_OBJ="$WORK/agent-gym-sequential-rule-swapped-triangle-match-match.o"
+SEQ_STMM_ROM="$WORK/agent-gym-sequential-rule-swapped-triangle-match-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_STMM_OBJ" "$SEQ_STMM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_STMM_ROM" "$SEQ_STMM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSTMM" "$SEQ_STMM_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-triangle-match-flip\n'
+SEQ_STMF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-triangle-match-flip/main.asm"
+SEQ_STMF_OBJ="$WORK/agent-gym-sequential-rule-swapped-triangle-match-flip.o"
+SEQ_STMF_ROM="$WORK/agent-gym-sequential-rule-swapped-triangle-match-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_STMF_OBJ" "$SEQ_STMF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_STMF_ROM" "$SEQ_STMF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSTMF" "$SEQ_STMF_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-triangle-flip-match\n'
+SEQ_STFM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-triangle-flip-match/main.asm"
+SEQ_STFM_OBJ="$WORK/agent-gym-sequential-rule-swapped-triangle-flip-match.o"
+SEQ_STFM_ROM="$WORK/agent-gym-sequential-rule-swapped-triangle-flip-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_STFM_OBJ" "$SEQ_STFM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_STFM_ROM" "$SEQ_STFM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSTFM" "$SEQ_STFM_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-triangle-flip-flip\n'
+SEQ_STFF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-triangle-flip-flip/main.asm"
+SEQ_STFF_OBJ="$WORK/agent-gym-sequential-rule-swapped-triangle-flip-flip.o"
+SEQ_STFF_ROM="$WORK/agent-gym-sequential-rule-swapped-triangle-flip-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_STFF_OBJ" "$SEQ_STFF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_STFF_ROM" "$SEQ_STFF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSTFF" "$SEQ_STFF_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-square-match-match\n'
+SEQ_SSMM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-square-match-match/main.asm"
+SEQ_SSMM_OBJ="$WORK/agent-gym-sequential-rule-swapped-square-match-match.o"
+SEQ_SSMM_ROM="$WORK/agent-gym-sequential-rule-swapped-square-match-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_SSMM_OBJ" "$SEQ_SSMM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_SSMM_ROM" "$SEQ_SSMM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSSMM" "$SEQ_SSMM_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-square-match-flip\n'
+SEQ_SSMF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-square-match-flip/main.asm"
+SEQ_SSMF_OBJ="$WORK/agent-gym-sequential-rule-swapped-square-match-flip.o"
+SEQ_SSMF_ROM="$WORK/agent-gym-sequential-rule-swapped-square-match-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_SSMF_OBJ" "$SEQ_SSMF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_SSMF_ROM" "$SEQ_SSMF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSSMF" "$SEQ_SSMF_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-square-flip-match\n'
+SEQ_SSFM_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-square-flip-match/main.asm"
+SEQ_SSFM_OBJ="$WORK/agent-gym-sequential-rule-swapped-square-flip-match.o"
+SEQ_SSFM_ROM="$WORK/agent-gym-sequential-rule-swapped-square-flip-match.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_SSFM_OBJ" "$SEQ_SSFM_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_SSFM_ROM" "$SEQ_SSFM_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSSFM" "$SEQ_SSFM_ROM"
+
+printf '==> assembling source-first Sequential Rule swapped-square-flip-flip\n'
+SEQ_SSFF_SRC="$ROOT/benchmarks/agent-gym-sequential-rule-swapped-square-flip-flip/main.asm"
+SEQ_SSFF_OBJ="$WORK/agent-gym-sequential-rule-swapped-square-flip-flip.o"
+SEQ_SSFF_ROM="$WORK/agent-gym-sequential-rule-swapped-square-flip-flip.gb"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbasm -o "$SEQ_SSFF_OBJ" "$SEQ_SSFF_SRC"
+PATH="$WORK/rgbds-install/bin:$PATH" rgblink -o "$SEQ_SSFF_ROM" "$SEQ_SSFF_OBJ"
+PATH="$WORK/rgbds-install/bin:$PATH" rgbfix -v -p 0x00 -t "PHISSSFF" "$SEQ_SSFF_ROM"
+
 printf '==> benchmark suite hashes\n'
-sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM"
+sha256sum "$GYM_SRC" "$GYM_ROM" "$MIRROR_SRC" "$MIRROR_ROM" "$WALL_SRC" "$WALL_ROM" "$TEMP_LEFT_SRC" "$TEMP_LEFT_ROM" "$TEMP_RIGHT_SRC" "$TEMP_RIGHT_ROM" "$RELAY_LEFT_SRC" "$RELAY_LEFT_ROM" "$RELAY_RIGHT_SRC" "$RELAY_RIGHT_ROM" "$KEY_LEFT_SRC" "$KEY_LEFT_ROM" "$KEY_RIGHT_SRC" "$KEY_RIGHT_ROM" "$POWER_LEFT_SRC" "$POWER_LEFT_ROM" "$POWER_RIGHT_SRC" "$POWER_RIGHT_ROM" "$BRANCH_TRI_SRC" "$BRANCH_TRI_ROM" "$BRANCH_SQ_SRC" "$BRANCH_SQ_ROM" "$NESTED_TC_SRC" "$NESTED_TC_ROM" "$NESTED_TX_SRC" "$NESTED_TX_ROM" "$NESTED_SC_SRC" "$NESTED_SC_ROM" "$NESTED_SX_SRC" "$NESTED_SX_ROM" "$BIND_NT_SRC" "$BIND_NT_ROM" "$BIND_NS_SRC" "$BIND_NS_ROM" "$BIND_ST_SRC" "$BIND_ST_ROM" "$BIND_SS_SRC" "$BIND_SS_ROM" "$COMP_NTM_SRC" "$COMP_NTM_ROM" "$COMP_NTF_SRC" "$COMP_NTF_ROM" "$COMP_NSM_SRC" "$COMP_NSM_ROM" "$COMP_NSF_SRC" "$COMP_NSF_ROM" "$COMP_STM_SRC" "$COMP_STM_ROM" "$COMP_STF_SRC" "$COMP_STF_ROM" "$COMP_SSM_SRC" "$COMP_SSM_ROM" "$COMP_SSF_SRC" "$COMP_SSF_ROM" "$SEQ_NTMM_SRC" "$SEQ_NTMM_ROM" "$SEQ_NTMF_SRC" "$SEQ_NTMF_ROM" "$SEQ_NTFM_SRC" "$SEQ_NTFM_ROM" "$SEQ_NTFF_SRC" "$SEQ_NTFF_ROM" "$SEQ_NSMM_SRC" "$SEQ_NSMM_ROM" "$SEQ_NSMF_SRC" "$SEQ_NSMF_ROM" "$SEQ_NSFM_SRC" "$SEQ_NSFM_ROM" "$SEQ_NSFF_SRC" "$SEQ_NSFF_ROM" "$SEQ_STMM_SRC" "$SEQ_STMM_ROM" "$SEQ_STMF_SRC" "$SEQ_STMF_ROM" "$SEQ_STFM_SRC" "$SEQ_STFM_ROM" "$SEQ_STFF_SRC" "$SEQ_STFF_ROM" "$SEQ_SSMM_SRC" "$SEQ_SSMM_ROM" "$SEQ_SSMF_SRC" "$SEQ_SSMF_ROM" "$SEQ_SSFM_SRC" "$SEQ_SSFM_ROM" "$SEQ_SSFF_SRC" "$SEQ_SSFF_ROM"
 
 printf '==> running governed libretro smoke qualification\n'
 mkdir -p "$ROOT/artifacts"
