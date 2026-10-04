@@ -540,7 +540,31 @@ fn run() -> Result<(), String> {
         && fixed_right_succeeds_exactly_two)
     {
         return Err(format!(
-            "binding controls failed: normal_brief_same={normal_briefing_query_independent} swapped_brief_same={swapped_briefing_query_independent} arrangements_distinct={arrangements_visibly_distinct} triangle_choice_same={triangle_choice_converges_across_arrangements} square_choice_same={square_choice_converges_across_arrangements} queries_distinct={query_symbols_visibly_distinct} geometry={all_choice_geometry_identical} correct={all_correct_paths_pass} terminal={all_wrong_commits_terminal} left2={fixed_left_succeeds_exactly_two} right2={fixed_right_succeeds_exactly_two}"
+            "binding controls failed: normal_brief_same={normal_briefing_query_independent} swapped_brief_same={swapped_briefing_query_independent} arrangements_distinct={arrangements_visibly_distinct} triangle_choice_same={triangle_choice_converges_across_arrangements} square_choice_same={square_choice_converges_across_arrangements} queries_distinct={query_symbols_visibly_distinct} geometry={all_choice_geometry_identical} correct={all_correct_paths_pass} terminal={all_wrong_commits_terminal} left2={fixed_left_succeeds_exactly_two} right2={fixed_right_succeeds_exactly_two}; NT(term={}, wrong={:?}, neutral={:?}, recovery={:?}, neutral_hash={}, recovery_hash={}); NS(term={}, wrong={:?}, neutral={:?}, recovery={:?}, neutral_hash={}, recovery_hash={}); ST(term={}, wrong={:?}, neutral={:?}, recovery={:?}, neutral_hash={}, recovery_hash={}); SS(term={}, wrong={:?}, neutral={:?}, recovery={:?}, neutral_hash={}, recovery_hash={})",
+            normal_triangle.wrong_commit_terminal,
+            normal_triangle.wrong_final_player,
+            normal_triangle.neutral_terminal_player,
+            normal_triangle.post_recovery_probe_player,
+            normal_triangle.neutral_terminal_frame_sha256,
+            normal_triangle.recovery_probe_frame_sha256,
+            normal_square.wrong_commit_terminal,
+            normal_square.wrong_final_player,
+            normal_square.neutral_terminal_player,
+            normal_square.post_recovery_probe_player,
+            normal_square.neutral_terminal_frame_sha256,
+            normal_square.recovery_probe_frame_sha256,
+            swapped_triangle.wrong_commit_terminal,
+            swapped_triangle.wrong_final_player,
+            swapped_triangle.neutral_terminal_player,
+            swapped_triangle.post_recovery_probe_player,
+            swapped_triangle.neutral_terminal_frame_sha256,
+            swapped_triangle.recovery_probe_frame_sha256,
+            swapped_square.wrong_commit_terminal,
+            swapped_square.wrong_final_player,
+            swapped_square.neutral_terminal_player,
+            swapped_square.post_recovery_probe_player,
+            swapped_square.neutral_terminal_frame_sha256,
+            swapped_square.recovery_probe_frame_sha256,
         ));
     }
 
