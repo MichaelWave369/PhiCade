@@ -494,7 +494,7 @@ ReadMove:
 
 .up:
     bit 2, b
-    jr z, .down
+    jp z, .down
 
     ; Stage 2 cannot be reached until Stage 1 is accepted.
     ld a, [wStage1Done]
