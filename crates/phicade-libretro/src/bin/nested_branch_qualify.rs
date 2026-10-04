@@ -685,6 +685,18 @@ fn qualify_variant(
         &mut audio,
         "neutralize before generator interaction",
     )?;
+    let generator_before_a = locate_agent_gym_player(&video).map_err(|error| {
+        format!(
+            "{} could not resolve player before generator A: {error}",
+            task.id
+        )
+    })?;
+    if !point_within_tolerance(generator_before_a, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
+        return Err(format!(
+            "{} reached wrong pre-generator checkpoint: expected {:?} ±{}px, got {:?}",
+            task.id, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE, generator_before_a
+        ));
+    }
     tap_a(
         &mut core,
         &mut sequence,
@@ -699,8 +711,20 @@ fn qualify_variant(
         &mut audio,
         "settle powered generator",
     )?;
-    let powered_player =
-        locate_player_near(&video, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE)?;
+    let powered_player = locate_player_near(
+        &video,
+        GENERATOR_PLAYER,
+        CHECKPOINT_TOLERANCE,
+    )
+    .map_err(|local_error| {
+        let global = locate_agent_gym_player(&video)
+            .map(|point| format!("{point:?}"))
+            .unwrap_or_else(|error| format!("unresolved ({error})"));
+        format!(
+            "{} powered checkpoint locator failed near {:?}: {local_error}; global detector={global}",
+            task.id, GENERATOR_PLAYER
+        )
+    })?;
     if !point_within_tolerance(powered_player, GENERATOR_PLAYER, CHECKPOINT_TOLERANCE) {
         return Err(format!(
             "{} powered checkpoint left generator neighborhood: expected {:?} ±{}px, got {:?}",
