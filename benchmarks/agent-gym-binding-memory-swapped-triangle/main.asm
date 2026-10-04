@@ -40,6 +40,10 @@ DEF RIGHT_BIND_TILE EQU 2
 DEF QUERY_TILE      EQU 2
 DEF CORRECT_X       EQU 128
 DEF WRONG_X         EQU 32
+DEF CORRECT_MIN_X   EQU CORRECT_X - 3
+DEF CORRECT_MAX_X   EQU CORRECT_X + 4
+DEF WRONG_MIN_X     EQU WRONG_X - 3
+DEF WRONG_MAX_X     EQU WRONG_X + 4
 
 SECTION "Header", ROM0[$100]
     nop
@@ -246,11 +250,19 @@ ReadChoice:
     bit 0, a
     jr z, .done
 
+    ; Commit by rendered overlap band rather than one sacred x pixel.
+    ; The two doors are far apart, so the bands cannot alias.
     ld a, [wPlayerX]
-    cp CORRECT_X
-    jr z, .accept
-    cp WRONG_X
-    jr z, .fail
+    cp CORRECT_MIN_X
+    jr c, .checkWrong
+    cp CORRECT_MAX_X
+    jr c, .accept
+.checkWrong:
+    ld a, [wPlayerX]
+    cp WRONG_MIN_X
+    jr c, .done
+    cp WRONG_MAX_X
+    jr c, .fail
     jr .done
 
 .accept:
