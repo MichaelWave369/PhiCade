@@ -15,15 +15,15 @@ use std::{
 };
 
 const WARMUP_FRAMES: u64 = 120;
-const SIDE_FRAMES: u64 = 28;
+const SIDE_FRAMES: u64 = 32;
 // hold_button performs a separate release step. SameBoy observes one final
 // Hold durations match the canonical Agent Gym oracle. The release event
 // neutralizes the button before the release frame is simulated, so it does
 // not contribute an extra movement tick.
 const STAGE2_UP_FRAMES: u64 = 16;
-const GENERATOR_UP_FRAMES: u64 = 8;
-const GATE_UP_FRAMES: u64 = 4;
-const TARGET_UP_FRAMES: u64 = 16;
+const GENERATOR_UP_FRAMES: u64 = 12;
+const GATE_UP_FRAMES: u64 = 8;
+const TARGET_UP_FRAMES: u64 = 20;
 const BLOCK_PROBE_FRAMES: u64 = 8;
 const SETTLE_FRAMES: u64 = 2;
 
