@@ -219,8 +219,8 @@
       "id": "nested-branch-triangle-circle-v1",
       "title": "Nested Branch: Triangle → Circle",
       "source": "benchmarks/agent-gym-nested-branch-triangle-circle/main.asm",
-      "sourceSha256": "2222222222222222222222222222222222222222222222222222222222222222",
-      "romSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "sourceSha256": "2bb724ae134c2e7ec31c24b3096ac08e3f94158f24e75c50ff37b871fdce7a82",
+      "romSha256": "85bebe2dca1974b87c434abde755ec138a6f398f2e33b9cfcf81fae1db4914f5",
       "oracle": [
         "LEFT",
         "A",
@@ -246,8 +246,8 @@
       "id": "nested-branch-triangle-cross-v1",
       "title": "Nested Branch: Triangle → Cross",
       "source": "benchmarks/agent-gym-nested-branch-triangle-cross/main.asm",
-      "sourceSha256": "4444444444444444444444444444444444444444444444444444444444444444",
-      "romSha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "sourceSha256": "d65fbb5339300243d33de0d1544eb1abc8c87ec626fa126b33b56f91657dcde6",
+      "romSha256": "5e96ec33e6b5a33776bebef68a63a311087cd51bca5976a60ef3aad55ca3e5b2",
       "oracle": [
         "LEFT",
         "A",
@@ -273,8 +273,8 @@
       "id": "nested-branch-square-circle-v1",
       "title": "Nested Branch: Square → Circle",
       "source": "benchmarks/agent-gym-nested-branch-square-circle/main.asm",
-      "sourceSha256": "6666666666666666666666666666666666666666666666666666666666666666",
-      "romSha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "sourceSha256": "051ffafd163aa65c310145c999c76bedbf90978e74503901a6ed82d1aa8a7137",
+      "romSha256": "7779a57acf881c39709e1b31f561a361ab6539f1aed36ab875cacab094726f0f",
       "oracle": [
         "RIGHT",
         "A",
@@ -300,8 +300,8 @@
       "id": "nested-branch-square-cross-v1",
       "title": "Nested Branch: Square → Cross",
       "source": "benchmarks/agent-gym-nested-branch-square-cross/main.asm",
-      "sourceSha256": "8888888888888888888888888888888888888888888888888888888888888888",
-      "romSha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "sourceSha256": "eb915d89c6241f71150854d32c1f768079865a895e8f62137c8bdf76409994fd",
+      "romSha256": "9ca574ca0c55540ccc734146f8230c2f26bb6b1b98f87c43f3b186f9d57e80d6",
       "oracle": [
         "RIGHT",
         "A",
