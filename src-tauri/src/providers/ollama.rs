@@ -9,6 +9,14 @@ use phicade_runtime::{
     AGENT_GYM_COMP_NSM_ROM_SHA256, AGENT_GYM_COMP_NSF_ROM_SHA256,
     AGENT_GYM_COMP_STM_ROM_SHA256, AGENT_GYM_COMP_STF_ROM_SHA256,
     AGENT_GYM_COMP_SSM_ROM_SHA256, AGENT_GYM_COMP_SSF_ROM_SHA256,
+    AGENT_GYM_SEQ_NTMM_ROM_SHA256, AGENT_GYM_SEQ_NTMF_ROM_SHA256,
+    AGENT_GYM_SEQ_NTFM_ROM_SHA256, AGENT_GYM_SEQ_NTFF_ROM_SHA256,
+    AGENT_GYM_SEQ_NSMM_ROM_SHA256, AGENT_GYM_SEQ_NSMF_ROM_SHA256,
+    AGENT_GYM_SEQ_NSFM_ROM_SHA256, AGENT_GYM_SEQ_NSFF_ROM_SHA256,
+    AGENT_GYM_SEQ_STMM_ROM_SHA256, AGENT_GYM_SEQ_STMF_ROM_SHA256,
+    AGENT_GYM_SEQ_STFM_ROM_SHA256, AGENT_GYM_SEQ_STFF_ROM_SHA256,
+    AGENT_GYM_SEQ_SSMM_ROM_SHA256, AGENT_GYM_SEQ_SSMF_ROM_SHA256,
+    AGENT_GYM_SEQ_SSFM_ROM_SHA256, AGENT_GYM_SEQ_SSFF_ROM_SHA256,
     AGENT_GYM_KEY_GATE_LEFT_ROM_SHA256,
     AGENT_GYM_KEY_GATE_RIGHT_ROM_SHA256, AGENT_GYM_POWER_CHAIN_LEFT_ROM_SHA256,
     AGENT_GYM_POWER_CHAIN_RIGHT_ROM_SHA256, AGENT_GYM_MIRROR_ROM_SHA256,
@@ -843,6 +851,43 @@ mod tests {
         assert!(!prompt.contains("Swapped / Square"));
         assert!(!prompt.contains("MATCH →"));
         assert!(!prompt.contains("FLIP →"));
+    }
+
+    #[test]
+    fn sequential_rule_factorial_uses_identical_non_leaking_instruction() {
+        let hashes = [
+            AGENT_GYM_SEQ_NTMM_ROM_SHA256, AGENT_GYM_SEQ_NTMF_ROM_SHA256,
+            AGENT_GYM_SEQ_NTFM_ROM_SHA256, AGENT_GYM_SEQ_NTFF_ROM_SHA256,
+            AGENT_GYM_SEQ_NSMM_ROM_SHA256, AGENT_GYM_SEQ_NSMF_ROM_SHA256,
+            AGENT_GYM_SEQ_NSFM_ROM_SHA256, AGENT_GYM_SEQ_NSFF_ROM_SHA256,
+            AGENT_GYM_SEQ_STMM_ROM_SHA256, AGENT_GYM_SEQ_STMF_ROM_SHA256,
+            AGENT_GYM_SEQ_STFM_ROM_SHA256, AGENT_GYM_SEQ_STFF_ROM_SHA256,
+            AGENT_GYM_SEQ_SSMM_ROM_SHA256, AGENT_GYM_SEQ_SSMF_ROM_SHA256,
+            AGENT_GYM_SEQ_SSFM_ROM_SHA256, AGENT_GYM_SEQ_SSFF_ROM_SHA256,
+        ];
+        let prompts: Vec<String> = hashes
+            .iter()
+            .map(|hash| {
+                let mut req = request();
+                req.observation.game_sha256 = (*hash).into();
+                req.observation.allowed_buttons =
+                    vec!["A".into(), "LEFT".into(), "RIGHT".into()];
+                system_prompt(&req)
+            })
+            .collect();
+
+        assert!(prompts.windows(2).all(|pair| pair[0] == pair[1]));
+        let prompt = &prompts[0];
+        assert!(prompt.contains("Stage 1"));
+        assert!(prompt.contains("operator 1"));
+        assert!(prompt.contains("intermediate"));
+        assert!(prompt.contains("Stage 2"));
+        assert!(prompt.contains("operator 2"));
+        assert!(prompt.contains("wrong commitment is irreversible"));
+        assert!(!prompt.contains("Normal /"));
+        assert!(!prompt.contains("Swapped /"));
+        assert!(!prompt.contains("MATCH / MATCH"));
+        assert!(!prompt.contains("FLIP / FLIP"));
     }
 
     #[test]
