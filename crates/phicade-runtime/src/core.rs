@@ -65,3 +65,66 @@ pub trait EmulatorCore {
         audio: &mut AudioBuffer,
     ) -> Result<(), CoreError>;
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SystemId;
+
+    #[derive(Default)]
+    struct MockCore {
+        loaded: Option<GameImage>,
+    }
+
+    impl EmulatorCore for MockCore {
+        fn core_id(&self) -> &str {
+            "mock"
+        }
+
+        fn load_game(&mut self, image: &GameImage) -> Result<(), CoreError> {
+            self.loaded = Some(image.clone());
+            Ok(())
+        }
+
+        fn reset(&mut self) -> Result<(), CoreError> {
+            Ok(())
+        }
+
+        fn step_frame(
+            &mut self,
+            _actions: &[ActionEnvelope],
+            _video: &mut FrameBuffer,
+            _audio: &mut AudioBuffer,
+        ) -> Result<(), CoreError> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn runtime_neutral_file_descriptor_uses_legacy_game_image_bridge() {
+        let content = ContentDescriptor::file("demo.gb", "Demo")
+            .with_system(SystemId::GameBoy);
+        let mut core = MockCore::default();
+
+        core.load_content(&content).expect("load compatible descriptor");
+
+        assert_eq!(
+            core.loaded,
+            Some(GameImage::new("demo.gb", SystemId::GameBoy, "Demo"))
+        );
+    }
+
+    #[test]
+    fn legacy_emulator_core_fails_closed_for_directory_or_launch_target() {
+        let mut core = MockCore::default();
+        let directory = ContentDescriptor::directory("games/demo", "Demo")
+            .with_runtime_hint("scummvm");
+        let target = ContentDescriptor::launch_target("demo", "Demo")
+            .with_runtime_hint("scummvm");
+
+        assert_eq!(core.load_content(&directory), Err(CoreError::UnsupportedImage));
+        assert_eq!(core.load_content(&target), Err(CoreError::UnsupportedImage));
+        assert!(core.loaded.is_none());
+    }
+}
