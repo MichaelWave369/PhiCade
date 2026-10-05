@@ -8,7 +8,7 @@ pub mod authority;
 pub mod agent_gym;
 pub mod autodrive;
 pub mod benchmark_campaign;
-pub mod campaign_comparison;
+pub mod campaign_comparison;\npub mod capabilities;
 pub mod suite_report;
 pub mod suite_comparison;
 pub mod core;
@@ -146,6 +146,10 @@ pub use autodrive::{
 pub use benchmark_campaign::{
     summarize_benchmark_trials, BenchmarkCampaignStats, BenchmarkTrialOutcome,
     BENCHMARK_CAMPAIGN_SCHEMA,
+};
+pub use capabilities::{
+    CapabilityStatus, RuntimeCapabilities, RuntimeCapabilityManifest, RuntimeExecutionModel,
+    RuntimeQualificationProfile, RUNTIME_CAPABILITY_MANIFEST_SCHEMA,
 };
 pub use campaign_comparison::{
     compare_campaign_samples, CampaignComparisonStats, CampaignSampleSummary,
