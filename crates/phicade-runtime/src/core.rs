@@ -1,5 +1,6 @@
 use crate::{
-    ActionEnvelope, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest, RuntimeExecutionModel,
+    ActionEnvelope, ContentDescriptor, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest,
+    RuntimeExecutionModel,
 };
 
 #[derive(Debug, Clone, Default)]
@@ -42,6 +43,15 @@ pub trait EmulatorCore {
         )
     }
     fn load_game(&mut self, image: &GameImage) -> Result<(), CoreError>;
+
+    /// Load runtime-neutral content through the legacy GameImage compatibility
+    /// bridge when possible. Non-file or non-system content is refused by
+    /// emulator cores until a provider supplies a stronger content path.
+    fn load_content(&mut self, content: &ContentDescriptor) -> Result<(), CoreError> {
+        content.validate().map_err(CoreError::InvalidState)?;
+        let image = content.as_game_image().ok_or(CoreError::UnsupportedImage)?;
+        self.load_game(&image)
+    }
     fn reset(&mut self) -> Result<(), CoreError>;
 
     /// Advance exactly one emulated frame.
