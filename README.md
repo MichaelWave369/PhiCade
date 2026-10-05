@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 32
+## Current status — Rung 33
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -30,6 +30,7 @@ Benchmark suites:
 - **Suite v12** — the exact v11 tasks + the sixteen **Selective Context Routing** 2×2×2×2 factorial variants
 - **Suite v13** — the exact v12 tasks + the sixteen **Indirect Context Routing** 2×2×2×2 factorial variants
 - **Runtime Capability Manifest v1** — adapters declare execution model and per-capability UNSUPPORTED / SUPPORTED / QUALIFIED status without inflating weaker runtimes into emulator-shaped interfaces
+- **Content Descriptor v1** — FILE / DIRECTORY / LAUNCH_TARGET content locators with optional system and runtime hints, while legacy GameImage behavior remains intact
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -124,6 +125,8 @@ Current evidence stack includes:
 - Runtime Capability Manifest v1 with conservative core defaults
 - pinned SameBoy 1.0.3 capability profile with source revision + binary-evidence requirement
 - capability manifest embedded in the SameBoy qualification receipt
+- Content Descriptor v1 with fail-closed legacy EmulatorCore compatibility bridge
+- GameImage ↔ FILE+system descriptor compatibility with no SameBoy behavior change
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -142,6 +145,24 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Runtime-neutral content
+
+Rung 33 adds `phicade.content-descriptor.v1`.
+
+PhiCade can now describe a selected FILE, DIRECTORY, or runtime-native
+LAUNCH_TARGET without assuming every game is a console ROM. Existing
+`GameImage` callers remain valid: FILE + system descriptors bridge back into
+the legacy emulator path, while directories and launch targets fail closed on
+cores that do not explicitly support them.
+
+The optional `runtimeHint` is advisory routing metadata only. It grants no
+install, launch, or provider authority.
+
+This is the content seam required for future ScummVM directories/targets and
+PixelForge cartridges.
+
+See `docs/CONTENT_DESCRIPTOR.md`.
 
 ## Runtime capability manifests
 
@@ -511,6 +532,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/CONTENT_DESCRIPTOR.md`
 - `docs/RUNTIME_CAPABILITY_MANIFEST.md`
 - `docs/INDIRECT_CONTEXT_ROUTING_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V13.md`

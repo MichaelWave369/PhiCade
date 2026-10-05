@@ -169,7 +169,7 @@ pub use driver::{
     compile_agent_turn, AgentTurnAction, AgentTurnRequest, AgentTurnResponse,
     AGENT_MEMORY_MAX_BYTES, AGENT_TURN_REQUEST_SCHEMA, AGENT_TURN_RESPONSE_SCHEMA,
 };
-pub use library::{GameImage, SystemId};
+pub use library::{ContentDescriptor, ContentLocator, GameImage, SystemId, CONTENT_DESCRIPTOR_SCHEMA};
 pub use replay::{
     ReplayCheckpoint, ReplayLedger, ReplayReceipt, ReplayVerification,
     ReplayVerificationResult, REPLAY_RECEIPT_SCHEMA, REPLAY_SCHEMA,
