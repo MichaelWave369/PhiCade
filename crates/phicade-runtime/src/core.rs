@@ -1,4 +1,6 @@
-use crate::{\n    ActionEnvelope, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest, RuntimeExecutionModel,\n};
+use crate::{
+    ActionEnvelope, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest, RuntimeExecutionModel,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct FrameBuffer {
