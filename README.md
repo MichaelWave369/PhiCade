@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 31
+## Current status — Rung 32
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -29,6 +29,7 @@ Benchmark suites:
 - **Suite v11** — the exact v10 tasks + the sixteen **Sequential Rule Composition** 2×2×2×2 factorial variants
 - **Suite v12** — the exact v11 tasks + the sixteen **Selective Context Routing** 2×2×2×2 factorial variants
 - **Suite v13** — the exact v12 tasks + the sixteen **Indirect Context Routing** 2×2×2×2 factorial variants
+- **Runtime Capability Manifest v1** — adapters declare execution model and per-capability UNSUPPORTED / SUPPORTED / QUALIFIED status without inflating weaker runtimes into emulator-shaped interfaces
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -120,6 +121,9 @@ Current evidence stack includes:
 - four-history choice-frame convergence for fixed pointer + query
 - map/bank/query shortcut families capped at exactly 8/16
 - Benchmark Suite v13 with exact 77-task membership
+- Runtime Capability Manifest v1 with conservative core defaults
+- pinned SameBoy 1.0.3 capability profile with source revision + binary-evidence requirement
+- capability manifest embedded in the SameBoy qualification receipt
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -138,6 +142,23 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Runtime capability manifests
+
+Rung 32 adds `phicade.runtime-capability-manifest.v1`.
+
+Runtime adapters now declare an execution model plus explicit capability status:
+`UNSUPPORTED`, `SUPPORTED`, or `QUALIFIED`. The core-neutral
+`EmulatorCore` default only claims frame stepping, framebuffer/audio output,
+governed actions, and reset. SameBoy's stronger state-snapshot and exact-replay
+claims are promoted only under its named qualification profile, and exact binary
+evidence is still required.
+
+This is the compatibility seam for future external runtimes such as ScummVM and
+semantic/browser runtimes such as PixelForge without forcing them to impersonate
+SameBoy.
+
+See `docs/RUNTIME_CAPABILITY_MANIFEST.md`.
 
 ## Run
 
@@ -490,6 +511,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/RUNTIME_CAPABILITY_MANIFEST.md`
 - `docs/INDIRECT_CONTEXT_ROUTING_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V13.md`
 - `docs/SELECTIVE_CONTEXT_ROUTING_BENCHMARK.md`

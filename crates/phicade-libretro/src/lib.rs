@@ -1,7 +1,8 @@
 use libloading::Library;
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, AudioBuffer, CoreError, EmulatorCore, FrameBuffer, GameImage,
-    SystemCommand, SystemId,
+    ActionEnvelope, ActionKind, AudioBuffer, CapabilityStatus, CoreError, EmulatorCore,
+    FrameBuffer, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest,
+    RuntimeExecutionModel, RuntimeQualificationProfile, SystemCommand, SystemId,
 };
 use serde::Serialize;
 use std::{
@@ -15,6 +16,8 @@ use std::{
 pub const SAMEBOY_SOURCE_REVISION: &str = "213a12ce93d66b105a113debd9396306066a7cfc";
 pub const SAMEBOY_VERSION: &str = "1.0.3";
 pub const SAMEBOY_LICENSE: &str = "Expat";
+pub const LIBRETRO_ADAPTER_ID: &str = "phicade.libretro";
+pub const SAMEBOY_QUALIFICATION_PROFILE_ID: &str = "phicade.sameboy-1.0.3-qualified.v1";
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
 const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
@@ -180,6 +183,42 @@ pub struct CoreIdentity {
     pub need_fullpath: bool,
     pub fps: f64,
     pub sample_rate_hz: u32,
+}
+
+pub fn libretro_capability_manifest(identity: &CoreIdentity) -> RuntimeCapabilityManifest {
+    let mut capabilities = RuntimeCapabilities::core_baseline();
+
+    // The libretro adapter exposes these APIs, but generic cores are not
+    // promoted to QUALIFIED merely because the ABI symbols exist.
+    capabilities.state_snapshots = CapabilityStatus::Supported;
+    capabilities.persistent_save_data = CapabilityStatus::Supported;
+
+    let is_pinned_sameboy_profile =
+        identity.library_name.eq_ignore_ascii_case("SameBoy")
+            && identity.library_version == SAMEBOY_VERSION;
+
+    let mut manifest = RuntimeCapabilityManifest::new(
+        identity.library_name.clone(),
+        Some(identity.library_version.clone()),
+        LIBRETRO_ADAPTER_ID,
+        RuntimeExecutionModel::EmbeddedFrameCore,
+        capabilities,
+    );
+
+    if is_pinned_sameboy_profile {
+        manifest.capabilities.frame_step = CapabilityStatus::Qualified;
+        manifest.capabilities.rendered_framebuffer = CapabilityStatus::Qualified;
+        manifest.capabilities.governed_actions = CapabilityStatus::Qualified;
+        manifest.capabilities.state_snapshots = CapabilityStatus::Qualified;
+        manifest.capabilities.exact_replay = CapabilityStatus::Qualified;
+        manifest = manifest.with_qualification_profile(RuntimeQualificationProfile {
+            profile_id: SAMEBOY_QUALIFICATION_PROFILE_ID.into(),
+            source_revision: Some(SAMEBOY_SOURCE_REVISION.into()),
+            binary_evidence_required: true,
+        });
+    }
+
+    manifest
 }
 
 pub struct LibretroCore {
@@ -411,6 +450,10 @@ impl LibretroCore {
 impl EmulatorCore for LibretroCore {
     fn core_id(&self) -> &str { &self.identity.library_name }
 
+    fn capability_manifest(&self) -> RuntimeCapabilityManifest {
+        libretro_capability_manifest(&self.identity)
+    }
+
     fn load_game(&mut self, image: &GameImage) -> Result<(), CoreError> {
         if !matches!(image.system, SystemId::GameBoy | SystemId::GameBoyColor) {
             return Err(CoreError::UnsupportedImage);
@@ -620,6 +663,53 @@ mod tests {
         assert_eq!(button_id("left"), Some(LEFT));
         assert_eq!(button_id("wat"), None);
     }
+    #[test]
+    fn sameboy_manifest_marks_only_qualified_capabilities() {
+        let identity = CoreIdentity {
+            library_name: "SameBoy".into(),
+            library_version: SAMEBOY_VERSION.into(),
+            valid_extensions: "gb|gbc".into(),
+            need_fullpath: false,
+            fps: 59.7,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = libretro_capability_manifest(&identity);
+
+        assert_eq!(manifest.adapter_id, LIBRETRO_ADAPTER_ID);
+        assert_eq!(manifest.execution_model, RuntimeExecutionModel::EmbeddedFrameCore);
+        assert_eq!(manifest.capabilities.frame_step, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.rendered_framebuffer, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.governed_actions, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.state_snapshots, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.persistent_save_data, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.game_detection, CapabilityStatus::Unsupported);
+        assert_eq!(manifest.capabilities.external_process_lifecycle, CapabilityStatus::Unsupported);
+
+        let profile = manifest.qualification_profile.expect("sameboy qualification profile");
+        assert_eq!(profile.profile_id, SAMEBOY_QUALIFICATION_PROFILE_ID);
+        assert_eq!(profile.source_revision.as_deref(), Some(SAMEBOY_SOURCE_REVISION));
+        assert!(profile.binary_evidence_required);
+    }
+
+    #[test]
+    fn generic_libretro_core_does_not_inherit_sameboy_qualification() {
+        let identity = CoreIdentity {
+            library_name: "OtherCore".into(),
+            library_version: "9.9".into(),
+            valid_extensions: "rom".into(),
+            need_fullpath: false,
+            fps: 60.0,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = libretro_capability_manifest(&identity);
+
+        assert_eq!(manifest.capabilities.frame_step, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.state_snapshots, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Unsupported);
+        assert!(manifest.qualification_profile.is_none());
+    }
+
     #[test]
     fn converts_xrgb8888() {
         let raw=RawVideo{width:1,height:1,pitch:4,bytes:0x00112233u32.to_ne_bytes().to_vec()};

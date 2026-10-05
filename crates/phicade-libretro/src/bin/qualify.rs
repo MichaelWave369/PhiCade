@@ -1,5 +1,5 @@
 use phicade_libretro::{LibretroCore, SAMEBOY_LICENSE, SAMEBOY_SOURCE_REVISION, SAMEBOY_VERSION};
-use phicade_runtime::{AudioBuffer, EmulatorCore, FrameBuffer, GameImage, SystemId};
+use phicade_runtime::{AudioBuffer, EmulatorCore, FrameBuffer, GameImage, RuntimeCapabilityManifest, SystemId};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::{env, fs, path::{Path, PathBuf}, process};
@@ -15,6 +15,7 @@ struct QualificationReceipt {
     core_declared_version: &'static str,
     core_license: &'static str,
     core_sha256: String,
+    capability_manifest: RuntimeCapabilityManifest,
     fixture_name: &'static str,
     fixture_sha256: String,
     frames_requested: u64,
@@ -82,6 +83,7 @@ fn run() -> Result<(), String> {
     let mut core = LibretroCore::open(&core_path, &system_dir, &save_dir)
         .map_err(|error| format!("open core: {error:?}"))?;
     let identity = core.identity().clone();
+    let capability_manifest = core.capability_manifest();
     if !identity.library_name.to_ascii_lowercase().contains("sameboy") {
         return Err(format!("expected SameBoy core, got {} {}", identity.library_name, identity.library_version));
     }
@@ -148,6 +150,7 @@ fn run() -> Result<(), String> {
         core_declared_version: SAMEBOY_VERSION,
         core_license: SAMEBOY_LICENSE,
         core_sha256: hash_file(&core_path)?,
+        capability_manifest,
         fixture_name: "dmg-acid2 v1.0 (MIT)",
         fixture_sha256: hash_file(&rom_path)?,
         frames_requested: frames,
