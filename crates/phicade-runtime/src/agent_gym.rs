@@ -3383,11 +3383,12 @@ mod tests {
         ] {
             assert_eq!(benchmark_task_by_id(id).map(|task| task.id), Some(id));
             let memberships = benchmark_suites_for_task(id);
-            assert_eq!(memberships.len(), 4);
+            assert_eq!(memberships.len(), 5);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V9_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V10_ID);
             assert_eq!(memberships[2].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[3].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[4].id, BENCHMARK_SUITE_V13_ID);
         }
         assert_eq!(AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_NORMAL_SQUARE_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -3407,10 +3408,11 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 3);
+            assert_eq!(memberships.len(), 4);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V10_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[2].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[3].id, BENCHMARK_SUITE_V13_ID);
         }
         assert_eq!(AGENT_GYM_COMP_NTM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_COMP_NTF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -3429,9 +3431,10 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 2);
+            assert_eq!(memberships.len(), 3);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[2].id, BENCHMARK_SUITE_V13_ID);
             assert_eq!(task.rom_sha256.len(), 64);
             assert_eq!(task.source_sha256.len(), 64);
         }
@@ -3444,8 +3447,32 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships.len(), 2);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[1].id, BENCHMARK_SUITE_V13_ID);
+            assert_eq!(task.rom_sha256.len(), 64);
+            assert_eq!(task.source_sha256.len(), 64);
+        }
+    }
+
+    #[test]
+    fn registry_resolves_indirect_context_tasks_by_id_and_hash() {
+        let tasks = [
+            AGENT_GYM_IND_A_NOR_STAR_TRI_TASK, AGENT_GYM_IND_A_NOR_STAR_SQR_TASK,
+            AGENT_GYM_IND_A_NOR_MOON_TRI_TASK, AGENT_GYM_IND_A_NOR_MOON_SQR_TASK,
+            AGENT_GYM_IND_A_SWP_STAR_TRI_TASK, AGENT_GYM_IND_A_SWP_STAR_SQR_TASK,
+            AGENT_GYM_IND_A_SWP_MOON_TRI_TASK, AGENT_GYM_IND_A_SWP_MOON_SQR_TASK,
+            AGENT_GYM_IND_B_NOR_STAR_TRI_TASK, AGENT_GYM_IND_B_NOR_STAR_SQR_TASK,
+            AGENT_GYM_IND_B_NOR_MOON_TRI_TASK, AGENT_GYM_IND_B_NOR_MOON_SQR_TASK,
+            AGENT_GYM_IND_B_SWP_STAR_TRI_TASK, AGENT_GYM_IND_B_SWP_STAR_SQR_TASK,
+            AGENT_GYM_IND_B_SWP_MOON_TRI_TASK, AGENT_GYM_IND_B_SWP_MOON_SQR_TASK,
+        ];
+        for task in tasks {
+            assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
+            assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
+            let memberships = benchmark_suites_for_task(task.id);
+            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships[0].id, BENCHMARK_SUITE_V13_ID);
             assert_eq!(task.rom_sha256.len(), 64);
             assert_eq!(task.source_sha256.len(), 64);
         }
