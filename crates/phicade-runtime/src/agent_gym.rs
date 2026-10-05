@@ -2544,9 +2544,7 @@ pub static BENCHMARK_SUITE_V12_TASKS: [BenchmarkTaskSpec; 61] = [
     AGENT_GYM_CTX_B_CRS_SF_TASK,
 ];
 
-pub static BENCHMARK_SUITE_V13_TASKS: [BenchmarkTaskSpec; 77] = [BenchmarkTaskSpec; 61] = [
-
-
+pub static BENCHMARK_SUITE_V13_TASKS: [BenchmarkTaskSpec; 77] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -2608,7 +2606,6 @@ pub static BENCHMARK_SUITE_V13_TASKS: [BenchmarkTaskSpec; 77] = [BenchmarkTaskSp
     AGENT_GYM_CTX_B_CRS_TF_TASK,
     AGENT_GYM_CTX_B_CRS_SM_TASK,
     AGENT_GYM_CTX_B_CRS_SF_TASK,
-
     AGENT_GYM_IND_A_NOR_STAR_TRI_TASK,
     AGENT_GYM_IND_A_NOR_STAR_SQR_TASK,
     AGENT_GYM_IND_A_NOR_MOON_TRI_TASK,
