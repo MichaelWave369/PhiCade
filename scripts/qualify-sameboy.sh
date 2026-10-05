@@ -1307,6 +1307,155 @@ cargo run -p phicade-libretro --bin agent_gym_qualify -- \
   --task "selective-context-b-cross-square-flip-v1" \
   --receipt "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-flip-qualification.json"
 
+printf '==> running Indirect Context 2x2x2x2 qualification\n'
+cargo run -p phicade-libretro --bin indirect_context_qualify -- \
+  --core "$CORE" \
+  --rom "indirect-context-a-normal-star-triangle-v1=$IND_A_NOR_STAR_TRI_ROM" \
+  --rom "indirect-context-a-normal-star-square-v1=$IND_A_NOR_STAR_SQR_ROM" \
+  --rom "indirect-context-a-normal-moon-triangle-v1=$IND_A_NOR_MOON_TRI_ROM" \
+  --rom "indirect-context-a-normal-moon-square-v1=$IND_A_NOR_MOON_SQR_ROM" \
+  --rom "indirect-context-a-swapped-star-triangle-v1=$IND_A_SWP_STAR_TRI_ROM" \
+  --rom "indirect-context-a-swapped-star-square-v1=$IND_A_SWP_STAR_SQR_ROM" \
+  --rom "indirect-context-a-swapped-moon-triangle-v1=$IND_A_SWP_MOON_TRI_ROM" \
+  --rom "indirect-context-a-swapped-moon-square-v1=$IND_A_SWP_MOON_SQR_ROM" \
+  --rom "indirect-context-b-normal-star-triangle-v1=$IND_B_NOR_STAR_TRI_ROM" \
+  --rom "indirect-context-b-normal-star-square-v1=$IND_B_NOR_STAR_SQR_ROM" \
+  --rom "indirect-context-b-normal-moon-triangle-v1=$IND_B_NOR_MOON_TRI_ROM" \
+  --rom "indirect-context-b-normal-moon-square-v1=$IND_B_NOR_MOON_SQR_ROM" \
+  --rom "indirect-context-b-swapped-star-triangle-v1=$IND_B_SWP_STAR_TRI_ROM" \
+  --rom "indirect-context-b-swapped-star-square-v1=$IND_B_SWP_STAR_SQR_ROM" \
+  --rom "indirect-context-b-swapped-moon-triangle-v1=$IND_B_SWP_MOON_TRI_ROM" \
+  --rom "indirect-context-b-swapped-moon-square-v1=$IND_B_SWP_MOON_SQR_ROM" \
+  --receipt "$ROOT/artifacts/indirect-context-routing-qualification.json"
+
+printf '==> running Indirect Context a-normal-star-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_NOR_STAR_TRI_ROM" \
+  --source "$IND_A_NOR_STAR_TRI_SRC" \
+  --task "indirect-context-a-normal-star-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-normal-star-triangle-qualification.json"
+
+printf '==> running Indirect Context a-normal-star-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_NOR_STAR_SQR_ROM" \
+  --source "$IND_A_NOR_STAR_SQR_SRC" \
+  --task "indirect-context-a-normal-star-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-normal-star-square-qualification.json"
+
+printf '==> running Indirect Context a-normal-moon-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_NOR_MOON_TRI_ROM" \
+  --source "$IND_A_NOR_MOON_TRI_SRC" \
+  --task "indirect-context-a-normal-moon-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-normal-moon-triangle-qualification.json"
+
+printf '==> running Indirect Context a-normal-moon-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_NOR_MOON_SQR_ROM" \
+  --source "$IND_A_NOR_MOON_SQR_SRC" \
+  --task "indirect-context-a-normal-moon-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-normal-moon-square-qualification.json"
+
+printf '==> running Indirect Context a-swapped-star-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_SWP_STAR_TRI_ROM" \
+  --source "$IND_A_SWP_STAR_TRI_SRC" \
+  --task "indirect-context-a-swapped-star-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-star-triangle-qualification.json"
+
+printf '==> running Indirect Context a-swapped-star-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_SWP_STAR_SQR_ROM" \
+  --source "$IND_A_SWP_STAR_SQR_SRC" \
+  --task "indirect-context-a-swapped-star-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-star-square-qualification.json"
+
+printf '==> running Indirect Context a-swapped-moon-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_SWP_MOON_TRI_ROM" \
+  --source "$IND_A_SWP_MOON_TRI_SRC" \
+  --task "indirect-context-a-swapped-moon-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-moon-triangle-qualification.json"
+
+printf '==> running Indirect Context a-swapped-moon-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_A_SWP_MOON_SQR_ROM" \
+  --source "$IND_A_SWP_MOON_SQR_SRC" \
+  --task "indirect-context-a-swapped-moon-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-moon-square-qualification.json"
+
+printf '==> running Indirect Context b-normal-star-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_NOR_STAR_TRI_ROM" \
+  --source "$IND_B_NOR_STAR_TRI_SRC" \
+  --task "indirect-context-b-normal-star-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-normal-star-triangle-qualification.json"
+
+printf '==> running Indirect Context b-normal-star-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_NOR_STAR_SQR_ROM" \
+  --source "$IND_B_NOR_STAR_SQR_SRC" \
+  --task "indirect-context-b-normal-star-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-normal-star-square-qualification.json"
+
+printf '==> running Indirect Context b-normal-moon-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_NOR_MOON_TRI_ROM" \
+  --source "$IND_B_NOR_MOON_TRI_SRC" \
+  --task "indirect-context-b-normal-moon-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-normal-moon-triangle-qualification.json"
+
+printf '==> running Indirect Context b-normal-moon-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_NOR_MOON_SQR_ROM" \
+  --source "$IND_B_NOR_MOON_SQR_SRC" \
+  --task "indirect-context-b-normal-moon-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-normal-moon-square-qualification.json"
+
+printf '==> running Indirect Context b-swapped-star-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_SWP_STAR_TRI_ROM" \
+  --source "$IND_B_SWP_STAR_TRI_SRC" \
+  --task "indirect-context-b-swapped-star-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-star-triangle-qualification.json"
+
+printf '==> running Indirect Context b-swapped-star-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_SWP_STAR_SQR_ROM" \
+  --source "$IND_B_SWP_STAR_SQR_SRC" \
+  --task "indirect-context-b-swapped-star-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-star-square-qualification.json"
+
+printf '==> running Indirect Context b-swapped-moon-triangle\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_SWP_MOON_TRI_ROM" \
+  --source "$IND_B_SWP_MOON_TRI_SRC" \
+  --task "indirect-context-b-swapped-moon-triangle-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-moon-triangle-qualification.json"
+
+printf '==> running Indirect Context b-swapped-moon-square\n'
+cargo run -p phicade-libretro --bin agent_gym_qualify -- \
+  --core "$CORE" \
+  --rom "$IND_B_SWP_MOON_SQR_ROM" \
+  --source "$IND_B_SWP_MOON_SQR_SRC" \
+  --task "indirect-context-b-swapped-moon-square-v1" \
+  --receipt "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-moon-square-qualification.json"
+
 printf '==> receipts:\n'
 printf '    %s\n' "$ROOT/artifacts/sameboy-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/replay-qualification.json"
@@ -1384,3 +1533,21 @@ printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-
 printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-triangle-flip-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-match-qualification.json"
 printf '    %s\n' "$ROOT/artifacts/agent-gym-selective-context-b-cross-square-flip-qualification.json"
+
+printf '    %s\n' "$ROOT/artifacts/indirect-context-routing-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-normal-star-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-normal-star-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-normal-moon-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-normal-moon-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-star-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-star-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-moon-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-a-swapped-moon-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-normal-star-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-normal-star-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-normal-moon-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-normal-moon-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-star-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-star-square-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-moon-triangle-qualification.json"
+printf '    %s\n' "$ROOT/artifacts/agent-gym-indirect-context-b-swapped-moon-square-qualification.json"

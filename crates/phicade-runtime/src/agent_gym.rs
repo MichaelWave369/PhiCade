@@ -13,6 +13,7 @@ pub const BENCHMARK_SUITE_V9_ID: &str = "phicade-agent-gym-suite-v9";
 pub const BENCHMARK_SUITE_V10_ID: &str = "phicade-agent-gym-suite-v10";
 pub const BENCHMARK_SUITE_V11_ID: &str = "phicade-agent-gym-suite-v11";
 pub const BENCHMARK_SUITE_V12_ID: &str = "phicade-agent-gym-suite-v12";
+pub const BENCHMARK_SUITE_V13_ID: &str = "phicade-agent-gym-suite-v13";
 
 pub const AGENT_GYM_ID: &str = "move-block-to-x-v1";
 pub const AGENT_GYM_ROM_SHA256: &str =
@@ -380,6 +381,102 @@ pub const AGENT_GYM_CTX_B_CRS_SF_ROM_SHA256: &str =
 pub const AGENT_GYM_CTX_B_CRS_SF_SOURCE_SHA256: &str =
     "4e738f4647d201b738cdbc381ff062ee2ec6eb693ed9138e0c4688aac1388443";
 
+pub const AGENT_GYM_IND_A_NOR_STAR_TRI_ID: &str = "indirect-context-a-normal-star-triangle-v1";
+pub const AGENT_GYM_IND_A_NOR_STAR_TRI_ROM_SHA256: &str =
+    "6b34ae3504980a774ee08539cfdca5e2875a3eddf1308c29c71e996c80ea0e32";
+pub const AGENT_GYM_IND_A_NOR_STAR_TRI_SOURCE_SHA256: &str =
+    "40a31e3b91dca036c4abf4d6f536bbe2646876beac88ed1864e1324c952229e0";
+
+pub const AGENT_GYM_IND_A_NOR_STAR_SQR_ID: &str = "indirect-context-a-normal-star-square-v1";
+pub const AGENT_GYM_IND_A_NOR_STAR_SQR_ROM_SHA256: &str =
+    "f542159acbd0c91e270dda194568a4c5c036d3d4db646d29bed3023fab56c234";
+pub const AGENT_GYM_IND_A_NOR_STAR_SQR_SOURCE_SHA256: &str =
+    "b22beed5be9941b0661316ab659b247dae86af9c3e80aecfff4638c82eb94edf";
+
+pub const AGENT_GYM_IND_A_NOR_MOON_TRI_ID: &str = "indirect-context-a-normal-moon-triangle-v1";
+pub const AGENT_GYM_IND_A_NOR_MOON_TRI_ROM_SHA256: &str =
+    "b89da08d85a96abad7024b769d3c39da831520882d5825dd3a6cfa42751c6901";
+pub const AGENT_GYM_IND_A_NOR_MOON_TRI_SOURCE_SHA256: &str =
+    "fb555800e44fd2e76a85f4fb4753b02dbb353d3ea364eb2a4ac5c78c8bdcc0a3";
+
+pub const AGENT_GYM_IND_A_NOR_MOON_SQR_ID: &str = "indirect-context-a-normal-moon-square-v1";
+pub const AGENT_GYM_IND_A_NOR_MOON_SQR_ROM_SHA256: &str =
+    "d10b19aaf775a1fe834ae8b4cb12ca3bb2ad38cc3c6f7cdab9f0b5c715258390";
+pub const AGENT_GYM_IND_A_NOR_MOON_SQR_SOURCE_SHA256: &str =
+    "61960f293b49291d37671d484d19052bf7ab91e8538ea12c06403d71f4a2ef8a";
+
+pub const AGENT_GYM_IND_A_SWP_STAR_TRI_ID: &str = "indirect-context-a-swapped-star-triangle-v1";
+pub const AGENT_GYM_IND_A_SWP_STAR_TRI_ROM_SHA256: &str =
+    "a3ec2e8d44180e145d790f06853f18ed9e480ded1357be787f793f5edbdc4220";
+pub const AGENT_GYM_IND_A_SWP_STAR_TRI_SOURCE_SHA256: &str =
+    "dd22e10d37a1989c69df5371509a67e71956a58153d7cf07753ef0415a8cdbbf";
+
+pub const AGENT_GYM_IND_A_SWP_STAR_SQR_ID: &str = "indirect-context-a-swapped-star-square-v1";
+pub const AGENT_GYM_IND_A_SWP_STAR_SQR_ROM_SHA256: &str =
+    "7d40f1ee787053ba0264d30714ba34336c27c97ad9c44c9199d90d7c3529a3f8";
+pub const AGENT_GYM_IND_A_SWP_STAR_SQR_SOURCE_SHA256: &str =
+    "5631d4f553099c92df71256151aa1fdcb045d8d19eed25c90e660e4cc300d682";
+
+pub const AGENT_GYM_IND_A_SWP_MOON_TRI_ID: &str = "indirect-context-a-swapped-moon-triangle-v1";
+pub const AGENT_GYM_IND_A_SWP_MOON_TRI_ROM_SHA256: &str =
+    "a24caf59ec39db1c5f8d90db732e857843c9d1657aeaf754efbed3787aa7070f";
+pub const AGENT_GYM_IND_A_SWP_MOON_TRI_SOURCE_SHA256: &str =
+    "6a24d28d399e00d299f6517a2498195dc9f69b8081f62ba2a86d28e0df0afea9";
+
+pub const AGENT_GYM_IND_A_SWP_MOON_SQR_ID: &str = "indirect-context-a-swapped-moon-square-v1";
+pub const AGENT_GYM_IND_A_SWP_MOON_SQR_ROM_SHA256: &str =
+    "6c290eca438290f3446c94923a723693f5aa9ade2d72fbeb57a8939bcb008cdd";
+pub const AGENT_GYM_IND_A_SWP_MOON_SQR_SOURCE_SHA256: &str =
+    "1573026b2bf4ded51a3fce9c51ef8de277c3eea4feaab494964bd32adf6807fd";
+
+pub const AGENT_GYM_IND_B_NOR_STAR_TRI_ID: &str = "indirect-context-b-normal-star-triangle-v1";
+pub const AGENT_GYM_IND_B_NOR_STAR_TRI_ROM_SHA256: &str =
+    "6713824ff5a3222362722ea0e668fa842cc04322c0c008d988fa4f3ca9601dd9";
+pub const AGENT_GYM_IND_B_NOR_STAR_TRI_SOURCE_SHA256: &str =
+    "d1358b69d7fe9974b1454b9c306d0c4518ef0d066ca9f38499d30d0b2921709e";
+
+pub const AGENT_GYM_IND_B_NOR_STAR_SQR_ID: &str = "indirect-context-b-normal-star-square-v1";
+pub const AGENT_GYM_IND_B_NOR_STAR_SQR_ROM_SHA256: &str =
+    "068a8cd9b7eabe21a57a6bbc3bb4bf5104e281dad6daedef68c13bc89d820610";
+pub const AGENT_GYM_IND_B_NOR_STAR_SQR_SOURCE_SHA256: &str =
+    "c3cb118ad3e26c81daec3bb24cf4b2b51055131e151dceb716ea58e143cc043b";
+
+pub const AGENT_GYM_IND_B_NOR_MOON_TRI_ID: &str = "indirect-context-b-normal-moon-triangle-v1";
+pub const AGENT_GYM_IND_B_NOR_MOON_TRI_ROM_SHA256: &str =
+    "b71ad037f9e3afa15122f05af776ecf63a5aff2b6733722fe77d1f86d279b817";
+pub const AGENT_GYM_IND_B_NOR_MOON_TRI_SOURCE_SHA256: &str =
+    "4d79a9154882628a76147ea7c8415c97f85e42fb36303a1f7503280a95bcd247";
+
+pub const AGENT_GYM_IND_B_NOR_MOON_SQR_ID: &str = "indirect-context-b-normal-moon-square-v1";
+pub const AGENT_GYM_IND_B_NOR_MOON_SQR_ROM_SHA256: &str =
+    "c70e6dcc25788fa37573eab3c4160753ab5f75b87128a45ef8b23506d4874410";
+pub const AGENT_GYM_IND_B_NOR_MOON_SQR_SOURCE_SHA256: &str =
+    "77640122851c308130a7b123078386f57f6dd24b19cbf9b05d7219507dfd0f5e";
+
+pub const AGENT_GYM_IND_B_SWP_STAR_TRI_ID: &str = "indirect-context-b-swapped-star-triangle-v1";
+pub const AGENT_GYM_IND_B_SWP_STAR_TRI_ROM_SHA256: &str =
+    "7aa217434ebd22b97b216ec76100355c6f3b6bb4edf9dbde7f849fea682cda4b";
+pub const AGENT_GYM_IND_B_SWP_STAR_TRI_SOURCE_SHA256: &str =
+    "c438f31fa781194778e45d6616c61616d369c2933a11be74a97701742c6313b4";
+
+pub const AGENT_GYM_IND_B_SWP_STAR_SQR_ID: &str = "indirect-context-b-swapped-star-square-v1";
+pub const AGENT_GYM_IND_B_SWP_STAR_SQR_ROM_SHA256: &str =
+    "a137e18934c2508136bf2be75481aeeb187005917a36bd01111ab55808c1735a";
+pub const AGENT_GYM_IND_B_SWP_STAR_SQR_SOURCE_SHA256: &str =
+    "34a53b9c22155180796c14ae61480452db5caacb35f290b02c92e307ff8c2093";
+
+pub const AGENT_GYM_IND_B_SWP_MOON_TRI_ID: &str = "indirect-context-b-swapped-moon-triangle-v1";
+pub const AGENT_GYM_IND_B_SWP_MOON_TRI_ROM_SHA256: &str =
+    "fe840a1fb27afc6f62bcbf049f55ac8dcd61a4eec651c1779461dbd338fd6ed7";
+pub const AGENT_GYM_IND_B_SWP_MOON_TRI_SOURCE_SHA256: &str =
+    "67420e6b62057e6216d5f2280df6ec53a11a4e52675140262561c7dc0a50c486";
+
+pub const AGENT_GYM_IND_B_SWP_MOON_SQR_ID: &str = "indirect-context-b-swapped-moon-square-v1";
+pub const AGENT_GYM_IND_B_SWP_MOON_SQR_ROM_SHA256: &str =
+    "b03b2761833c9b0f078135793c4150b16a76053fe9c880949a58832e8a98777a";
+pub const AGENT_GYM_IND_B_SWP_MOON_SQR_SOURCE_SHA256: &str =
+    "2fd750f60d98219f1d78d664cfde419fcf5690480e14f1ec65ce59a77cacec07";
+
 pub const AGENT_GYM_TARGET_X: i32 = 136;
 pub const AGENT_GYM_TARGET_Y: i32 = 112;
 pub const AGENT_GYM_START_X: i32 = 16;
@@ -456,6 +553,7 @@ pub static AGENT_GYM_BINDING_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_COMPOSITIONAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_SEQUENTIAL_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 pub static AGENT_GYM_CONTEXT_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
+pub static AGENT_GYM_INDIRECT_CONTEXT_BUTTONS: [&str; 3] = ["A", "LEFT", "RIGHT"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1853,7 +1951,263 @@ pub const AGENT_GYM_CTX_B_CRS_SF_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
     oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
 };
 
-pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 61] = [
+pub const AGENT_GYM_IND_A_NOR_STAR_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_NOR_STAR_TRI_ID,
+    title: "Indirect Context: Layout A / NORMAL / STAR / Triangle",
+    rom_sha256: AGENT_GYM_IND_A_NOR_STAR_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_NOR_STAR_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: "Benchmark task: memorize the TRIANGLE/SQUARE positions in both the CIRCLE and CROSS banks and also memorize which bank STAR and MOON point to. Press A to erase the briefing. Later, use the pointer token to recover the correct bank, then use the query symbol to recover the remembered side from that bank. Choose the matching identical door and press A to commit. A wrong commitment is irreversible.",
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_NOR_STAR_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_NOR_STAR_SQR_ID,
+    title: "Indirect Context: Layout A / NORMAL / STAR / Square",
+    rom_sha256: AGENT_GYM_IND_A_NOR_STAR_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_NOR_STAR_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_NOR_MOON_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_NOR_MOON_TRI_ID,
+    title: "Indirect Context: Layout A / NORMAL / MOON / Triangle",
+    rom_sha256: AGENT_GYM_IND_A_NOR_MOON_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_NOR_MOON_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_NOR_MOON_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_NOR_MOON_SQR_ID,
+    title: "Indirect Context: Layout A / NORMAL / MOON / Square",
+    rom_sha256: AGENT_GYM_IND_A_NOR_MOON_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_NOR_MOON_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_SWP_STAR_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_SWP_STAR_TRI_ID,
+    title: "Indirect Context: Layout A / SWAPPED / STAR / Triangle",
+    rom_sha256: AGENT_GYM_IND_A_SWP_STAR_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_SWP_STAR_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_SWP_STAR_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_SWP_STAR_SQR_ID,
+    title: "Indirect Context: Layout A / SWAPPED / STAR / Square",
+    rom_sha256: AGENT_GYM_IND_A_SWP_STAR_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_SWP_STAR_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_SWP_MOON_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_SWP_MOON_TRI_ID,
+    title: "Indirect Context: Layout A / SWAPPED / MOON / Triangle",
+    rom_sha256: AGENT_GYM_IND_A_SWP_MOON_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_SWP_MOON_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_A_SWP_MOON_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_A_SWP_MOON_SQR_ID,
+    title: "Indirect Context: Layout A / SWAPPED / MOON / Square",
+    rom_sha256: AGENT_GYM_IND_A_SWP_MOON_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_A_SWP_MOON_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_NOR_STAR_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_NOR_STAR_TRI_ID,
+    title: "Indirect Context: Layout B / NORMAL / STAR / Triangle",
+    rom_sha256: AGENT_GYM_IND_B_NOR_STAR_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_NOR_STAR_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_NOR_STAR_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_NOR_STAR_SQR_ID,
+    title: "Indirect Context: Layout B / NORMAL / STAR / Square",
+    rom_sha256: AGENT_GYM_IND_B_NOR_STAR_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_NOR_STAR_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_NOR_MOON_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_NOR_MOON_TRI_ID,
+    title: "Indirect Context: Layout B / NORMAL / MOON / Triangle",
+    rom_sha256: AGENT_GYM_IND_B_NOR_MOON_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_NOR_MOON_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_NOR_MOON_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_NOR_MOON_SQR_ID,
+    title: "Indirect Context: Layout B / NORMAL / MOON / Square",
+    rom_sha256: AGENT_GYM_IND_B_NOR_MOON_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_NOR_MOON_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_SWP_STAR_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_SWP_STAR_TRI_ID,
+    title: "Indirect Context: Layout B / SWAPPED / STAR / Triangle",
+    rom_sha256: AGENT_GYM_IND_B_SWP_STAR_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_SWP_STAR_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_SWP_STAR_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_SWP_STAR_SQR_ID,
+    title: "Indirect Context: Layout B / SWAPPED / STAR / Square",
+    rom_sha256: AGENT_GYM_IND_B_SWP_STAR_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_SWP_STAR_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_SWP_MOON_TRI_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_SWP_MOON_TRI_ID,
+    title: "Indirect Context: Layout B / SWAPPED / MOON / Triangle",
+    rom_sha256: AGENT_GYM_IND_B_SWP_MOON_TRI_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_SWP_MOON_TRI_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_RIGHT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_RIGHT_ORACLE,
+};
+
+pub const AGENT_GYM_IND_B_SWP_MOON_SQR_TASK: BenchmarkTaskSpec = BenchmarkTaskSpec {
+    suite_id: BENCHMARK_SUITE_V13_ID,
+    id: AGENT_GYM_IND_B_SWP_MOON_SQR_ID,
+    title: "Indirect Context: Layout B / SWAPPED / MOON / Square",
+    rom_sha256: AGENT_GYM_IND_B_SWP_MOON_SQR_ROM_SHA256,
+    source_sha256: AGENT_GYM_IND_B_SWP_MOON_SQR_SOURCE_SHA256,
+    start: AGENT_GYM_BINDING_START,
+    target: AGENT_GYM_BINDING_LEFT_TARGET,
+    initial_distance: AGENT_GYM_BINDING_INITIAL_DISTANCE,
+    success_distance: AGENT_GYM_SUCCESS_DISTANCE,
+    warmup_frames: AGENT_GYM_WARMUP_FRAMES,
+    allowed_buttons: &AGENT_GYM_INDIRECT_CONTEXT_BUTTONS,
+    prompt: AGENT_GYM_IND_A_NOR_STAR_TRI_TASK.prompt,
+    oracle: &AGENT_GYM_BINDING_LEFT_ORACLE,
+};
+
+pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 77] = [
     AGENT_GYM_TASK,
     AGENT_GYM_MIRROR_TASK,
     AGENT_GYM_WALL_TASK,
@@ -1915,6 +2269,22 @@ pub static BENCHMARK_TASKS: [BenchmarkTaskSpec; 61] = [
     AGENT_GYM_CTX_B_CRS_TF_TASK,
     AGENT_GYM_CTX_B_CRS_SM_TASK,
     AGENT_GYM_CTX_B_CRS_SF_TASK,
+    AGENT_GYM_IND_A_NOR_STAR_TRI_TASK,
+    AGENT_GYM_IND_A_NOR_STAR_SQR_TASK,
+    AGENT_GYM_IND_A_NOR_MOON_TRI_TASK,
+    AGENT_GYM_IND_A_NOR_MOON_SQR_TASK,
+    AGENT_GYM_IND_A_SWP_STAR_TRI_TASK,
+    AGENT_GYM_IND_A_SWP_STAR_SQR_TASK,
+    AGENT_GYM_IND_A_SWP_MOON_TRI_TASK,
+    AGENT_GYM_IND_A_SWP_MOON_SQR_TASK,
+    AGENT_GYM_IND_B_NOR_STAR_TRI_TASK,
+    AGENT_GYM_IND_B_NOR_STAR_SQR_TASK,
+    AGENT_GYM_IND_B_NOR_MOON_TRI_TASK,
+    AGENT_GYM_IND_B_NOR_MOON_SQR_TASK,
+    AGENT_GYM_IND_B_SWP_STAR_TRI_TASK,
+    AGENT_GYM_IND_B_SWP_STAR_SQR_TASK,
+    AGENT_GYM_IND_B_SWP_MOON_TRI_TASK,
+    AGENT_GYM_IND_B_SWP_MOON_SQR_TASK,
 ];
 
 pub static BENCHMARK_SUITE_V1_TASKS: [BenchmarkTaskSpec; 2] =
@@ -2174,6 +2544,86 @@ pub static BENCHMARK_SUITE_V12_TASKS: [BenchmarkTaskSpec; 61] = [
     AGENT_GYM_CTX_B_CRS_SF_TASK,
 ];
 
+pub static BENCHMARK_SUITE_V13_TASKS: [BenchmarkTaskSpec; 77] = [
+    AGENT_GYM_TASK,
+    AGENT_GYM_MIRROR_TASK,
+    AGENT_GYM_WALL_TASK,
+    AGENT_GYM_TEMPORAL_LEFT_TASK,
+    AGENT_GYM_TEMPORAL_RIGHT_TASK,
+    AGENT_GYM_RELAY_LEFT_TASK,
+    AGENT_GYM_RELAY_RIGHT_TASK,
+    AGENT_GYM_KEY_GATE_LEFT_TASK,
+    AGENT_GYM_KEY_GATE_RIGHT_TASK,
+    AGENT_GYM_POWER_CHAIN_LEFT_TASK,
+    AGENT_GYM_POWER_CHAIN_RIGHT_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_TASK,
+    AGENT_GYM_BRANCH_SELECTOR_SQUARE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_TRIANGLE_CROSS_TASK,
+    AGENT_GYM_NESTED_SQUARE_CIRCLE_TASK,
+    AGENT_GYM_NESTED_SQUARE_CROSS_TASK,
+    AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_NORMAL_SQUARE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_TRIANGLE_TASK,
+    AGENT_GYM_BINDING_SWAPPED_SQUARE_TASK,
+    AGENT_GYM_COMP_NTM_TASK,
+    AGENT_GYM_COMP_NTF_TASK,
+    AGENT_GYM_COMP_NSM_TASK,
+    AGENT_GYM_COMP_NSF_TASK,
+    AGENT_GYM_COMP_STM_TASK,
+    AGENT_GYM_COMP_STF_TASK,
+    AGENT_GYM_COMP_SSM_TASK,
+    AGENT_GYM_COMP_SSF_TASK,
+    AGENT_GYM_SEQ_NTMM_TASK,
+    AGENT_GYM_SEQ_NTMF_TASK,
+    AGENT_GYM_SEQ_NTFM_TASK,
+    AGENT_GYM_SEQ_NTFF_TASK,
+    AGENT_GYM_SEQ_NSMM_TASK,
+    AGENT_GYM_SEQ_NSMF_TASK,
+    AGENT_GYM_SEQ_NSFM_TASK,
+    AGENT_GYM_SEQ_NSFF_TASK,
+    AGENT_GYM_SEQ_STMM_TASK,
+    AGENT_GYM_SEQ_STMF_TASK,
+    AGENT_GYM_SEQ_STFM_TASK,
+    AGENT_GYM_SEQ_STFF_TASK,
+    AGENT_GYM_SEQ_SSMM_TASK,
+    AGENT_GYM_SEQ_SSMF_TASK,
+    AGENT_GYM_SEQ_SSFM_TASK,
+    AGENT_GYM_SEQ_SSFF_TASK,
+    AGENT_GYM_CTX_A_CIR_TM_TASK,
+    AGENT_GYM_CTX_A_CIR_TF_TASK,
+    AGENT_GYM_CTX_A_CIR_SM_TASK,
+    AGENT_GYM_CTX_A_CIR_SF_TASK,
+    AGENT_GYM_CTX_A_CRS_TM_TASK,
+    AGENT_GYM_CTX_A_CRS_TF_TASK,
+    AGENT_GYM_CTX_A_CRS_SM_TASK,
+    AGENT_GYM_CTX_A_CRS_SF_TASK,
+    AGENT_GYM_CTX_B_CIR_TM_TASK,
+    AGENT_GYM_CTX_B_CIR_TF_TASK,
+    AGENT_GYM_CTX_B_CIR_SM_TASK,
+    AGENT_GYM_CTX_B_CIR_SF_TASK,
+    AGENT_GYM_CTX_B_CRS_TM_TASK,
+    AGENT_GYM_CTX_B_CRS_TF_TASK,
+    AGENT_GYM_CTX_B_CRS_SM_TASK,
+    AGENT_GYM_CTX_B_CRS_SF_TASK,
+    AGENT_GYM_IND_A_NOR_STAR_TRI_TASK,
+    AGENT_GYM_IND_A_NOR_STAR_SQR_TASK,
+    AGENT_GYM_IND_A_NOR_MOON_TRI_TASK,
+    AGENT_GYM_IND_A_NOR_MOON_SQR_TASK,
+    AGENT_GYM_IND_A_SWP_STAR_TRI_TASK,
+    AGENT_GYM_IND_A_SWP_STAR_SQR_TASK,
+    AGENT_GYM_IND_A_SWP_MOON_TRI_TASK,
+    AGENT_GYM_IND_A_SWP_MOON_SQR_TASK,
+    AGENT_GYM_IND_B_NOR_STAR_TRI_TASK,
+    AGENT_GYM_IND_B_NOR_STAR_SQR_TASK,
+    AGENT_GYM_IND_B_NOR_MOON_TRI_TASK,
+    AGENT_GYM_IND_B_NOR_MOON_SQR_TASK,
+    AGENT_GYM_IND_B_SWP_STAR_TRI_TASK,
+    AGENT_GYM_IND_B_SWP_STAR_SQR_TASK,
+    AGENT_GYM_IND_B_SWP_MOON_TRI_TASK,
+    AGENT_GYM_IND_B_SWP_MOON_SQR_TASK,
+];
+
 pub static BENCHMARK_SUITE_V1: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     id: BENCHMARK_SUITE_V1_ID,
     title: "Phi-Agent Gym Suite v1",
@@ -2258,7 +2708,14 @@ pub static BENCHMARK_SUITE_V12: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
     tasks: &BENCHMARK_SUITE_V12_TASKS,
 };
 
-pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 12] = [
+pub static BENCHMARK_SUITE_V13: BenchmarkSuiteSpec = BenchmarkSuiteSpec {
+    id: BENCHMARK_SUITE_V13_ID,
+    title: "Phi-Agent Gym Suite v13",
+    version: 13,
+    tasks: &BENCHMARK_SUITE_V13_TASKS,
+};
+
+pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 13] = [
     &BENCHMARK_SUITE_V1,
     &BENCHMARK_SUITE_V2,
     &BENCHMARK_SUITE_V3,
@@ -2271,6 +2728,7 @@ pub static BENCHMARK_SUITES: [&BenchmarkSuiteSpec; 12] = [
     &BENCHMARK_SUITE_V10,
     &BENCHMARK_SUITE_V11,
     &BENCHMARK_SUITE_V12,
+    &BENCHMARK_SUITE_V13,
 ];
 
 pub fn benchmark_suites() -> &'static [&'static BenchmarkSuiteSpec] {
@@ -2327,6 +2785,10 @@ pub fn benchmark_suite_v11_tasks() -> &'static [BenchmarkTaskSpec] {
 
 pub fn benchmark_suite_v12_tasks() -> &'static [BenchmarkTaskSpec] {
     &BENCHMARK_SUITE_V12_TASKS
+}
+
+pub fn benchmark_suite_v13_tasks() -> &'static [BenchmarkTaskSpec] {
+    &BENCHMARK_SUITE_V13_TASKS
 }
 
 pub fn benchmark_suites_for_task(task_id: &str) -> Vec<&'static BenchmarkSuiteSpec> {
@@ -2745,100 +3207,51 @@ mod tests {
     }
 
     #[test]
+    fn suite_v13_preserves_v12_and_adds_indirect_context_factorial() {
+        let tasks = benchmark_suite_v13_tasks();
+        assert_eq!(tasks.len(), 77);
+        assert_eq!(tasks[..61], BENCHMARK_SUITE_V12_TASKS);
+        let ids = [AGENT_GYM_IND_A_NOR_STAR_TRI_ID, AGENT_GYM_IND_A_NOR_STAR_SQR_ID, AGENT_GYM_IND_A_NOR_MOON_TRI_ID, AGENT_GYM_IND_A_NOR_MOON_SQR_ID, AGENT_GYM_IND_A_SWP_STAR_TRI_ID, AGENT_GYM_IND_A_SWP_STAR_SQR_ID, AGENT_GYM_IND_A_SWP_MOON_TRI_ID, AGENT_GYM_IND_A_SWP_MOON_SQR_ID, AGENT_GYM_IND_B_NOR_STAR_TRI_ID, AGENT_GYM_IND_B_NOR_STAR_SQR_ID, AGENT_GYM_IND_B_NOR_MOON_TRI_ID, AGENT_GYM_IND_B_NOR_MOON_SQR_ID, AGENT_GYM_IND_B_SWP_STAR_TRI_ID, AGENT_GYM_IND_B_SWP_STAR_SQR_ID, AGENT_GYM_IND_B_SWP_MOON_TRI_ID, AGENT_GYM_IND_B_SWP_MOON_SQR_ID];
+        for (offset, id) in ids.iter().enumerate() {
+            assert_eq!(tasks[61 + offset].id, *id);
+        }
+        assert_eq!(benchmark_suite_by_id(BENCHMARK_SUITE_V13_ID).unwrap().version, 13);
+
+        let indirect = [AGENT_GYM_IND_A_NOR_STAR_TRI_TASK, AGENT_GYM_IND_A_NOR_STAR_SQR_TASK, AGENT_GYM_IND_A_NOR_MOON_TRI_TASK, AGENT_GYM_IND_A_NOR_MOON_SQR_TASK, AGENT_GYM_IND_A_SWP_STAR_TRI_TASK, AGENT_GYM_IND_A_SWP_STAR_SQR_TASK, AGENT_GYM_IND_A_SWP_MOON_TRI_TASK, AGENT_GYM_IND_A_SWP_MOON_SQR_TASK, AGENT_GYM_IND_B_NOR_STAR_TRI_TASK, AGENT_GYM_IND_B_NOR_STAR_SQR_TASK, AGENT_GYM_IND_B_NOR_MOON_TRI_TASK, AGENT_GYM_IND_B_NOR_MOON_SQR_TASK, AGENT_GYM_IND_B_SWP_STAR_TRI_TASK, AGENT_GYM_IND_B_SWP_STAR_SQR_TASK, AGENT_GYM_IND_B_SWP_MOON_TRI_TASK, AGENT_GYM_IND_B_SWP_MOON_SQR_TASK];
+        for task in &indirect[1..] {
+            assert_eq!(task.prompt, indirect[0].prompt);
+            assert_eq!(task.allowed_buttons, indirect[0].allowed_buttons);
+        }
+        let prompt = indirect[0].prompt.to_ascii_lowercase();
+        for leak in [
+            "layout a", "layout b", "normal /", "swapped /", "answer is left", "answer is right",
+            "star points to circle", "star points to cross", "moon points to circle", "moon points to cross",
+        ] {
+            assert!(!prompt.contains(leak), "provider prompt leaked variant detail: {leak}");
+        }
+        assert!(prompt.contains("circle"));
+        assert!(prompt.contains("cross"));
+        assert!(prompt.contains("star"));
+        assert!(prompt.contains("moon"));
+        assert!(prompt.contains("pointer token"));
+        assert!(indirect.iter().all(|task| task.oracle.len() == 4));
+    }
+
+    #[test]
     fn suite_membership_is_separate_from_task_origin() {
-        let memberships = benchmark_suites_for_task(AGENT_GYM_ID);
-        assert_eq!(memberships.len(), 12);
-        assert_eq!(memberships[0].id, BENCHMARK_SUITE_V1_ID);
-        assert_eq!(memberships[1].id, BENCHMARK_SUITE_V2_ID);
-        assert_eq!(memberships[2].id, BENCHMARK_SUITE_V3_ID);
-        assert_eq!(memberships[3].id, BENCHMARK_SUITE_V4_ID);
-        assert_eq!(memberships[4].id, BENCHMARK_SUITE_V5_ID);
-        assert_eq!(memberships[5].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(memberships[6].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(memberships[7].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(memberships[8].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(memberships[9].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(memberships[10].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(memberships[11].id, BENCHMARK_SUITE_V12_ID);
+        let original = benchmark_suites_for_task(AGENT_GYM_ID);
+        assert_eq!(original.len(), 13);
+        assert_eq!(original.first().unwrap().id, BENCHMARK_SUITE_V1_ID);
+        assert_eq!(original.last().unwrap().id, BENCHMARK_SUITE_V13_ID);
 
-        let wall_memberships = benchmark_suites_for_task(AGENT_GYM_WALL_ID);
-        assert_eq!(wall_memberships.len(), 11);
-        assert_eq!(wall_memberships[0].id, BENCHMARK_SUITE_V2_ID);
-        assert_eq!(wall_memberships[1].id, BENCHMARK_SUITE_V3_ID);
-        assert_eq!(wall_memberships[2].id, BENCHMARK_SUITE_V4_ID);
-        assert_eq!(wall_memberships[3].id, BENCHMARK_SUITE_V5_ID);
-        assert_eq!(wall_memberships[4].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(wall_memberships[5].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(wall_memberships[6].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(wall_memberships[7].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(wall_memberships[8].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(wall_memberships[9].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(wall_memberships[10].id, BENCHMARK_SUITE_V12_ID);
+        let context = benchmark_suites_for_task(AGENT_GYM_CTX_A_CIR_TM_ID);
+        assert_eq!(context.len(), 2);
+        assert_eq!(context[0].id, BENCHMARK_SUITE_V12_ID);
+        assert_eq!(context[1].id, BENCHMARK_SUITE_V13_ID);
 
-        let temporal_memberships = benchmark_suites_for_task(AGENT_GYM_TEMPORAL_LEFT_ID);
-        assert_eq!(temporal_memberships.len(), 10);
-        assert_eq!(temporal_memberships[0].id, BENCHMARK_SUITE_V3_ID);
-        assert_eq!(temporal_memberships[1].id, BENCHMARK_SUITE_V4_ID);
-        assert_eq!(temporal_memberships[2].id, BENCHMARK_SUITE_V5_ID);
-        assert_eq!(temporal_memberships[3].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(temporal_memberships[4].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(temporal_memberships[5].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(temporal_memberships[6].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(temporal_memberships[7].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(temporal_memberships[8].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(temporal_memberships[9].id, BENCHMARK_SUITE_V12_ID);
-
-        let relay_memberships = benchmark_suites_for_task(AGENT_GYM_RELAY_LEFT_ID);
-        assert_eq!(relay_memberships.len(), 9);
-        assert_eq!(relay_memberships[0].id, BENCHMARK_SUITE_V4_ID);
-        assert_eq!(relay_memberships[1].id, BENCHMARK_SUITE_V5_ID);
-        assert_eq!(relay_memberships[2].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(relay_memberships[3].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(relay_memberships[4].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(relay_memberships[5].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(relay_memberships[6].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(relay_memberships[7].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(relay_memberships[8].id, BENCHMARK_SUITE_V12_ID);
-
-        let key_gate_memberships = benchmark_suites_for_task(AGENT_GYM_KEY_GATE_LEFT_ID);
-        assert_eq!(key_gate_memberships.len(), 8);
-        assert_eq!(key_gate_memberships[0].id, BENCHMARK_SUITE_V5_ID);
-        assert_eq!(key_gate_memberships[1].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(key_gate_memberships[2].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(key_gate_memberships[3].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(key_gate_memberships[4].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(key_gate_memberships[5].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(key_gate_memberships[6].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(key_gate_memberships[7].id, BENCHMARK_SUITE_V12_ID);
-
-        let power_memberships = benchmark_suites_for_task(AGENT_GYM_POWER_CHAIN_LEFT_ID);
-        assert_eq!(power_memberships.len(), 7);
-        assert_eq!(power_memberships[0].id, BENCHMARK_SUITE_V6_ID);
-        assert_eq!(power_memberships[1].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(power_memberships[2].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(power_memberships[3].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(power_memberships[4].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(power_memberships[5].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(power_memberships[6].id, BENCHMARK_SUITE_V12_ID);
-
-        let branch_memberships =
-            benchmark_suites_for_task(AGENT_GYM_BRANCH_SELECTOR_TRIANGLE_ID);
-        assert_eq!(branch_memberships.len(), 6);
-        assert_eq!(branch_memberships[0].id, BENCHMARK_SUITE_V7_ID);
-        assert_eq!(branch_memberships[1].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(branch_memberships[2].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(branch_memberships[3].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(branch_memberships[4].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(branch_memberships[5].id, BENCHMARK_SUITE_V12_ID);
-
-        let nested_memberships =
-            benchmark_suites_for_task(AGENT_GYM_NESTED_TRIANGLE_CIRCLE_ID);
-        assert_eq!(nested_memberships.len(), 5);
-        assert_eq!(nested_memberships[0].id, BENCHMARK_SUITE_V8_ID);
-        assert_eq!(nested_memberships[1].id, BENCHMARK_SUITE_V9_ID);
-        assert_eq!(nested_memberships[2].id, BENCHMARK_SUITE_V10_ID);
-        assert_eq!(nested_memberships[3].id, BENCHMARK_SUITE_V11_ID);
-        assert_eq!(nested_memberships[4].id, BENCHMARK_SUITE_V12_ID);
+        let indirect = benchmark_suites_for_task(AGENT_GYM_IND_A_NOR_STAR_TRI_ID);
+        assert_eq!(indirect.len(), 1);
+        assert_eq!(indirect[0].id, BENCHMARK_SUITE_V13_ID);
     }
 
     #[test]
@@ -2970,11 +3383,12 @@ mod tests {
         ] {
             assert_eq!(benchmark_task_by_id(id).map(|task| task.id), Some(id));
             let memberships = benchmark_suites_for_task(id);
-            assert_eq!(memberships.len(), 4);
+            assert_eq!(memberships.len(), 5);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V9_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V10_ID);
             assert_eq!(memberships[2].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[3].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[4].id, BENCHMARK_SUITE_V13_ID);
         }
         assert_eq!(AGENT_GYM_BINDING_NORMAL_TRIANGLE_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_BINDING_NORMAL_SQUARE_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -2994,10 +3408,11 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 3);
+            assert_eq!(memberships.len(), 4);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V10_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[2].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[3].id, BENCHMARK_SUITE_V13_ID);
         }
         assert_eq!(AGENT_GYM_COMP_NTM_TASK.target, AGENT_GYM_BINDING_LEFT_TARGET);
         assert_eq!(AGENT_GYM_COMP_NTF_TASK.target, AGENT_GYM_BINDING_RIGHT_TARGET);
@@ -3016,9 +3431,10 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 2);
+            assert_eq!(memberships.len(), 3);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V11_ID);
             assert_eq!(memberships[1].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[2].id, BENCHMARK_SUITE_V13_ID);
             assert_eq!(task.rom_sha256.len(), 64);
             assert_eq!(task.source_sha256.len(), 64);
         }
@@ -3031,8 +3447,32 @@ mod tests {
             assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
             assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
             let memberships = benchmark_suites_for_task(task.id);
-            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships.len(), 2);
             assert_eq!(memberships[0].id, BENCHMARK_SUITE_V12_ID);
+            assert_eq!(memberships[1].id, BENCHMARK_SUITE_V13_ID);
+            assert_eq!(task.rom_sha256.len(), 64);
+            assert_eq!(task.source_sha256.len(), 64);
+        }
+    }
+
+    #[test]
+    fn registry_resolves_indirect_context_tasks_by_id_and_hash() {
+        let tasks = [
+            AGENT_GYM_IND_A_NOR_STAR_TRI_TASK, AGENT_GYM_IND_A_NOR_STAR_SQR_TASK,
+            AGENT_GYM_IND_A_NOR_MOON_TRI_TASK, AGENT_GYM_IND_A_NOR_MOON_SQR_TASK,
+            AGENT_GYM_IND_A_SWP_STAR_TRI_TASK, AGENT_GYM_IND_A_SWP_STAR_SQR_TASK,
+            AGENT_GYM_IND_A_SWP_MOON_TRI_TASK, AGENT_GYM_IND_A_SWP_MOON_SQR_TASK,
+            AGENT_GYM_IND_B_NOR_STAR_TRI_TASK, AGENT_GYM_IND_B_NOR_STAR_SQR_TASK,
+            AGENT_GYM_IND_B_NOR_MOON_TRI_TASK, AGENT_GYM_IND_B_NOR_MOON_SQR_TASK,
+            AGENT_GYM_IND_B_SWP_STAR_TRI_TASK, AGENT_GYM_IND_B_SWP_STAR_SQR_TASK,
+            AGENT_GYM_IND_B_SWP_MOON_TRI_TASK, AGENT_GYM_IND_B_SWP_MOON_SQR_TASK,
+        ];
+        for task in tasks {
+            assert_eq!(benchmark_task_by_id(task.id).map(|found| found.id), Some(task.id));
+            assert_eq!(benchmark_task_by_rom_sha256(task.rom_sha256).map(|found| found.id), Some(task.id));
+            let memberships = benchmark_suites_for_task(task.id);
+            assert_eq!(memberships.len(), 1);
+            assert_eq!(memberships[0].id, BENCHMARK_SUITE_V13_ID);
             assert_eq!(task.rom_sha256.len(), 64);
             assert_eq!(task.source_sha256.len(), 64);
         }
