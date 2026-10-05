@@ -5,14 +5,14 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 30
+## Current status — Rung 31
 
-PhiCade now has a selective context-routing benchmark. The briefing exposes
-two competing memory banks, CIRCLE and CROSS, that hold opposite TRIANGLE/SQUARE
-bindings. After the entire briefing is erased, a later scene reveals which bank
-to read, which symbol to query, and whether MATCH or FLIP applies. Suite v12
-preserves all 45 Suite v11 tasks and adds the full 16-way layout × bank × query
-× operator factorial.
+PhiCade now has an indirect context-routing benchmark. The briefing exposes
+two competing memory banks plus a STAR/MOON pointer map. After both the bank
+relations and the pointer map are erased, the later scene reveals only a pointer
+token and query symbol. Suite v13 preserves all 61 Suite v12 tasks and adds the
+full 16-way layout × pointer-map × pointer-token × query factorial for 77 frozen
+tasks.
 
 Benchmark suites:
 
@@ -28,6 +28,7 @@ Benchmark suites:
 - **Suite v10** — the exact v9 tasks + the eight **Compositional Recall** 2×2×2 factorial variants
 - **Suite v11** — the exact v10 tasks + the sixteen **Sequential Rule Composition** 2×2×2×2 factorial variants
 - **Suite v12** — the exact v11 tasks + the sixteen **Selective Context Routing** 2×2×2×2 factorial variants
+- **Suite v13** — the exact v12 tasks + the sixteen **Indirect Context Routing** 2×2×2×2 factorial variants
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -50,6 +51,8 @@ Benchmark suites:
   Stage 2 operator appears, forcing retention of a hidden intermediate result
 - **Selective Context Routing 16-way set** — two competing erased TRIANGLE/SQUARE
   memory banks require later bank-addressed retrieval before MATCH/FLIP commitment
+- **Indirect Context Routing 16-way set** — an erased STAR/MOON pointer map must
+  first resolve the erased bank before the queried symbol can resolve the side
 
 Current evidence stack includes:
 
@@ -113,6 +116,10 @@ Current evidence stack includes:
 - fixed-side, operator-ignoring, bank-ignoring, and query-ignoring controls capped at 8/16
 - explicit selective-context provenance path uniqueness gate
 - Benchmark Suite v12 with exact 61-task membership
+- sixteen-way layout × pointer-map × pointer-token × query indirect-context factorial
+- four-history choice-frame convergence for fixed pointer + query
+- map/bank/query shortcut families capped at exactly 8/16
+- Benchmark Suite v13 with exact 77-task membership
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -138,6 +145,23 @@ Current evidence stack includes:
 npm install
 npm run desktop
 ```
+
+## Indirect context-routing benchmark
+
+Suite v13 adds sixteen source-first Game Boy tasks spanning Layout A/B ×
+NORMAL/SWAPPED pointer map × STAR/MOON pointer token × TRIANGLE/SQUARE query.
+
+The briefing exposes two opposite CIRCLE/CROSS symbol banks and a separate
+STAR/MOON pointer map. Pressing A erases both layers. The later choice names
+neither CIRCLE nor CROSS: the controller must recover the pointer mapping first,
+then retrieve the symbol-to-side relation from the resolved erased bank.
+
+The joint qualifier proves four briefing-history controls, byte-identical
+same-pointer+query choice frames across erased histories, terminal wrong
+commitments, exact registry hashes, and balanced 8/16 shortcut ceilings.
+
+See `docs/INDIRECT_CONTEXT_ROUTING_BENCHMARK.md` and
+`docs/BENCHMARK_SUITE_V13.md`.
 
 ## Selective context-routing benchmark
 
@@ -391,7 +415,7 @@ Once the same model cohort has one COMPLETE fully scoreable campaign for every
 task in the selected suite:
 
 1. open **SUITE REPORT**,
-2. select the desired frozen suite version, including **Suite v12**,
+2. select the desired frozen suite version, including **Suite v13**,
 3. select a READY cohort,
 4. press **BUILD REPORT**.
 
@@ -457,15 +481,17 @@ than collapsed into one mystery score.
 bash ./scripts/qualify-sameboy.sh
 ```
 
-CI assembles and qualifies all sixty-one registered benchmark ROMs from source,
+CI assembles and qualifies all seventy-seven registered benchmark ROMs from source,
 jointly qualifies the Temporal Cue, Relay Rooms, Key Gate, Power Chain, Branch
 Selector, Nested Branch Graph, Relational Binding Memory, Compositional Recall,
-Sequential Rule Composition, and Selective Context Routing controls, tests
-prior-suite preservation, Suite v12 45/61 through 61/61 coverage, provenance
-path uniqueness, digest splitting, and trial-tamper refusal.
+Sequential Rule Composition, Selective Context Routing, and Indirect Context
+Routing controls, tests prior-suite preservation, Suite v13 61/77 through 77/77
+coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal.
 
 See:
 
+- `docs/INDIRECT_CONTEXT_ROUTING_BENCHMARK.md`
+- `docs/BENCHMARK_SUITE_V13.md`
 - `docs/SELECTIVE_CONTEXT_ROUTING_BENCHMARK.md`
 - `docs/BENCHMARK_SUITE_V12.md`
 - `docs/SEQUENTIAL_RULE_COMPOSITION_BENCHMARK.md`
