@@ -53,6 +53,14 @@ Content Descriptor
 Directory and launch-target descriptors fail closed with `UnsupportedImage`
 on legacy emulator cores.
 
+The generic libretro adapter overrides this compatibility bridge for `FILE`
+descriptors: it can pass a file to the loaded libretro core even when no
+`SystemId` is present. Compatibility is then decided by the core, not by a
+hard-coded PhiCade console allowlist.
+
+Directory and launch-target descriptors still remain unsupported by the generic
+libretro adapter.
+
 This means current SameBoy behavior does not change merely because the
 runtime-neutral content layer exists.
 
