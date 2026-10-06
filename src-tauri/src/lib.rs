@@ -5,8 +5,8 @@ use phicade_runtime::{
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
     BenchmarkSuiteAggregateStats, BenchmarkSuiteComparisonStats, BenchmarkTaskSpec,
-    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage,
+    BenchmarkTrialOutcome, CampaignComparisonStats, ContentDescriptor, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, RuntimeCapabilityManifest,
     SuiteTaskAggregateInput, SystemCommand, SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suite_v9_tasks, benchmark_suite_v10_tasks, benchmark_suite_v11_tasks, benchmark_suite_v12_tasks, benchmark_suite_v13_tasks, benchmark_suites,
@@ -520,6 +520,7 @@ struct SuiteCohortEvidence {
 
 struct EmulatorSession {
     core: LibretroCore,
+    runtime_features: RuntimeSessionFeatures,
     game_path: String,
     game_key: String,
     profile: GameProfile,
@@ -664,6 +665,32 @@ fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
     }
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeSessionFeatures {
+    state_snapshots: bool,
+    exact_replay: bool,
+    persistent_save_data: bool,
+}
+
+fn runtime_session_features(manifest: &RuntimeCapabilityManifest) -> RuntimeSessionFeatures {
+    RuntimeSessionFeatures {
+        state_snapshots: manifest.capabilities.state_snapshots.is_supported(),
+        exact_replay: manifest.capabilities.exact_replay.is_supported(),
+        persistent_save_data: manifest.capabilities.persistent_save_data.is_supported(),
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionRouteEvidence {
+    route: String,
+    registered_core_sha256: Option<String>,
+    registration_binary_evidence_bound: bool,
+    registration_authority_granted: bool,
+    session_operator_approved: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SessionInfo {
@@ -671,6 +698,9 @@ struct SessionInfo {
     game_key: String,
     core_path: String,
     core: CoreIdentity,
+    capability_manifest: RuntimeCapabilityManifest,
+    runtime_features: RuntimeSessionFeatures,
+    route_evidence: SessionRouteEvidence,
     profile: GameProfile,
     benchmark_task: Option<BenchmarkTaskInfo>,
 }
@@ -1076,6 +1106,213 @@ fn list_runtime_registrations(
             .then_with(|| left.core_sha256.cmp(&right.core_sha256))
     });
     Ok(receipts)
+}
+
+fn load_runtime_registration(
+    app: &AppHandle,
+    core_sha256: &str,
+) -> Result<RuntimeRegistrationReceipt, String> {
+    let digest = core_sha256.trim().to_ascii_lowercase();
+    if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("runtime registration requires a 64-character SHA-256".into());
+    }
+
+    let path = runtime_registry_dir(app)?.join(format!("{digest}.json"));
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read runtime registration {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<RuntimeRegistrationReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse runtime registration {}: {error}", path.display()))?;
+
+    if receipt.schema != RUNTIME_REGISTRATION_SCHEMA {
+        return Err(format!(
+            "unsupported runtime registration schema: {}",
+            receipt.schema
+        ));
+    }
+    if receipt.core_sha256.to_ascii_lowercase() != digest {
+        return Err("runtime registration digest does not match its registry filename".into());
+    }
+
+    Ok(receipt)
+}
+
+#[tauri::command]
+fn start_registered_emulation(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    core_sha256: String,
+    content_path: Option<String>,
+    operator_approved: bool,
+) -> Result<SessionInfo, String> {
+    if !operator_approved {
+        return Err("registered runtime launch requires explicit operator approval".into());
+    }
+
+    let registration = load_runtime_registration(&app, &core_sha256)?;
+    let core_file = PathBuf::from(&registration.core_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve registered core: {error}"))?;
+    let observed_core_sha256 = sha256_file(&core_file)?;
+    if !observed_core_sha256.eq_ignore_ascii_case(&registration.core_sha256) {
+        return Err(format!(
+            "registered runtime binary changed: expected {}, observed {}",
+            registration.core_sha256, observed_core_sha256
+        ));
+    }
+
+    let selected_content = match content_path {
+        Some(path) => {
+            let resolved = PathBuf::from(path)
+                .canonicalize()
+                .map_err(|error| format!("cannot resolve selected content: {error}"))?;
+            if !resolved.is_file() {
+                return Err("registered libretro sessions currently accept FILE content only".into());
+            }
+            Some(resolved)
+        }
+        None => None,
+    };
+
+    {
+        let mut session = state
+            .session
+            .lock()
+            .map_err(|_| "emulator session lock poisoned".to_owned())?;
+        *session = None;
+    }
+
+    let (root, system_dir, save_dir) = app_runtime_dirs(&app)?;
+    let mut core = LibretroCore::open(&core_file, &system_dir, &save_dir)
+        .map_err(|error| format!("cannot open registered libretro core: {error:?}"))?;
+    let identity = core.identity().clone();
+
+    if identity.library_name != registration.core.library_name
+        || identity.library_version != registration.core.library_version
+    {
+        return Err(format!(
+            "registered runtime identity changed: expected {} {}, observed {} {}",
+            registration.core.library_name,
+            registration.core.library_version,
+            identity.library_name,
+            identity.library_version
+        ));
+    }
+
+    let (game_path, game_key, benchmark_task) = if let Some(content) = selected_content.as_ref() {
+        let display_name = content
+            .file_stem()
+            .map(|value| value.to_string_lossy().to_string())
+            .unwrap_or_else(|| "libretro content".to_owned());
+        let descriptor = ContentDescriptor::file(content, display_name)
+            .with_runtime_hint(identity.library_name.clone());
+        core.load_content(&descriptor)
+            .map_err(|error| format!("cannot load registered runtime content: {error:?}"))?;
+        let key = sha256_file(content)?;
+        let benchmark = benchmark_task_by_rom_sha256(&key).map(benchmark_task_info);
+        (content.to_string_lossy().to_string(), key, benchmark)
+    } else {
+        if !core.supports_no_game() {
+            return Err("registered runtime does not support a no-content launcher session".into());
+        }
+        core.load_no_content()
+            .map_err(|error| format!("cannot start registered runtime launcher: {error:?}"))?;
+        let key = sha256_bytes(format!("launcher:{}", registration.core_sha256).as_bytes());
+        (
+            format!("launcher://{}-{}", identity.library_name, identity.library_version),
+            key,
+            None,
+        )
+    };
+
+    let capability_manifest = core.capability_manifest();
+    if !capability_manifest.capabilities.frame_step.is_supported()
+        || !capability_manifest.capabilities.rendered_framebuffer.is_supported()
+        || !capability_manifest.capabilities.governed_actions.is_supported()
+    {
+        return Err("registered runtime lacks the minimum governed frame-session capabilities".into());
+    }
+    let runtime_features = runtime_session_features(&capability_manifest);
+
+    let paths = session_paths(&root, &game_key, &identity)?;
+    if runtime_features.persistent_save_data {
+        restore_save_ram(&mut core, &paths.save_ram)?;
+    }
+    let profile = load_game_profile(&paths.profile)?;
+    persist_game_profile(&paths.profile, &profile)?;
+
+    let info = SessionInfo {
+        game_path: game_path.clone(),
+        game_key: game_key.clone(),
+        core_path: core_file.to_string_lossy().to_string(),
+        core: identity,
+        capability_manifest,
+        runtime_features: runtime_features.clone(),
+        route_evidence: SessionRouteEvidence {
+            route: "registered-libretro".into(),
+            registered_core_sha256: Some(registration.core_sha256.clone()),
+            registration_binary_evidence_bound: registration.binary_evidence_bound,
+            registration_authority_granted: registration.authority_granted,
+            session_operator_approved: true,
+        },
+        profile: profile.clone(),
+        benchmark_task,
+    };
+
+    let next_autodrive_run_id =
+        next_numbered_receipt_id(&paths.autodrive_dir, "run-", ".json")?;
+    let next_model_benchmark_run_id =
+        next_numbered_receipt_id(&paths.model_benchmark_dir, "run-", ".json")?;
+    let next_benchmark_campaign_id =
+        next_numbered_receipt_id(&paths.benchmark_campaign_dir, "campaign-", ".json")?;
+    let next_campaign_comparison_id =
+        next_numbered_receipt_id(&paths.campaign_comparison_dir, "comparison-", ".json")?;
+
+    let mut emulator_session = EmulatorSession {
+        core,
+        runtime_features: runtime_features.clone(),
+        game_path,
+        game_key,
+        profile,
+        paths,
+        rewind: VecDeque::new(),
+        next_rewind_frame: 0,
+        last_sram_flush_frame: 0,
+        last_frame: FrameBuffer::default(),
+        recording: None,
+        last_replay: None,
+        authority: AuthorityPolicy::new(1),
+        authority_rejections: 0,
+        last_authority_reason: None,
+        pending_agent_turn: None,
+        agent_inbox: VecDeque::new(),
+        next_driver_turn_id: 1,
+        next_action_sequence: 0,
+        agent_memory: AgentMemoryState::new(),
+        autodrive: None,
+        last_autodrive: None,
+        next_autodrive_run_id,
+        model_benchmark: None,
+        last_model_benchmark: None,
+        next_model_benchmark_run_id,
+        benchmark_campaign: None,
+        last_benchmark_campaign: None,
+        next_benchmark_campaign_id,
+        next_campaign_comparison_id,
+    };
+
+    if emulator_session.runtime_features.state_snapshots {
+        push_rewind_snapshot(&mut emulator_session)?;
+        emulator_session.next_rewind_frame =
+            u64::from(emulator_session.profile.rewind_interval_frames);
+    }
+
+    let mut session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    *session = Some(emulator_session);
+
+    Ok(info)
 }
 
 fn app_runtime_dirs(app: &AppHandle) -> Result<(PathBuf, PathBuf, PathBuf), String> {
@@ -1821,6 +2058,16 @@ fn process_session_actions(
 ) -> Result<(), String> {
     for envelope in actions {
         match &envelope.action {
+            ActionKind::System { command, .. }
+                if matches!(
+                    command,
+                    SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
+                ) && !session.runtime_features.state_snapshots =>
+            {
+                return Err(format!(
+                    "{command:?} is unavailable: the active runtime does not support state snapshots"
+                ));
+            }
             ActionKind::System {
                 command: SystemCommand::SaveState,
                 slot,
@@ -1900,6 +2147,8 @@ fn start_emulation(
 
     core.load_game(&GameImage::new(&game, system, display_name))
         .map_err(|error| format!("cannot load game image: {error:?}"))?;
+    let capability_manifest = core.capability_manifest();
+    let runtime_features = runtime_session_features(&capability_manifest);
 
     let paths = session_paths(&root, &game_key, &identity)?;
     restore_save_ram(&mut core, &paths.save_ram)?;
@@ -1911,6 +2160,15 @@ fn start_emulation(
         game_key: game_key.clone(),
         core_path: core_file.to_string_lossy().to_string(),
         core: identity,
+        capability_manifest,
+        runtime_features: runtime_features.clone(),
+        route_evidence: SessionRouteEvidence {
+            route: "legacy-direct-sameboy".into(),
+            registered_core_sha256: None,
+            registration_binary_evidence_bound: false,
+            registration_authority_granted: false,
+            session_operator_approved: true,
+        },
         profile: profile.clone(),
         benchmark_task: benchmark_task_by_rom_sha256(&game_key).map(benchmark_task_info),
     };
@@ -1926,6 +2184,7 @@ fn start_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        runtime_features: runtime_features.clone(),
         game_path: info.game_path.clone(),
         game_key,
         profile,
@@ -1956,9 +2215,11 @@ fn start_emulation(
         next_campaign_comparison_id,
     };
 
-    push_rewind_snapshot(&mut emulator_session)?;
-    emulator_session.next_rewind_frame =
-        u64::from(emulator_session.profile.rewind_interval_frames);
+    if emulator_session.runtime_features.state_snapshots {
+        push_rewind_snapshot(&mut emulator_session)?;
+        emulator_session.next_rewind_frame =
+            u64::from(emulator_session.profile.rewind_interval_frames);
+    }
 
     let mut session = state
         .session
@@ -4493,7 +4754,7 @@ fn step_emulation(
         };
 
         let frame = session.core.frame_count();
-        if frame >= session.next_rewind_frame {
+        if session.runtime_features.state_snapshots && frame >= session.next_rewind_frame {
             push_rewind_snapshot(session)?;
             session.next_rewind_frame =
                 frame + u64::from(session.profile.rewind_interval_frames);
@@ -4641,6 +4902,9 @@ fn start_replay_recording(state: State<'_, EmulatorState>) -> Result<ReplayStatu
     if session.recording.is_some() {
         return Err("replay recording is already active".into());
     }
+    if !session.runtime_features.exact_replay {
+        return Err("Replay v1 is unavailable: the active runtime does not support exact replay".into());
+    }
     if session
         .autodrive
         .as_ref()
@@ -4708,6 +4972,9 @@ fn verify_last_replay(state: State<'_, EmulatorState>) -> Result<ReplayArtifact,
 
     if session.recording.is_some() {
         return Err("stop replay recording before verification".into());
+    }
+    if !session.runtime_features.exact_replay {
+        return Err("Replay v1 verification is unavailable: the active runtime does not support exact replay".into());
     }
 
     let mut export = session
@@ -4890,6 +5157,7 @@ pub fn run() {
             save_settings,
             register_runtime_core,
             list_runtime_registrations,
+            start_registered_emulation,
             scan_rom_directory,
             validate_action_envelope,
             start_emulation,
@@ -4942,6 +5210,42 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn scummvm_session_features_disable_timeline_state() {
+        let identity = CoreIdentity {
+            library_name: "ScummVM".into(),
+            library_version: phicade_libretro::SCUMMVM_VERSION.into(),
+            valid_extensions: "scummvm".into(),
+            need_fullpath: true,
+            fps: 60.0,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = phicade_libretro::libretro_capability_manifest(&identity, false, false);
+        let features = runtime_session_features(&manifest);
+
+        assert!(!features.state_snapshots);
+        assert!(!features.exact_replay);
+        assert!(!features.persistent_save_data);
+    }
+
+    #[test]
+    fn sameboy_session_features_keep_qualified_timeline_state() {
+        let identity = CoreIdentity {
+            library_name: "SameBoy".into(),
+            library_version: phicade_libretro::SAMEBOY_VERSION.into(),
+            valid_extensions: "gb|gbc".into(),
+            need_fullpath: false,
+            fps: 59.7,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = phicade_libretro::libretro_capability_manifest(&identity, true, true);
+        let features = runtime_session_features(&manifest);
+
+        assert!(features.state_snapshots);
+        assert!(features.exact_replay);
+        assert!(features.persistent_save_data);
+    }
 
     #[test]
     fn runtime_registration_is_provenance_only_not_authority() {

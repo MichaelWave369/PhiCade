@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 36
+## Current status — Rung 37
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -34,6 +34,7 @@ Benchmark suites:
 - **Generic libretro Host v1** — generic FILE loading, full 16-button RetroPad, analog axes, and runtime-observed optional capability claims
 - **ScummVM 2026.3.0 qualification** — pinned upstream no-engine launcher build, real framebuffer/input qualification, explicit no-snapshot/no-exact-replay receipt
 - **Runtime Registration v1** — user-supplied libretro cores are fingerprinted, identified, capability-described, and persisted without implicitly receiving qualification or launch authority
+- **Registered Session Routing v1** — registered core SHA routing with stale-binary checks, explicit operator launch approval, FILE/no-content loading, and capability-aware timeline features
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -157,6 +158,20 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Registered session routing
+
+Rung 37 adds a second session entrypoint backed by Runtime Registration v1.
+
+A registered core is selected by SHA-256, re-hashed before launch, identity
+checked against its stored receipt, and requires explicit per-session operator
+approval. FILE content and libretro no-content launcher sessions are supported.
+
+Session features are derived from the live capability manifest. SameBoy keeps
+rewind/save-state/Replay v1 behavior; ScummVM gets governed frame/audio/input
+sessions without timeline features it does not support.
+
+See `docs/REGISTERED_SESSION_ROUTING.md`.
 
 ## Runtime registration
 
@@ -589,6 +604,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/REGISTERED_SESSION_ROUTING.md`
 - `docs/RUNTIME_REGISTRATION.md`
 - `docs/SCUMMVM_QUALIFICATION.md`
 - `docs/GENERIC_LIBRETRO_HOST.md`
