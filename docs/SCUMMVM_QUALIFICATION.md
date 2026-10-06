@@ -19,8 +19,12 @@ PhiCade does not vendor or publish the resulting ScummVM core binary.
 ## Qualification build
 
 The ScummVM libretro backend provides a `noengine` build target. PhiCade uses
-that target with software rendering forced on and several optional heavyweight
-features disabled.
+that target with software rendering forced on while leaving ScummVM's upstream
+feature matrix intact.
+
+This is deliberate: some base modules are still compiled by the no-engine
+launcher, so selectively disabling codec/component flags can create an invalid
+upstream build combination even when no game engines are present.
 
 This produces a launcher/backend core with no game engines and no commercial
 game assets.
