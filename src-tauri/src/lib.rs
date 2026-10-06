@@ -3553,6 +3553,17 @@ fn validate_autodrive_receipt_against_benchmark(
             campaign.campaign_id, benchmark.benchmark_run_id, receipt.schema
         ));
     }
+    receipt.policy.validate()?;
+    if receipt.ended_frame < receipt.started_frame
+        || receipt.turns_completed > receipt.turns_issued
+        || receipt.final_memory_bytes != u32::try_from(receipt.final_memory_content.len()).unwrap_or(u32::MAX)
+        || receipt.final_memory_sha256 != sha256_bytes(receipt.final_memory_content.as_bytes())
+    {
+        return Err(format!(
+            "campaign {} benchmark {} Autodrive receipt is internally inconsistent",
+            campaign.campaign_id, benchmark.benchmark_run_id
+        ));
+    }
 
     let expected_model = format!("{}@{}", benchmark.model, benchmark.model_digest);
     if receipt.run_id != benchmark.autodrive_run_id
@@ -6204,7 +6215,7 @@ mod tests {
             stop_reason: benchmark.stop_reason,
             final_frame_sha256: benchmark.final_frame_sha256.clone(),
             initial_memory_sha256: "1".repeat(64),
-            final_memory_sha256: "2".repeat(64),
+            final_memory_sha256: sha256_bytes(b""),
             final_memory_content: String::new(),
             final_memory_bytes: 0,
             memory_revision: 0,
