@@ -4104,7 +4104,8 @@ fn list_benchmark_suite_reports(
 fn markdown_cell(value: &str) -> String {
     value
         .replace('|', "\\|")
-        .replace(['\r', '\n'], " ")
+        .replace('\r', " ")
+        .replace('\n', " ")
         .trim()
         .to_owned()
 }
@@ -5511,6 +5512,112 @@ mod tests {
         );
         assert!(!receipt.binary_evidence_bound);
         assert!(!receipt.authority_granted);
+    }
+
+    #[test]
+    fn public_suite_markdown_preserves_provenance_and_boundaries() {
+        let receipt = PublicSuiteResultReceipt {
+            schema: PUBLIC_SUITE_RESULT_SCHEMA.into(),
+            record_status: "VERIFIED_EXPORT".into(),
+            suite_id: "suite-v13".into(),
+            suite_version: 13,
+            suite_title: "Benchmark Suite v13".into(),
+            report_id: 7,
+            suite_report_sha256: "a".repeat(64),
+            cohort_id: "cohort-a".into(),
+            provider: "ollama".into(),
+            model: "vision|model".into(),
+            model_digest: "b".repeat(64),
+            model_qualification_sha256: "c".repeat(64),
+            core_sha256: "d".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            trials_per_task: 5,
+            total_scored_trials: 5,
+            total_scoring_error_trials: 0,
+            stats: BenchmarkSuiteAggregateStats {
+                task_count: 1,
+                total_observed_trials: 5,
+                total_successful_trials: 4,
+                overall_success_rate: 0.8,
+                macro_mean_score_1000: 850.0,
+                min_task_mean_score_1000: 850.0,
+                max_task_mean_score_1000: 850.0,
+                population_stddev_task_mean_score_1000: 0.0,
+            },
+            tasks: vec![PublicSuiteTaskResult {
+                task_id: "task-a".into(),
+                task_title: "Task | A".into(),
+                campaign_id: 3,
+                campaign_receipt_sha256: "e".repeat(64),
+                observed_trials: 5,
+                scored_trials: 5,
+                scoring_error_trials: 0,
+                successful_trials: 4,
+                success_rate: 0.8,
+                mean_score_1000: 850.0,
+            }],
+        };
+
+        let markdown = render_public_suite_result_markdown(&receipt, &"f".repeat(64));
+        assert!(markdown.contains("850.0 / 1000"));
+        assert!(markdown.contains("80.0%"));
+        assert!(markdown.contains(&"a".repeat(64)));
+        assert!(markdown.contains(&"f".repeat(64)));
+        assert!(markdown.contains("Task \\| A"));
+        assert!(markdown.contains("does not declare a universal winner"));
+    }
+
+    #[test]
+    fn public_suite_markdown_is_deterministic() {
+        let receipt = PublicSuiteResultReceipt {
+            schema: PUBLIC_SUITE_RESULT_SCHEMA.into(),
+            record_status: "VERIFIED_EXPORT".into(),
+            suite_id: "suite-v1".into(),
+            suite_version: 1,
+            suite_title: "Benchmark Suite v1".into(),
+            report_id: 1,
+            suite_report_sha256: "1".repeat(64),
+            cohort_id: "cohort".into(),
+            provider: "ollama".into(),
+            model: "model".into(),
+            model_digest: "2".repeat(64),
+            model_qualification_sha256: "3".repeat(64),
+            core_sha256: "4".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            trials_per_task: 3,
+            total_scored_trials: 3,
+            total_scoring_error_trials: 0,
+            stats: BenchmarkSuiteAggregateStats {
+                task_count: 1,
+                total_observed_trials: 3,
+                total_successful_trials: 1,
+                overall_success_rate: 1.0 / 3.0,
+                macro_mean_score_1000: 500.0,
+                min_task_mean_score_1000: 500.0,
+                max_task_mean_score_1000: 500.0,
+                population_stddev_task_mean_score_1000: 0.0,
+            },
+            tasks: vec![PublicSuiteTaskResult {
+                task_id: "task".into(),
+                task_title: "Task".into(),
+                campaign_id: 1,
+                campaign_receipt_sha256: "5".repeat(64),
+                observed_trials: 3,
+                scored_trials: 3,
+                scoring_error_trials: 0,
+                successful_trials: 1,
+                success_rate: 1.0 / 3.0,
+                mean_score_1000: 500.0,
+            }],
+        };
+
+        let first = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
+        let second = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
+        assert_eq!(first, second);
     }
 
     #[test]
