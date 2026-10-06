@@ -5,8 +5,8 @@ use phicade_runtime::{
     AgentGymScore, AgentTurnRequest, AgentTurnResponse, AutodrivePolicy, AutodriveReceipt,
     AutodriveStatus, AutodriveStopReason, AuthorityPolicy, AudioBuffer, BenchmarkCampaignStats,
     BenchmarkSuiteAggregateStats, BenchmarkSuiteComparisonStats, BenchmarkTaskSpec,
-    BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
-    GameImage,
+    BenchmarkTrialOutcome, CampaignComparisonStats, ContentDescriptor, ControlMode, EmulatorCore,
+    FrameBuffer, GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
     ReplayVerification, ReplayVerificationResult, RuntimeCapabilityManifest,
     SuiteTaskAggregateInput, SystemCommand, SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suite_v9_tasks, benchmark_suite_v10_tasks, benchmark_suite_v11_tasks, benchmark_suite_v12_tasks, benchmark_suite_v13_tasks, benchmark_suites,
@@ -520,6 +520,7 @@ struct SuiteCohortEvidence {
 
 struct EmulatorSession {
     core: LibretroCore,
+    runtime_features: RuntimeSessionFeatures,
     game_path: String,
     game_key: String,
     profile: GameProfile,
@@ -664,6 +665,32 @@ fn benchmark_task_info(task: &BenchmarkTaskSpec) -> BenchmarkTaskInfo {
     }
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeSessionFeatures {
+    state_snapshots: bool,
+    exact_replay: bool,
+    persistent_save_data: bool,
+}
+
+fn runtime_session_features(manifest: &RuntimeCapabilityManifest) -> RuntimeSessionFeatures {
+    RuntimeSessionFeatures {
+        state_snapshots: manifest.capabilities.state_snapshots.is_supported(),
+        exact_replay: manifest.capabilities.exact_replay.is_supported(),
+        persistent_save_data: manifest.capabilities.persistent_save_data.is_supported(),
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SessionRouteEvidence {
+    route: String,
+    registered_core_sha256: Option<String>,
+    registration_binary_evidence_bound: bool,
+    registration_authority_granted: bool,
+    session_operator_approved: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SessionInfo {
@@ -671,6 +698,9 @@ struct SessionInfo {
     game_key: String,
     core_path: String,
     core: CoreIdentity,
+    capability_manifest: RuntimeCapabilityManifest,
+    runtime_features: RuntimeSessionFeatures,
+    route_evidence: SessionRouteEvidence,
     profile: GameProfile,
     benchmark_task: Option<BenchmarkTaskInfo>,
 }
