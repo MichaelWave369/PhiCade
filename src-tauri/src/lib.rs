@@ -4481,6 +4481,7 @@ fn render_public_suite_result_markdown(
 
 #[tauri::command]
 fn export_benchmark_suite_public_result(
+    app: AppHandle,
     state: State<'_, EmulatorState>,
     suite_id: String,
     report_id: u64,
@@ -4496,7 +4497,7 @@ fn export_benchmark_suite_public_result(
     let suite_id = suite_id.trim();
     let (report_path, report) =
         load_benchmark_suite_report_receipt(session, suite_id, report_id)?;
-    validate_suite_report_provenance(session, &report)?;
+    validate_suite_report_evidence_closure(&app, session, &report)?;
 
     let receipt = public_suite_result_receipt(suite_id, &report_path, &report)?;
     let report_dir = suite_report_dir_for(session, suite_id)?;
@@ -4528,6 +4529,7 @@ fn export_benchmark_suite_public_result(
 
 #[tauri::command]
 fn compare_benchmark_suite_reports(
+    app: AppHandle,
     state: State<'_, EmulatorState>,
     suite_id: String,
     report_a_id: u64,
@@ -4546,8 +4548,8 @@ fn compare_benchmark_suite_reports(
         .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
     let (path_a, report_a) = load_benchmark_suite_report_receipt(session, suite.id, report_a_id)?;
     let (path_b, report_b) = load_benchmark_suite_report_receipt(session, suite.id, report_b_id)?;
-    let campaigns_a = validate_suite_report_provenance(session, &report_a)?;
-    let campaigns_b = validate_suite_report_provenance(session, &report_b)?;
+    let campaigns_a = validate_suite_report_evidence_closure(&app, session, &report_a)?;
+    let campaigns_b = validate_suite_report_evidence_closure(&app, session, &report_b)?;
     validate_suite_report_compatibility(&report_a, &report_b)?;
 
     let mut aggregate_inputs = Vec::new();
