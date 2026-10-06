@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 34
+## Current status — Rung 35
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -32,6 +32,7 @@ Benchmark suites:
 - **Runtime Capability Manifest v1** — adapters declare execution model and per-capability UNSUPPORTED / SUPPORTED / QUALIFIED status without inflating weaker runtimes into emulator-shaped interfaces
 - **Content Descriptor v1** — FILE / DIRECTORY / LAUNCH_TARGET content locators with optional system and runtime hints, while legacy GameImage behavior remains intact
 - **Generic libretro Host v1** — generic FILE loading, full 16-button RetroPad, analog axes, and runtime-observed optional capability claims
+- **ScummVM 2026.3.0 qualification** — pinned upstream no-engine launcher build, real framebuffer/input qualification, explicit no-snapshot/no-exact-replay receipt
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -132,6 +133,11 @@ Current evidence stack includes:
 - full 16-button RetroPad mapping plus left/right analog axes
 - state-snapshot/save-data capability probes for unqualified libretro cores
 - generic exact replay remains unsupported unless separately qualified
+- pinned ScummVM v2026.3.0 / fed42f2068dcafc6aafa1c28c77e4c88def74b66
+- no-content ScummVM launcher qualification with no game assets
+- ScummVM binary SHA-256 bound into qualification receipt
+- governed RetroPad + analog callback-path evidence
+- explicit zero-byte serialization and zero libretro save-RAM evidence
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -150,6 +156,23 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## ScummVM qualification
+
+Rung 35 qualifies the official ScummVM `v2026.3.0` libretro port from pinned
+source commit `fed42f2068dcafc6aafa1c28c77e4c88def74b66`.
+
+CI builds ScummVM's no-engine launcher in software-rendering mode and runs it
+through PhiCade with no game content. The qualifier requires real framebuffer
+output and governed joypad/analog callback evidence while proving that the
+pinned libretro core exposes no serializable state or save RAM.
+
+ScummVM therefore enters PhiCade as an `EMBEDDED_FRAME_CORE` with qualified
+frame/render behavior but no state-checkpointed exact replay.
+
+PhiCade does not distribute the built GPL ScummVM core or any game data.
+
+See `docs/SCUMMVM_QUALIFICATION.md`.
 
 ## Generic libretro host
 
@@ -553,6 +576,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/SCUMMVM_QUALIFICATION.md`
 - `docs/GENERIC_LIBRETRO_HOST.md`
 - `docs/CONTENT_DESCRIPTOR.md`
 - `docs/RUNTIME_CAPABILITY_MANIFEST.md`
