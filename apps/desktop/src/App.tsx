@@ -377,6 +377,8 @@ export function App() {
       const receipt = await registerRuntimeCore(selected);
       const registrations = await listRuntimeRegistrations();
       setRuntimeRegistrations(registrations);
+      setSelectedRuntimeSha(receipt.coreSha256);
+      setRegisteredLaunchApproved(false);
       const profile = receipt.qualificationProfileId ?? "UNQUALIFIED PROFILE";
       setNotice(
         `RUNTIME REGISTERED // ${receipt.core.libraryName} ${receipt.core.libraryVersion} // ${profile} // SHA ${receipt.coreSha256.slice(0, 12)}…`,
@@ -1507,7 +1509,11 @@ export function App() {
                   const qualified = Object.values(capabilities).filter((status) => status === "QUALIFIED").length;
                   const supported = Object.values(capabilities).filter((status) => status !== "UNSUPPORTED").length;
                   return (
-                    <div className="runtime-row" key={runtime.coreSha256} title={runtime.corePath}>
+                    <div
+                      className={`runtime-row ${selectedRuntimeSha === runtime.coreSha256 ? "selected" : ""}`}
+                      key={runtime.coreSha256}
+                      title={runtime.corePath}
+                    >
                       <div className="runtime-row-main">
                         <strong>{runtime.core.libraryName} {runtime.core.libraryVersion}</strong>
                         <span>{runtime.capabilityManifest.executionModel.replaceAll("_", " ")}</span>
@@ -1517,9 +1523,53 @@ export function App() {
                       <small>
                         PROFILE // {runtime.qualificationProfileId ?? "NONE"} // EVIDENCE {runtime.binaryEvidenceBound ? "BOUND" : "UNBOUND"} // AUTHORITY {runtime.authorityGranted ? "GRANTED" : "NONE"}
                       </small>
+                      <button
+                        className="runtime-select"
+                        onClick={() => {
+                          setSelectedRuntimeSha(runtime.coreSha256);
+                          setRegisteredLaunchApproved(false);
+                        }}
+                        disabled={running || registeredLaunchBusy}
+                      >
+                        {selectedRuntimeSha === runtime.coreSha256 ? "SELECTED" : "SELECT"}
+                      </button>
                     </div>
                   );
                 })}
+              </div>
+            )}
+            {selectedRuntime && (
+              <div className="runtime-launch">
+                <div className="runtime-launch-heading">
+                  <strong>{selectedRuntime.core.libraryName} {selectedRuntime.core.libraryVersion}</strong>
+                  <small>{selectedRuntime.coreSha256.slice(0, 16)}…</small>
+                </div>
+                <label className="runtime-approval">
+                  <input
+                    type="checkbox"
+                    checked={registeredLaunchApproved}
+                    onChange={(event) => setRegisteredLaunchApproved(event.target.checked)}
+                    disabled={running || registeredLaunchBusy}
+                  />
+                  <span>APPROVE THIS SESSION LAUNCH</span>
+                </label>
+                <div className="runtime-launch-actions">
+                  <button
+                    onClick={() => void launchRegisteredRuntime("launcher")}
+                    disabled={!registeredLaunchApproved || running || registeredLaunchBusy}
+                  >
+                    {registeredLaunchBusy ? "STARTING..." : "RUN LAUNCHER"}
+                  </button>
+                  <button
+                    onClick={() => void launchRegisteredRuntime("file")}
+                    disabled={!registeredLaunchApproved || running || registeredLaunchBusy}
+                  >
+                    RUN FILE…
+                  </button>
+                </div>
+                <small>
+                  APPROVAL IS SESSION-SCOPED // REGISTRATION AUTHORITY REMAINS {selectedRuntime.authorityGranted ? "GRANTED" : "NONE"}
+                </small>
               </div>
             )}
           </div>
@@ -1821,11 +1871,11 @@ export function App() {
             <button
               className={replayRecording ? "recording" : ""}
               onClick={replayRecording ? endReplayRecording : beginReplayRecording}
-              disabled={!running || autodrive?.active || (!replayRecording && profile?.fastForward !== 1)}
+              disabled={!running || autodrive?.active || !session?.runtimeFeatures.exactReplay || (!replayRecording && profile?.fastForward !== 1)}
             >
               {replayRecording ? "STOP + EXPORT" : "REC"}
             </button>
-            <button onClick={verifyReplay} disabled={!running || replayRecording || autodrive?.active || !lastReplay}>VERIFY LAST</button>
+            <button onClick={verifyReplay} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.exactReplay || !lastReplay}>VERIFY LAST</button>
             <small>
               {lastReplay
                 ? `${lastReplay.receipt.verification?.result?.toUpperCase() ?? "UNVERIFIED"} // ${lastReplay.replaySha256.slice(0, 12)}…`
@@ -1836,12 +1886,12 @@ export function App() {
           </div>
 
           <div className="session-tools">
-            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>SAVE S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>LOAD S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording || autodrive?.active}>REWIND 2S</button>
+            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>SAVE S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>LOAD S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>REWIND 2S</button>
             <button onClick={() => queueSystem("reset")} disabled={!running || replayRecording || autodrive?.active}>RESET</button>
             <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
-            <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
+            <button onClick={flushBatteryRam} disabled={!running || !session?.runtimeFeatures.persistentSaveData}>FLUSH SRAM</button>
           </div>
 
           <div className="speed-strip">
@@ -1856,7 +1906,7 @@ export function App() {
                 {speed}×
               </button>
             ))}
-            <small>{profile ? `REWIND ${profile.rewindSeconds}S / EVERY ${profile.rewindIntervalFrames}F` : "PROFILE OFFLINE"}</small>
+            <small>{profile ? (session?.runtimeFeatures.stateSnapshots ? `REWIND ${profile.rewindSeconds}S / EVERY ${profile.rewindIntervalFrames}F` : "REWIND UNSUPPORTED BY RUNTIME") : "PROFILE OFFLINE"}</small>
           </div>
 
           <div className="control-strip">
