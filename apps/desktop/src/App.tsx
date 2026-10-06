@@ -1411,7 +1411,7 @@ export function App() {
       setSuiteComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
-      setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
+      setNotice("CORE SESSION STOPPED // PERSISTENT DATA FLUSH ATTEMPT COMPLETE");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
     }
@@ -1428,7 +1428,7 @@ export function App() {
         <div className="status-cluster" aria-label="runtime status">
           <span><i className={`lamp ${native ? "lamp-green" : "lamp-amber"}`} /> {native ? "TAURI NATIVE" : "WEB PREVIEW"}</span>
           <span><i className="lamp lamp-green" /> ACTION IPC READY</span>
-          <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? "SAMEBOY RUNNING" : "CORE HOST STANDBY"}</span>
+          <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? `${session?.core.libraryName.toUpperCase() ?? "CORE"} RUNNING` : "CORE HOST STANDBY"}</span>
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
@@ -1584,7 +1584,7 @@ export function App() {
                 <div className="boot-copy">
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
-                  <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
+                  <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : selectedRuntime ? `RUNTIME // ${selectedRuntime.core.libraryName} ${selectedRuntime.core.libraryVersion}` : "SELECT CARTRIDGE OR RUNTIME"}</p>
                   <small>RUNG 39 // REGISTERED RUNTIME LAUNCH ONLINE</small>
                 </div>
               )}
@@ -1881,7 +1881,9 @@ export function App() {
                 ? `${lastReplay.receipt.verification?.result?.toUpperCase() ?? "UNVERIFIED"} // ${lastReplay.replaySha256.slice(0, 12)}…`
                 : replayRecording
                   ? `${replayActions} ACTIONS / ${replayCheckpoints} CHECKPOINTS`
-                  : "NO EXPORTED REPLAY"}
+                  : session && !session.runtimeFeatures.exactReplay
+                    ? "EXACT REPLAY UNSUPPORTED BY RUNTIME"
+                    : "NO EXPORTED REPLAY"}
             </small>
           </div>
 
@@ -1943,10 +1945,12 @@ export function App() {
             <div><dt>REWIND</dt><dd>{session?.runtimeFeatures.stateSnapshots ? rewindSnapshots.toString().padStart(6, "0") : "N/A"}</dd></div>
             <div><dt>STATE SLOT</dt><dd>{session?.runtimeFeatures.stateSnapshots ? `S${profile?.saveSlot ?? 0}` : "N/A"}</dd></div>
             <div><dt>GAME HASH</dt><dd>{session ? session.gameKey.slice(0, 8).toUpperCase() : "--------"}</dd></div>
+            <div><dt>REG SHA</dt><dd>{session?.routeEvidence.registeredCoreSha256?.slice(0, 8).toUpperCase() ?? "--------"}</dd></div>
+            <div><dt>BIN EVIDENCE</dt><dd>{session ? (session.routeEvidence.registrationBinaryEvidenceBound ? "BOUND" : "UNBOUND") : "----"}</dd></div>
             <div><dt>REPLAY</dt><dd>{session && !session.runtimeFeatures.exactReplay ? "UNSUPPORTED" : replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
             <div><dt>ACTIONS</dt><dd>{replayActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>CHECKPOINTS</dt><dd>{replayCheckpoints.toString().padStart(6, "0")}</dd></div>
-            <div><dt>VERIFY</dt><dd>{lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
+            <div><dt>VERIFY</dt><dd>{session && !session.runtimeFeatures.exactReplay ? "N/A" : lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
             <div><dt>AUTHORITY</dt><dd>{authority?.mode.toUpperCase() ?? "OFFLINE"}</dd></div>
             <div><dt>AGENT</dt><dd>{authority?.agentId ?? "NONE"}</dd></div>
             <div><dt>REJECTED</dt><dd>{(authority?.rejectedActions ?? 0).toString().padStart(6, "0")}</dd></div>
