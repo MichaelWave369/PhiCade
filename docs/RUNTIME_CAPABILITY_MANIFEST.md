@@ -111,25 +111,14 @@ The core qualification receipt embeds the manifest beside the exact core SHA-256
 Runtime integration now becomes capability negotiation instead of interface
 fiction.
 
-A future external ScummVM provider could honestly begin approximately like this:
+The pinned ScummVM 2026.3.0 libretro profile is now an actual
+`EMBEDDED_FRAME_CORE`, not a hypothetical external-process provider.
 
-```text
-executionModel            EXTERNAL_PROCESS
-frameStep                 UNSUPPORTED
-renderedFramebuffer       UNSUPPORTED
-audioStream               UNSUPPORTED
-governedActions           SUPPORTED
-reset                     SUPPORTED
-stateSnapshots            UNSUPPORTED
-exactReplay               UNSUPPORTED
-persistentSaveData        SUPPORTED
-gameDetection             SUPPORTED
-externalProcessLifecycle  SUPPORTED
-semanticEvents            UNSUPPORTED
-```
+It qualifies frame stepping and rendered framebuffer output while leaving state
+snapshots and exact replay unsupported. Game detection is supported by the
+runtime, and the qualification receipt binds the exact built binary SHA-256.
 
-Those values are illustrative until the ScummVM adapter exists and is tested.
-The important rule is that ScummVM would not be required to imitate SameBoy.
+See `docs/SCUMMVM_QUALIFICATION.md`.
 
 A future PixelForge bridge can likewise declare semantic events or web/bridge
 execution without claiming emulator-specific state semantics.
