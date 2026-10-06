@@ -72,6 +72,7 @@ struct SessionPaths {
     screenshot_dir: PathBuf,
     replay_dir: PathBuf,
     autodrive_dir: PathBuf,
+    autodrive_root: PathBuf,
     model_benchmark_dir: PathBuf,
     model_benchmark_root: PathBuf,
     benchmark_campaign_root: PathBuf,
@@ -153,7 +154,7 @@ struct ModelBenchmarkRun {
     initial_distance: i32,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ModelGameplayBenchmarkReceipt {
     schema: String,
@@ -1449,7 +1450,8 @@ fn session_paths(
     let screenshot_dir = root.join("screenshots").join(game_key);
     let profile_dir = root.join("profiles");
     let replay_dir = root.join("replays").join(game_key);
-    let autodrive_dir = root.join("autodrive").join(game_key);
+    let autodrive_root = root.join("autodrive");
+    let autodrive_dir = autodrive_root.join(game_key);
     let model_benchmark_root = root.join("model-benchmarks");
     let benchmark_campaign_root = root.join("benchmark-campaigns");
     let model_benchmark_dir = model_benchmark_root.join(game_key);
@@ -1491,6 +1493,7 @@ fn session_paths(
         screenshot_dir,
         replay_dir,
         autodrive_dir,
+        autodrive_root,
         model_benchmark_dir,
         model_benchmark_root,
         benchmark_campaign_root,
