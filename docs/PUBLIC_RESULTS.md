@@ -15,7 +15,7 @@ Benchmark campaigns
 verified Suite Report
         |
         v
-revalidate report + every referenced campaign
+revalidate full transitive evidence chain
         |
         v
 Public Suite Result v1
@@ -31,11 +31,19 @@ The **PUBLIC RESULT** lane appears beside Suite Report and Suite Compare.
 1. Select a benchmark suite.
 2. Select one existing verified Suite Report.
 3. Press **EXPORT JSON + MD**.
-4. PhiCade re-opens the report and revalidates its full provenance.
+4. PhiCade re-opens the report and closes provenance through campaigns,
+   model-gameplay receipts, Autodrive receipts, and the exact model
+   qualification receipt.
 5. If validation succeeds, PhiCade writes deterministic JSON and Markdown
    artifacts.
 
 The exporter never treats the currently displayed score as sufficient evidence.
+
+Rung 42 also requires the exact model qualification receipt pinned by the
+cohort. Qualification receipts are archived by receipt SHA-256 so re-qualifying
+the same model digest does not replace historical qualification evidence.
+
+See `EVIDENCE_CLOSURE.md` for the full validation graph.
 
 ## Schema
 

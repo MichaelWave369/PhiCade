@@ -1625,7 +1625,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : selectedRuntime ? `RUNTIME // ${selectedRuntime.core.libraryName} ${selectedRuntime.core.libraryVersion}` : "SELECT CARTRIDGE OR RUNTIME"}</p>
-                  <small>RUNG 41 // VERIFIED PUBLIC RESULT EXPORT ONLINE</small>
+                  <small>RUNG 42 // EVIDENCE CLOSURE ONLINE</small>
                 </div>
               )}
             </div>
@@ -2003,7 +2003,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 41</div>
+          <div className="panel-title">RUNTIME // RUNG 42</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
