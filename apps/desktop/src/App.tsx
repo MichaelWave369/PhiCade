@@ -1585,7 +1585,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 19 // VERSIONED BENCHMARK SUITES ONLINE</small>
+                  <small>RUNG 39 // REGISTERED RUNTIME LAUNCH ONLINE</small>
                 </div>
               )}
             </div>
@@ -1926,19 +1926,24 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 19</div>
+          <div className="panel-title">RUNTIME // RUNG 39</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
             <div><dt>LIBRARY</dt><dd>{games.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>GAMEPADS</dt><dd>{controllers.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>CORE</dt><dd>{running ? "ONLINE" : "STANDBY"}</dd></div>
+            <div><dt>ROUTE</dt><dd>{session?.routeEvidence.route.toUpperCase() ?? "NONE"}</dd></div>
+            <div><dt>OP APPROVAL</dt><dd>{session?.routeEvidence.sessionOperatorApproved ? "YES" : "NO"}</dd></div>
+            <div><dt>STATE SNAP</dt><dd>{session ? (session.runtimeFeatures.stateSnapshots ? "YES" : "NO") : "----"}</dd></div>
+            <div><dt>EXACT REPLAY</dt><dd>{session ? (session.runtimeFeatures.exactReplay ? "YES" : "NO") : "----"}</dd></div>
+            <div><dt>SAVE DATA</dt><dd>{session ? (session.runtimeFeatures.persistentSaveData ? "YES" : "NO") : "----"}</dd></div>
             <div><dt>AUDIO</dt><dd>{running ? (audioRate ? `${audioRate} HZ` : "SYNC") : "OFFLINE"}</dd></div>
             <div><dt>SPEED</dt><dd>{running ? `${profile?.fastForward ?? 1}×` : "OFFLINE"}</dd></div>
-            <div><dt>REWIND</dt><dd>{rewindSnapshots.toString().padStart(6, "0")}</dd></div>
-            <div><dt>STATE SLOT</dt><dd>S{profile?.saveSlot ?? 0}</dd></div>
+            <div><dt>REWIND</dt><dd>{session?.runtimeFeatures.stateSnapshots ? rewindSnapshots.toString().padStart(6, "0") : "N/A"}</dd></div>
+            <div><dt>STATE SLOT</dt><dd>{session?.runtimeFeatures.stateSnapshots ? `S${profile?.saveSlot ?? 0}` : "N/A"}</dd></div>
             <div><dt>GAME HASH</dt><dd>{session ? session.gameKey.slice(0, 8).toUpperCase() : "--------"}</dd></div>
-            <div><dt>REPLAY</dt><dd>{replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
+            <div><dt>REPLAY</dt><dd>{session && !session.runtimeFeatures.exactReplay ? "UNSUPPORTED" : replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
             <div><dt>ACTIONS</dt><dd>{replayActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>CHECKPOINTS</dt><dd>{replayCheckpoints.toString().padStart(6, "0")}</dd></div>
             <div><dt>VERIFY</dt><dd>{lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
