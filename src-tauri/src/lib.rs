@@ -3427,6 +3427,180 @@ fn verify_campaign_trial_receipts(
     Ok(())
 }
 
+fn validate_model_gameplay_receipt_against_campaign(
+    campaign: &BenchmarkCampaignReceipt,
+    trial: &CampaignTrialEvidence,
+    receipt: &ModelGameplayBenchmarkReceipt,
+) -> Result<(), String> {
+    if receipt.schema != MODEL_GAMEPLAY_BENCHMARK_SCHEMA {
+        return Err(format!(
+            "campaign {} trial {} has unsupported model benchmark schema {}",
+            campaign.campaign_id, trial.benchmark_run_id, receipt.schema
+        ));
+    }
+    if receipt.benchmark_run_id != trial.benchmark_run_id
+        || receipt.record_status != trial.record_status
+        || receipt.benchmark_id != campaign.benchmark_id
+        || receipt.provider != campaign.provider
+        || receipt.model != campaign.model
+        || receipt.model_digest != campaign.model_digest
+        || receipt.model_qualification_sha256 != campaign.model_qualification_sha256
+        || receipt.gym_source_sha256 != campaign.gym_source_sha256
+        || receipt.gym_rom_sha256 != campaign.gym_rom_sha256
+        || receipt.core_sha256 != campaign.core_sha256
+        || receipt.core_name != campaign.core_name
+        || receipt.core_version != campaign.core_version
+        || receipt.policy != campaign.policy
+        || receipt.stop_reason != trial.stop_reason
+        || receipt.score_1000 != trial.score_1000
+        || receipt.task_success != trial.task_success
+    {
+        return Err(format!(
+            "campaign {} trial {} model benchmark identity differs from campaign evidence",
+            campaign.campaign_id, trial.benchmark_run_id
+        ));
+    }
+    if receipt.record_status == "COMPLETE" && receipt.scoring_error.is_some() {
+        return Err(format!(
+            "campaign {} trial {} is COMPLETE but carries a scoring error",
+            campaign.campaign_id, trial.benchmark_run_id
+        ));
+    }
+    Ok(())
+}
+
+fn validate_autodrive_receipt_against_benchmark(
+    campaign: &BenchmarkCampaignReceipt,
+    benchmark: &ModelGameplayBenchmarkReceipt,
+    receipt: &AutodriveReceipt,
+) -> Result<(), String> {
+    if receipt.schema != AUTODRIVE_RECEIPT_SCHEMA {
+        return Err(format!(
+            "campaign {} benchmark {} has unsupported Autodrive schema {}",
+            campaign.campaign_id, benchmark.benchmark_run_id, receipt.schema
+        ));
+    }
+
+    let expected_model = format!("{}@{}", benchmark.model, benchmark.model_digest);
+    if receipt.run_id != benchmark.autodrive_run_id
+        || receipt.provider != benchmark.provider
+        || receipt.model != expected_model
+        || receipt.game_sha256 != benchmark.gym_rom_sha256
+        || receipt.core_name != benchmark.core_name
+        || receipt.core_version != benchmark.core_version
+        || receipt.policy != benchmark.policy
+        || receipt.stop_reason != benchmark.stop_reason
+        || receipt.started_frame != benchmark.started_frame
+        || receipt.ended_frame != benchmark.ended_frame
+        || receipt.turns_issued != benchmark.turns_issued
+        || receipt.turns_completed != benchmark.turns_completed
+        || receipt.total_actions != benchmark.total_actions
+        || receipt.final_frame_sha256 != benchmark.final_frame_sha256
+    {
+        return Err(format!(
+            "campaign {} benchmark {} Autodrive receipt identity differs",
+            campaign.campaign_id, benchmark.benchmark_run_id
+        ));
+    }
+    Ok(())
+}
+
+fn validate_campaign_evidence_closure(
+    session: &EmulatorSession,
+    campaign: &BenchmarkCampaignReceipt,
+) -> Result<(), String> {
+    let model_benchmark_dir = session
+        .paths
+        .model_benchmark_root
+        .join(&campaign.gym_rom_sha256);
+    validate_campaign_for_comparison(&model_benchmark_dir, campaign)?;
+
+    for trial in &campaign.trials {
+        let benchmark_path =
+            model_benchmark_dir.join(format!("run-{:06}.json", trial.benchmark_run_id));
+        let observed_benchmark_sha = sha256_file(&benchmark_path)?;
+        if observed_benchmark_sha != trial.receipt_sha256 {
+            return Err(format!(
+                "campaign {} trial {} model benchmark hash mismatch",
+                campaign.campaign_id, trial.benchmark_run_id
+            ));
+        }
+
+        let benchmark_bytes = fs::read(&benchmark_path)
+            .map_err(|error| format!("cannot read {}: {error}", benchmark_path.display()))?;
+        let benchmark = serde_json::from_slice::<ModelGameplayBenchmarkReceipt>(&benchmark_bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", benchmark_path.display()))?;
+        validate_model_gameplay_receipt_against_campaign(campaign, trial, &benchmark)?;
+
+        let autodrive_path = session
+            .paths
+            .autodrive_root
+            .join(&campaign.gym_rom_sha256)
+            .join(format!("run-{:06}.json", benchmark.autodrive_run_id));
+        let observed_autodrive_sha = sha256_file(&autodrive_path)?;
+        if observed_autodrive_sha != benchmark.autodrive_receipt_sha256 {
+            return Err(format!(
+                "campaign {} benchmark {} Autodrive receipt hash mismatch",
+                campaign.campaign_id, benchmark.benchmark_run_id
+            ));
+        }
+
+        let autodrive_bytes = fs::read(&autodrive_path)
+            .map_err(|error| format!("cannot read {}: {error}", autodrive_path.display()))?;
+        let autodrive = serde_json::from_slice::<AutodriveReceipt>(&autodrive_bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", autodrive_path.display()))?;
+        validate_autodrive_receipt_against_benchmark(campaign, &benchmark, &autodrive)?;
+    }
+
+    Ok(())
+}
+
+fn validate_suite_report_evidence_closure(
+    app: &AppHandle,
+    session: &EmulatorSession,
+    receipt: &BenchmarkSuiteReportReceipt,
+) -> Result<std::collections::BTreeMap<String, BenchmarkCampaignReceipt>, String> {
+    let campaigns = validate_suite_report_provenance(session, receipt)?;
+
+    if receipt.provider != "ollama" {
+        return Err(format!(
+            "suite report {} evidence closure does not support provider {}",
+            receipt.report_id, receipt.provider
+        ));
+    }
+    let qualification = load_ollama_qualification(app, &receipt.model_digest)?
+        .ok_or_else(|| {
+            format!(
+                "suite report {} model qualification receipt is missing",
+                receipt.report_id
+            )
+        })?;
+    let qualification_path = Path::new(&qualification.receipt_path);
+    let qualification_sha256 = sha256_file(qualification_path)?;
+    if qualification_sha256 != receipt.model_qualification_sha256 {
+        return Err(format!(
+            "suite report {} model qualification receipt hash mismatch",
+            receipt.report_id
+        ));
+    }
+    if !qualification_receipt_passes(
+        &qualification.receipt,
+        &receipt.model,
+        &receipt.model_digest,
+    ) {
+        return Err(format!(
+            "suite report {} model qualification receipt no longer passes exact model identity",
+            receipt.report_id
+        ));
+    }
+
+    for campaign in campaigns.values() {
+        validate_campaign_evidence_closure(session, campaign)?;
+    }
+
+    Ok(campaigns)
+}
+
 fn validate_campaign_for_comparison(
     model_benchmark_dir: &Path,
     campaign: &BenchmarkCampaignReceipt,
