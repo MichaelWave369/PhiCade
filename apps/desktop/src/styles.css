@@ -905,7 +905,7 @@ footer {
 /* Rung 41: verified public suite result export */
 .public-result-strip {
   display: grid;
-  grid-template-columns: auto minmax(220px, 1.4fr) auto minmax(260px, 1.8fr);
+  grid-template-columns: auto minmax(220px, 1.4fr) auto auto minmax(260px, 1.8fr);
   gap: 6px;
   align-items: center;
   margin-top: 8px;
