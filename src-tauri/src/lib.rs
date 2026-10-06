@@ -1852,6 +1852,18 @@ fn process_session_actions(
     for envelope in actions {
         match &envelope.action {
             ActionKind::System {
+                command: SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind,
+                ..
+            } if !session.runtime_features.state_snapshots => {
+                return Err(format!(
+                    "{:?} is unavailable: the active runtime does not support state snapshots",
+                    match &envelope.action {
+                        ActionKind::System { command, .. } => command,
+                        _ => unreachable!(),
+                    }
+                ));
+            }
+            ActionKind::System {
                 command: SystemCommand::SaveState,
                 slot,
             } => {
@@ -4523,7 +4535,7 @@ fn step_emulation(
         };
 
         let frame = session.core.frame_count();
-        if frame >= session.next_rewind_frame {
+        if session.runtime_features.state_snapshots && frame >= session.next_rewind_frame {
             push_rewind_snapshot(session)?;
             session.next_rewind_frame =
                 frame + u64::from(session.profile.rewind_interval_frames);
@@ -4671,6 +4683,9 @@ fn start_replay_recording(state: State<'_, EmulatorState>) -> Result<ReplayStatu
     if session.recording.is_some() {
         return Err("replay recording is already active".into());
     }
+    if !session.runtime_features.exact_replay {
+        return Err("Replay v1 is unavailable: the active runtime does not support exact replay".into());
+    }
     if session
         .autodrive
         .as_ref()
@@ -4738,6 +4753,9 @@ fn verify_last_replay(state: State<'_, EmulatorState>) -> Result<ReplayArtifact,
 
     if session.recording.is_some() {
         return Err("stop replay recording before verification".into());
+    }
+    if !session.runtime_features.exact_replay {
+        return Err("Replay v1 verification is unavailable: the active runtime does not support exact replay".into());
     }
 
     let mut export = session
