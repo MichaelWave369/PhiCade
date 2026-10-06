@@ -27,6 +27,65 @@ export interface CoreIdentity {
   sampleRateHz: number;
 }
 
+export type CapabilityStatus = "UNSUPPORTED" | "SUPPORTED" | "QUALIFIED";
+
+export interface RuntimeCapabilities {
+  frameStep: CapabilityStatus;
+  renderedFramebuffer: CapabilityStatus;
+  audioStream: CapabilityStatus;
+  governedActions: CapabilityStatus;
+  reset: CapabilityStatus;
+  stateSnapshots: CapabilityStatus;
+  exactReplay: CapabilityStatus;
+  persistentSaveData: CapabilityStatus;
+  gameDetection: CapabilityStatus;
+  externalProcessLifecycle: CapabilityStatus;
+  semanticEvents: CapabilityStatus;
+}
+
+export interface RuntimeQualificationProfile {
+  profileId: string;
+  sourceRevision: string | null;
+  binaryEvidenceRequired: boolean;
+}
+
+export interface RuntimeCapabilityManifest {
+  schema: string;
+  runtimeId: string;
+  runtimeVersion: string | null;
+  adapterId: string;
+  executionModel: "EMBEDDED_FRAME_CORE" | "EXTERNAL_PROCESS" | "WEB_RUNTIME" | "BRIDGED_RUNTIME";
+  qualificationProfile: RuntimeQualificationProfile | null;
+  capabilities: RuntimeCapabilities;
+}
+
+export interface RuntimeRegistrationReceipt {
+  schema: string;
+  recordStatus: string;
+  corePath: string;
+  coreSha256: string;
+  core: CoreIdentity;
+  capabilityManifest: RuntimeCapabilityManifest;
+  qualificationProfileId: string | null;
+  binaryEvidenceBound: boolean;
+  authorityGranted: boolean;
+}
+
+export interface RuntimeSessionFeatures {
+  stateSnapshots: boolean;
+  exactReplay: boolean;
+  persistentSaveData: boolean;
+}
+
+export interface SessionRouteEvidence {
+  route: string;
+  registeredCoreSha256: string | null;
+  registrationBinaryEvidenceBound: boolean;
+  registrationAuthorityGranted: boolean;
+  sessionOperatorApproved: boolean;
+}
+
+
 export interface GameProfile {
   fastForward: 1 | 2 | 4;
   rewindSeconds: number;
@@ -54,6 +113,9 @@ export interface SessionInfo {
   gameKey: string;
   corePath: string;
   core: CoreIdentity;
+  capabilityManifest: RuntimeCapabilityManifest;
+  runtimeFeatures: RuntimeSessionFeatures;
+  routeEvidence: SessionRouteEvidence;
   profile: GameProfile;
   benchmarkTask: BenchmarkTaskInfo | null;
 }
@@ -721,6 +783,26 @@ export async function selectSameBoyCore(): Promise<string | null> {
     filters: [{ name: "Libretro core", extensions: ["dll", "so", "dylib"] }],
   });
   return typeof selected === "string" ? selected : null;
+}
+
+export async function selectLibretroCore(): Promise<string | null> {
+  if (!isNativeShell()) return null;
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    title: "Register a libretro runtime core",
+    filters: [{ name: "Libretro core", extensions: ["dll", "so", "dylib"] }],
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function registerRuntimeCore(corePath: string): Promise<RuntimeRegistrationReceipt> {
+  return invoke<RuntimeRegistrationReceipt>("register_runtime_core", { corePath });
+}
+
+export async function listRuntimeRegistrations(): Promise<RuntimeRegistrationReceipt[]> {
+  if (!isNativeShell()) return [];
+  return invoke<RuntimeRegistrationReceipt[]>("list_runtime_registrations");
 }
 
 export async function scanRomDirectory(path: string): Promise<RomEntry[]> {
