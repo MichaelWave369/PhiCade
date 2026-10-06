@@ -19,6 +19,7 @@ import {
   compareBenchmarkCampaigns,
   compareBenchmarkSuiteReports,
   continueBenchmarkCampaign,
+  exportBenchmarkSuitePublicResult,
   buildBenchmarkSuiteReport,
   failAutodriveProvider,
   flushGameSave,
@@ -82,6 +83,7 @@ import {
   type ModelBenchmarkArtifact,
   type OllamaModel,
   type OllamaQualificationStatus,
+  type PublicSuiteResultArtifact,
   type ReplayArtifact,
   type RomEntry,
   type RuntimeRegistrationReceipt,
@@ -169,6 +171,9 @@ export function App() {
   const [suiteComparisonBId, setSuiteComparisonBId] = useState<number | null>(null);
   const [lastSuiteComparison, setLastSuiteComparison] = useState<BenchmarkSuiteComparisonArtifact | null>(null);
   const [suiteComparisonBusy, setSuiteComparisonBusy] = useState(false);
+  const [publicResultReportId, setPublicResultReportId] = useState<number | null>(null);
+  const [publicResultBusy, setPublicResultBusy] = useState(false);
+  const [lastPublicSuiteResult, setLastPublicSuiteResult] = useState<PublicSuiteResultArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
@@ -702,6 +707,11 @@ export function App() {
         setSuiteComparisonAId(reports[0]?.reportId ?? null);
         setSuiteComparisonBId(null);
       }
+      setPublicResultReportId((current) =>
+        current !== null && reports.some((entry) => entry.reportId === current)
+          ? current
+          : reports[reports.length - 1]?.reportId ?? null,
+      );
     } catch (error) {
       setNotice(`SUITE COMPARISON LEDGER ERROR // ${String(error)}`);
     }
@@ -716,10 +726,36 @@ export function App() {
     setSuiteComparisonAId(null);
     setSuiteComparisonBId(null);
     setLastSuiteComparison(null);
+    setPublicResultReportId(null);
+    setLastPublicSuiteResult(null);
     await Promise.all([
       refreshSuiteReportCandidates(suiteId),
       refreshSuiteReportLedger(suiteId),
     ]);
+  };
+
+  const exportSelectedPublicSuiteResult = async () => {
+    if (!selectedSuiteId || publicResultReportId === null) {
+      setNotice("PUBLIC RESULT EXPORT REQUIRES A SELECTED SUITE REPORT");
+      return;
+    }
+
+    setPublicResultBusy(true);
+    try {
+      const artifact = await exportBenchmarkSuitePublicResult(
+        selectedSuiteId,
+        publicResultReportId,
+      );
+      setLastPublicSuiteResult(artifact);
+      setNotice(
+        `PUBLIC RESULT VERIFIED // ${artifact.receipt.suiteId.toUpperCase()} #${artifact.receipt.reportId} // MACRO μ ${artifact.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(artifact.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // JSON ${artifact.jsonSha256.slice(0, 12)}…`,
+      );
+    } catch (error) {
+      setLastPublicSuiteResult(null);
+      setNotice(`PUBLIC RESULT EXPORT REFUSED // ${String(error)}`);
+    } finally {
+      setPublicResultBusy(false);
+    }
   };
 
   const runSuiteComparison = async () => {
@@ -768,6 +804,8 @@ export function App() {
         selectedSuiteCohortId,
       );
       setLastSuiteReport(artifact);
+      setPublicResultReportId(artifact.receipt.reportId);
+      setLastPublicSuiteResult(null);
       const stats = artifact.receipt.stats;
       setNotice(
         `${artifact.receipt.suiteId.toUpperCase()} // REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
@@ -1409,6 +1447,8 @@ export function App() {
       setSuiteComparisonBId(null);
       setLastSuiteComparison(null);
       setSuiteComparisonBusy(false);
+      setPublicResultReportId(null);
+      setLastPublicSuiteResult(null);
       providerBusyRef.current = false;
       setProviderBusy(false);
       setNotice("CORE SESSION STOPPED // PERSISTENT DATA FLUSH ATTEMPT COMPLETE");
@@ -1585,7 +1625,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : selectedRuntime ? `RUNTIME // ${selectedRuntime.core.libraryName} ${selectedRuntime.core.libraryVersion}` : "SELECT CARTRIDGE OR RUNTIME"}</p>
-                  <small>RUNG 39 // REGISTERED RUNTIME LAUNCH ONLINE</small>
+                  <small>RUNG 41 // VERIFIED PUBLIC RESULT EXPORT ONLINE</small>
                 </div>
               )}
             </div>
@@ -1928,7 +1968,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 39</div>
+          <div className="panel-title">RUNTIME // RUNG 41</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
