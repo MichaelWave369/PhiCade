@@ -1847,6 +1847,41 @@ export function App() {
                 : `${suiteCandidates.filter((candidate) => candidate.ready).length} READY COHORTS // ${selectedSuite?.taskCount ?? 0} TASKS REQUIRED`}
             </small>
           </div>
+          <div className="public-result-strip">
+            <span>PUBLIC RESULT</span>
+            <select
+              value={publicResultReportId ?? ""}
+              onChange={(event) => {
+                setPublicResultReportId(event.target.value ? Number(event.target.value) : null);
+                setLastPublicSuiteResult(null);
+              }}
+              disabled={suiteReportLedger.length === 0 || publicResultBusy || autodrive?.active}
+              aria-label="Public Suite Result report"
+            >
+              <option value="">SELECT VERIFIED REPORT</option>
+              {suiteReportLedger.map((entry) => (
+                <option key={`public-${entry.reportId}`} value={entry.reportId}>
+                  {`#${entry.reportId} ${entry.model} ${entry.modelDigest.slice(0, 8)}… // μ ${entry.macroMeanScore1000.toFixed(1)} // ${(entry.overallSuccessRate * 100).toFixed(1)}%`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => void exportSelectedPublicSuiteResult()}
+              disabled={
+                publicResultBusy
+                || publicResultReportId === null
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {publicResultBusy ? "REVERIFYING..." : "EXPORT JSON + MD"}
+            </button>
+            <small>
+              {lastPublicSuiteResult
+                ? `V${lastPublicSuiteResult.receipt.suiteVersion} #${lastPublicSuiteResult.receipt.reportId} // JSON ${lastPublicSuiteResult.jsonSha256.slice(0, 12)}… // MD ${lastPublicSuiteResult.markdownSha256.slice(0, 12)}… // ${lastPublicSuiteResult.markdownPath}`
+                : "REVALIDATES SUITE REPORT + UNDERLYING CAMPAIGNS BEFORE EXPORT"}
+            </small>
+          </div>
           <div className="comparison-strip">
             <span>SUITE COMPARE</span>
             <select
