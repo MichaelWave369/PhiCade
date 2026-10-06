@@ -54,8 +54,10 @@ import {
   selectRomDirectory,
   selectSameBoyCore,
   selectLibretroCore,
+  selectRuntimeContent,
   setGameProfile,
   startEmulation,
+  startRegisteredEmulation,
   stepEmulation,
   stopEmulation,
   validateActionEnvelope,
@@ -170,8 +172,12 @@ export function App() {
   const [scanning, setScanning] = useState(false);
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
+  const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
+  const [registeredLaunchApproved, setRegisteredLaunchApproved] = useState(false);
+  const [registeredLaunchBusy, setRegisteredLaunchBusy] = useState(false);
 
   const selectedSuite = suiteRegistry.find((suite) => suite.id === selectedSuiteId) ?? null;
+  const selectedRuntime = runtimeRegistrations.find((runtime) => runtime.coreSha256 === selectedRuntimeSha) ?? null;
 
   useEffect(() => {
     runningRef.current = running;
