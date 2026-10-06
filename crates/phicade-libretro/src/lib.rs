@@ -4,7 +4,7 @@ use phicade_runtime::{
     CoreError, EmulatorCore, FrameBuffer, GameImage, RuntimeCapabilities,
     RuntimeCapabilityManifest, RuntimeExecutionModel, RuntimeQualificationProfile, SystemCommand,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     ffi::{c_char, c_uint, c_void, CStr, CString},
     fs,
@@ -214,7 +214,7 @@ type RetroUnserialize = unsafe extern "C" fn(*const c_void, usize) -> bool;
 type RetroGetMemoryData = unsafe extern "C" fn(c_uint) -> *mut c_void;
 type RetroGetMemorySize = unsafe extern "C" fn(c_uint) -> usize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CoreIdentity {
     pub library_name: String,
