@@ -902,6 +902,63 @@ footer {
 }
 
 
+/* Rung 41: verified public suite result export */
+.public-result-strip {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1.4fr) auto minmax(260px, 1.8fr);
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #5c5132;
+  background: #100d07;
+}
+
+.public-result-strip > span {
+  color: var(--amber);
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.public-result-strip select,
+.public-result-strip button {
+  border: 1px solid var(--line);
+  background: #080d0a;
+  color: var(--ink);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.public-result-strip button {
+  cursor: pointer;
+}
+
+.public-result-strip button:hover:not(:disabled),
+.public-result-strip select:focus {
+  border-color: var(--amber);
+  outline: none;
+}
+
+.public-result-strip > small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .public-result-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .public-result-strip > span,
+  .public-result-strip > small,
+  .public-result-strip select {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Rung 16: Benchmark Suite Reports */
 .suite-strip {
   display: grid;

@@ -52,6 +52,7 @@ const MAX_CAMPAIGN_TRIALS: u16 = 20;
 const MANUAL_AGENT_MEMORY_MAX_BYTES: u32 = 4_096;
 const MANUAL_AGENT_MEMORY_UPDATE_MAX_BYTES: u32 = 1_024;
 const RUNTIME_REGISTRATION_SCHEMA: &str = "phicade.runtime-registration.v1";
+const PUBLIC_SUITE_RESULT_SCHEMA: &str = "phicade.public-suite-result.v1";
 
 #[derive(Default)]
 struct EmulatorState {
@@ -424,6 +425,57 @@ struct BenchmarkSuiteReportListEntry {
     macro_mean_score_1000: f64,
     overall_success_rate: f64,
     receipt_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteTaskResult {
+    task_id: String,
+    task_title: String,
+    campaign_id: u64,
+    campaign_receipt_sha256: String,
+    observed_trials: u16,
+    scored_trials: u16,
+    scoring_error_trials: u16,
+    successful_trials: u16,
+    success_rate: f64,
+    mean_score_1000: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteResultReceipt {
+    schema: String,
+    record_status: String,
+    suite_id: String,
+    suite_version: u16,
+    suite_title: String,
+    report_id: u64,
+    suite_report_sha256: String,
+    cohort_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    trials_per_task: u16,
+    total_scored_trials: u32,
+    total_scoring_error_trials: u32,
+    stats: BenchmarkSuiteAggregateStats,
+    tasks: Vec<PublicSuiteTaskResult>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteResultArtifact {
+    json_path: String,
+    markdown_path: String,
+    json_sha256: String,
+    markdown_sha256: String,
+    receipt: PublicSuiteResultReceipt,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -4048,6 +4100,192 @@ fn list_benchmark_suite_reports(
     Ok(entries)
 }
 
+
+fn markdown_cell(value: &str) -> String {
+    value
+        .replace('|', "\\|")
+        .replace('\r', " ")
+        .replace('\n', " ")
+        .trim()
+        .to_owned()
+}
+
+fn public_suite_result_receipt(
+    suite_id: &str,
+    report_path: &Path,
+    report: &BenchmarkSuiteReportReceipt,
+) -> Result<PublicSuiteResultReceipt, String> {
+    let suite = benchmark_suite_by_id(suite_id)
+        .ok_or_else(|| format!("unknown benchmark suite {suite_id}"))?;
+
+    let mut total_scored_trials = 0u32;
+    let mut total_scoring_error_trials = 0u32;
+    let mut tasks = Vec::with_capacity(suite.tasks.len());
+
+    for task in suite.tasks {
+        let task_ref = report
+            .tasks
+            .iter()
+            .find(|candidate| candidate.task_id == task.id)
+            .ok_or_else(|| {
+                format!(
+                    "suite report {} is missing task {}",
+                    report.report_id, task.id
+                )
+            })?;
+        let mean_score_1000 = task_ref.stats.mean_score_1000.ok_or_else(|| {
+            format!(
+                "suite report {} task {} has no public mean score",
+                report.report_id, task.id
+            )
+        })?;
+
+        total_scored_trials =
+            total_scored_trials.saturating_add(u32::from(task_ref.stats.scored_trials));
+        total_scoring_error_trials = total_scoring_error_trials
+            .saturating_add(u32::from(task_ref.stats.scoring_error_trials));
+
+        tasks.push(PublicSuiteTaskResult {
+            task_id: task_ref.task_id.clone(),
+            task_title: task_ref.task_title.clone(),
+            campaign_id: task_ref.campaign_id,
+            campaign_receipt_sha256: task_ref.campaign_receipt_sha256.clone(),
+            observed_trials: task_ref.stats.observed_trials,
+            scored_trials: task_ref.stats.scored_trials,
+            scoring_error_trials: task_ref.stats.scoring_error_trials,
+            successful_trials: task_ref.stats.successful_trials,
+            success_rate: task_ref.stats.success_rate,
+            mean_score_1000,
+        });
+    }
+
+    Ok(PublicSuiteResultReceipt {
+        schema: PUBLIC_SUITE_RESULT_SCHEMA.into(),
+        record_status: "VERIFIED_EXPORT".into(),
+        suite_id: report.suite_id.clone(),
+        suite_version: suite.version,
+        suite_title: suite.title.into(),
+        report_id: report.report_id,
+        suite_report_sha256: sha256_file(report_path)?,
+        cohort_id: report.cohort_id.clone(),
+        provider: report.provider.clone(),
+        model: report.model.clone(),
+        model_digest: report.model_digest.clone(),
+        model_qualification_sha256: report.model_qualification_sha256.clone(),
+        core_sha256: report.core_sha256.clone(),
+        core_name: report.core_name.clone(),
+        core_version: report.core_version.clone(),
+        policy: report.policy.clone(),
+        trials_per_task: report.trials_per_task,
+        total_scored_trials,
+        total_scoring_error_trials,
+        stats: report.stats.clone(),
+        tasks,
+    })
+}
+
+fn render_public_suite_result_markdown(
+    receipt: &PublicSuiteResultReceipt,
+    json_sha256: &str,
+) -> String {
+    let stats = &receipt.stats;
+    let mut markdown = String::new();
+    markdown.push_str("# PhiCade Public Suite Result\n\n");
+    markdown.push_str("> Verified export derived from a revalidated PhiCade Suite Report.\n\n");
+    markdown.push_str("## Result\n\n");
+    markdown.push_str("| Field | Value |\n|---|---|\n");
+    markdown.push_str(&format!("| Suite | {} (v{}) |\n", markdown_cell(&receipt.suite_title), receipt.suite_version));
+    markdown.push_str(&format!("| Suite ID | {} |\n", markdown_cell(&receipt.suite_id)));
+    markdown.push_str(&format!("| Report ID | #{} |\n", receipt.report_id));
+    markdown.push_str(&format!("| Model | {} |\n", markdown_cell(&receipt.model)));
+    markdown.push_str(&format!("| Model digest | `{}` |\n", receipt.model_digest));
+    markdown.push_str(&format!("| Provider | {} |\n", markdown_cell(&receipt.provider)));
+    markdown.push_str(&format!("| Core | {} {} |\n", markdown_cell(&receipt.core_name), markdown_cell(&receipt.core_version)));
+    markdown.push_str(&format!("| Tasks | {} |\n", stats.task_count));
+    markdown.push_str(&format!("| Trials per task | {} |\n", receipt.trials_per_task));
+    markdown.push_str(&format!("| Macro mean score | {:.1} / 1000 |\n", stats.macro_mean_score_1000));
+    markdown.push_str(&format!("| Overall success rate | {:.1}% |\n", stats.overall_success_rate * 100.0));
+    markdown.push_str(&format!("| Task mean range | {:.1} .. {:.1} |\n", stats.min_task_mean_score_1000, stats.max_task_mean_score_1000));
+    markdown.push_str(&format!("| Task-mean population SD | {:.1} |\n", stats.population_stddev_task_mean_score_1000));
+    markdown.push_str(&format!("| Observed trials | {} |\n", stats.total_observed_trials));
+    markdown.push_str(&format!("| Scored trials | {} |\n", receipt.total_scored_trials));
+    markdown.push_str(&format!("| Scoring-error trials | {} |\n", receipt.total_scoring_error_trials));
+    markdown.push_str(&format!("| Successful trials | {} |\n", stats.total_successful_trials));
+    markdown.push_str("\n## Provenance\n\n");
+    markdown.push_str(&format!("- Suite Report SHA-256: `{}`\n", receipt.suite_report_sha256));
+    markdown.push_str(&format!("- Public JSON SHA-256: `{}`\n", json_sha256));
+    markdown.push_str(&format!("- Model qualification SHA-256: `{}`\n", receipt.model_qualification_sha256));
+    markdown.push_str(&format!("- Core SHA-256: `{}`\n", receipt.core_sha256));
+    markdown.push_str(&format!("- Cohort ID: `{}`\n", receipt.cohort_id));
+    markdown.push_str("\n## Per-task evidence\n\n");
+    markdown.push_str("| Task | Mean /1000 | Success | Trials | Campaign | Campaign receipt SHA |\n");
+    markdown.push_str("|---|---:|---:|---:|---:|---|\n");
+    for task in &receipt.tasks {
+        markdown.push_str(&format!(
+            "| {} | {:.1} | {:.1}% | {}/{} | #{} | `{}` |\n",
+            markdown_cell(&task.task_title),
+            task.mean_score_1000,
+            task.success_rate * 100.0,
+            task.scored_trials,
+            task.observed_trials,
+            task.campaign_id,
+            task.campaign_receipt_sha256,
+        ));
+    }
+    markdown.push_str("\n## Interpretation boundary\n\n");
+    markdown.push_str(
+        "This export reports one verified empirical cohort. It does not convert structural shortcut controls into empirical model baselines, and it does not declare a universal winner. Re-run provenance validation from the referenced Suite Report and campaign receipts before making derivative claims.\n",
+    );
+    markdown
+}
+
+#[tauri::command]
+fn export_benchmark_suite_public_result(
+    state: State<'_, EmulatorState>,
+    suite_id: String,
+    report_id: u64,
+) -> Result<PublicSuiteResultArtifact, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let suite_id = suite_id.trim();
+    let (report_path, report) =
+        load_benchmark_suite_report_receipt(session, suite_id, report_id)?;
+    validate_suite_report_provenance(session, &report)?;
+
+    let receipt = public_suite_result_receipt(suite_id, &report_path, &report)?;
+    let report_dir = suite_report_dir_for(session, suite_id)?;
+    let public_dir = report_dir.join("public");
+    fs::create_dir_all(&public_dir)
+        .map_err(|error| format!("cannot create public result directory {}: {error}", public_dir.display()))?;
+
+    let stem = format!("suite-report-{report_id:06}-public");
+    let json_path = public_dir.join(format!("{stem}.json"));
+    let markdown_path = public_dir.join(format!("{stem}.md"));
+
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("serialize public suite result: {error}"))?;
+    write_atomic(&json_path, &json)?;
+    let json_sha256 = sha256_file(&json_path)?;
+
+    let markdown = render_public_suite_result_markdown(&receipt, &json_sha256);
+    write_atomic(&markdown_path, markdown.as_bytes())?;
+    let markdown_sha256 = sha256_file(&markdown_path)?;
+
+    Ok(PublicSuiteResultArtifact {
+        json_path: json_path.to_string_lossy().to_string(),
+        markdown_path: markdown_path.to_string_lossy().to_string(),
+        json_sha256,
+        markdown_sha256,
+        receipt,
+    })
+}
+
 #[tauri::command]
 fn compare_benchmark_suite_reports(
     state: State<'_, EmulatorState>,
@@ -5178,6 +5416,7 @@ pub fn run() {
             list_benchmark_suite_report_candidates,
             build_benchmark_suite_report,
             list_benchmark_suite_reports,
+            export_benchmark_suite_public_result,
             compare_benchmark_suite_reports,
             compare_benchmark_campaigns,
             cancel_benchmark_campaign,
@@ -5273,6 +5512,112 @@ mod tests {
         );
         assert!(!receipt.binary_evidence_bound);
         assert!(!receipt.authority_granted);
+    }
+
+    #[test]
+    fn public_suite_markdown_preserves_provenance_and_boundaries() {
+        let receipt = PublicSuiteResultReceipt {
+            schema: PUBLIC_SUITE_RESULT_SCHEMA.into(),
+            record_status: "VERIFIED_EXPORT".into(),
+            suite_id: "suite-v13".into(),
+            suite_version: 13,
+            suite_title: "Benchmark Suite v13".into(),
+            report_id: 7,
+            suite_report_sha256: "a".repeat(64),
+            cohort_id: "cohort-a".into(),
+            provider: "ollama".into(),
+            model: "vision|model".into(),
+            model_digest: "b".repeat(64),
+            model_qualification_sha256: "c".repeat(64),
+            core_sha256: "d".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            trials_per_task: 5,
+            total_scored_trials: 5,
+            total_scoring_error_trials: 0,
+            stats: BenchmarkSuiteAggregateStats {
+                task_count: 1,
+                total_observed_trials: 5,
+                total_successful_trials: 4,
+                overall_success_rate: 0.8,
+                macro_mean_score_1000: 850.0,
+                min_task_mean_score_1000: 850.0,
+                max_task_mean_score_1000: 850.0,
+                population_stddev_task_mean_score_1000: 0.0,
+            },
+            tasks: vec![PublicSuiteTaskResult {
+                task_id: "task-a".into(),
+                task_title: "Task | A".into(),
+                campaign_id: 3,
+                campaign_receipt_sha256: "e".repeat(64),
+                observed_trials: 5,
+                scored_trials: 5,
+                scoring_error_trials: 0,
+                successful_trials: 4,
+                success_rate: 0.8,
+                mean_score_1000: 850.0,
+            }],
+        };
+
+        let markdown = render_public_suite_result_markdown(&receipt, &"f".repeat(64));
+        assert!(markdown.contains("850.0 / 1000"));
+        assert!(markdown.contains("80.0%"));
+        assert!(markdown.contains(&"a".repeat(64)));
+        assert!(markdown.contains(&"f".repeat(64)));
+        assert!(markdown.contains("Task \\| A"));
+        assert!(markdown.contains("does not declare a universal winner"));
+    }
+
+    #[test]
+    fn public_suite_markdown_is_deterministic() {
+        let receipt = PublicSuiteResultReceipt {
+            schema: PUBLIC_SUITE_RESULT_SCHEMA.into(),
+            record_status: "VERIFIED_EXPORT".into(),
+            suite_id: "suite-v1".into(),
+            suite_version: 1,
+            suite_title: "Benchmark Suite v1".into(),
+            report_id: 1,
+            suite_report_sha256: "1".repeat(64),
+            cohort_id: "cohort".into(),
+            provider: "ollama".into(),
+            model: "model".into(),
+            model_digest: "2".repeat(64),
+            model_qualification_sha256: "3".repeat(64),
+            core_sha256: "4".repeat(64),
+            core_name: "SameBoy".into(),
+            core_version: "1.0.3".into(),
+            policy: AutodrivePolicy::default(),
+            trials_per_task: 3,
+            total_scored_trials: 3,
+            total_scoring_error_trials: 0,
+            stats: BenchmarkSuiteAggregateStats {
+                task_count: 1,
+                total_observed_trials: 3,
+                total_successful_trials: 1,
+                overall_success_rate: 1.0 / 3.0,
+                macro_mean_score_1000: 500.0,
+                min_task_mean_score_1000: 500.0,
+                max_task_mean_score_1000: 500.0,
+                population_stddev_task_mean_score_1000: 0.0,
+            },
+            tasks: vec![PublicSuiteTaskResult {
+                task_id: "task".into(),
+                task_title: "Task".into(),
+                campaign_id: 1,
+                campaign_receipt_sha256: "5".repeat(64),
+                observed_trials: 3,
+                scored_trials: 3,
+                scoring_error_trials: 0,
+                successful_trials: 1,
+                success_rate: 1.0 / 3.0,
+                mean_score_1000: 500.0,
+            }],
+        };
+
+        let first = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
+        let second = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
+        assert_eq!(first, second);
     }
 
     #[test]
