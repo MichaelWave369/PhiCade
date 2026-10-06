@@ -38,9 +38,13 @@ The manifest records:
 - Suite Report ID;
 - Suite Report SHA-256;
 - exact model digest;
-- every bundled relative path;
-- SHA-256 of every bundled evidence/public-result file;
-- byte size of every bundled evidence/public-result file.
+- every payload relative path;
+- SHA-256 of every bundled evidence/public-result payload file;
+- byte size of every bundled evidence/public-result payload file.
+
+`manifest.json` itself is intentionally not self-hashed inside its own
+`files` array. The completed ZIP receives a separate SHA-256 returned by the
+desktop export command.
 
 ## Layout
 
