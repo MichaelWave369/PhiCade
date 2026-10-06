@@ -23,18 +23,7 @@ fi
 make -C "${SOURCE}/backends/platform/libretro" \
   noengine \
   -j2 \
-  FORCE_OPENGLNONE=1 \
-  USE_HIGHRES=0 \
-  USE_FLUIDSYNTH=0 \
-  USE_MT32EMU=0 \
-  USE_SID_AUDIO=0 \
-  USE_VORBIS=0 \
-  USE_THEORADEC=0 \
-  USE_IMGUI=0 \
-  USE_MPEG2=0 \
-  USE_GIF=0 \
-  USE_VPX=0 \
-  USE_MPCDEC=0
+  FORCE_OPENGLNONE=1
 
 if [[ ! -f "${CORE}" ]]; then
   echo "ScummVM libretro core not produced at ${CORE}" >&2
