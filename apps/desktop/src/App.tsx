@@ -836,6 +836,7 @@ export function App() {
       setLastSuiteReport(artifact);
       setPublicResultReportId(artifact.receipt.reportId);
       setLastPublicSuiteResult(null);
+      setLastPortableBundle(null);
       const stats = artifact.receipt.stats;
       setNotice(
         `${artifact.receipt.suiteId.toUpperCase()} // REPORT #${artifact.receipt.reportId} // MACRO μ ${stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(stats.overallSuccessRate * 100).toFixed(1)}% // ${stats.taskCount} TASKS`,
@@ -1884,6 +1885,7 @@ export function App() {
               onChange={(event) => {
                 setPublicResultReportId(event.target.value ? Number(event.target.value) : null);
                 setLastPublicSuiteResult(null);
+                setLastPortableBundle(null);
               }}
               disabled={suiteReportLedger.length === 0 || publicResultBusy || autodrive?.active}
               aria-label="Public Suite Result report"
