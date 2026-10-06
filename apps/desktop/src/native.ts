@@ -572,6 +572,51 @@ export interface BenchmarkSuiteReportArtifact {
   receipt: BenchmarkSuiteReportReceipt;
 }
 
+export interface PublicSuiteTaskResult {
+  taskId: string;
+  taskTitle: string;
+  campaignId: number;
+  campaignReceiptSha256: string;
+  observedTrials: number;
+  scoredTrials: number;
+  scoringErrorTrials: number;
+  successfulTrials: number;
+  successRate: number;
+  meanScore1000: number;
+}
+
+export interface PublicSuiteResultReceipt {
+  schema: string;
+  recordStatus: "VERIFIED_EXPORT";
+  suiteId: string;
+  suiteVersion: number;
+  suiteTitle: string;
+  reportId: number;
+  suiteReportSha256: string;
+  cohortId: string;
+  provider: string;
+  model: string;
+  modelDigest: string;
+  modelQualificationSha256: string;
+  coreSha256: string;
+  coreName: string;
+  coreVersion: string;
+  policy: AutodrivePolicy;
+  trialsPerTask: number;
+  totalScoredTrials: number;
+  totalScoringErrorTrials: number;
+  stats: BenchmarkSuiteAggregateStats;
+  tasks: PublicSuiteTaskResult[];
+}
+
+export interface PublicSuiteResultArtifact {
+  jsonPath: string;
+  markdownPath: string;
+  jsonSha256: string;
+  markdownSha256: string;
+  receipt: PublicSuiteResultReceipt;
+}
+
 export interface SuiteCandidateTask {
   taskId: string;
   taskTitle: string;
@@ -1112,6 +1157,16 @@ export async function buildBenchmarkSuiteReport(
 
 export async function listBenchmarkSuiteReports(): Promise<BenchmarkSuiteReportListEntry[]> {
   return invoke<BenchmarkSuiteReportListEntry[]>("list_benchmark_suite_reports");
+}
+
+export async function exportBenchmarkSuitePublicResult(
+  suiteId: string,
+  reportId: number,
+): Promise<PublicSuiteResultArtifact> {
+  return invoke<PublicSuiteResultArtifact>("export_benchmark_suite_public_result", {
+    suiteId,
+    reportId,
+  });
 }
 
 export async function compareBenchmarkSuiteReports(
