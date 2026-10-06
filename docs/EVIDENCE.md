@@ -180,6 +180,33 @@ The benchmark stack adds:
 
 Suite v13 contains 77 frozen tasks. See `BENCHMARKS.md`.
 
+## Evidence closure
+
+Suite-level claims now close transitively through the benchmark evidence graph.
+
+Before Public Suite Result export or Suite Report comparison, PhiCade re-opens
+and verifies:
+
+```text
+Suite Report
+  -> Campaign receipt
+  -> Model gameplay receipt
+  -> Autodrive receipt
+
+Suite Report / Campaign
+  -> exact model qualification receipt
+```
+
+Hash equality is necessary but not sufficient. Parsed child receipts must also
+match the parent evidence on task identity, model/digest, core identity, policy,
+score/success, stop reason, and the relevant run IDs.
+
+Model qualification receipts are now archived by immutable receipt SHA-256 so a
+later re-qualification of the same model digest cannot silently replace the
+bytes pinned by older benchmark evidence.
+
+See `EVIDENCE_CLOSURE.md`.
+
 ## Comparison semantics
 
 Comparison Lab remains like-for-like at the task level.
