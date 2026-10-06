@@ -178,6 +178,69 @@ button:disabled {
   line-height: 1.5;
 }
 
+.runtime-manager {
+  margin-top: 8px;
+}
+
+.runtime-manager-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.runtime-manager-heading strong {
+  color: var(--green);
+  font-size: 10px;
+}
+
+.runtime-list {
+  margin-top: 8px;
+  max-height: 210px;
+  overflow: auto;
+  border-top: 1px dotted #1e2c23;
+}
+
+.runtime-row {
+  display: grid;
+  gap: 3px;
+  padding: 8px 0;
+  border-bottom: 1px dotted #1e2c23;
+  min-width: 0;
+}
+
+.runtime-row-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.runtime-row-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.runtime-row-main span,
+.runtime-row small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.runtime-row-main span {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+
 .game-list {
   margin-top: 12px;
   max-height: 390px;
