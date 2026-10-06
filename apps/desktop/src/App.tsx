@@ -20,6 +20,7 @@ import {
   compareBenchmarkSuiteReports,
   continueBenchmarkCampaign,
   exportBenchmarkSuitePublicResult,
+  exportPortableEvidenceBundle,
   buildBenchmarkSuiteReport,
   failAutodriveProvider,
   flushGameSave,
@@ -83,6 +84,7 @@ import {
   type ModelBenchmarkArtifact,
   type OllamaModel,
   type OllamaQualificationStatus,
+  type PortableEvidenceBundleArtifact,
   type PublicSuiteResultArtifact,
   type ReplayArtifact,
   type RomEntry,
@@ -174,6 +176,8 @@ export function App() {
   const [publicResultReportId, setPublicResultReportId] = useState<number | null>(null);
   const [publicResultBusy, setPublicResultBusy] = useState(false);
   const [lastPublicSuiteResult, setLastPublicSuiteResult] = useState<PublicSuiteResultArtifact | null>(null);
+  const [portableBundleBusy, setPortableBundleBusy] = useState(false);
+  const [lastPortableBundle, setLastPortableBundle] = useState<PortableEvidenceBundleArtifact | null>(null);
   const [scanning, setScanning] = useState(false);
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
@@ -728,6 +732,7 @@ export function App() {
     setLastSuiteComparison(null);
     setPublicResultReportId(null);
     setLastPublicSuiteResult(null);
+    setLastPortableBundle(null);
     await Promise.all([
       refreshSuiteReportCandidates(suiteId),
       refreshSuiteReportLedger(suiteId),
@@ -747,6 +752,7 @@ export function App() {
         publicResultReportId,
       );
       setLastPublicSuiteResult(artifact);
+      setLastPortableBundle(null);
       setNotice(
         `PUBLIC RESULT VERIFIED // ${artifact.receipt.suiteId.toUpperCase()} #${artifact.receipt.reportId} // MACRO μ ${artifact.receipt.stats.macroMeanScore1000.toFixed(1)} // SUCCESS ${(artifact.receipt.stats.overallSuccessRate * 100).toFixed(1)}% // JSON ${artifact.jsonSha256.slice(0, 12)}…`,
       );
@@ -755,6 +761,30 @@ export function App() {
       setNotice(`PUBLIC RESULT EXPORT REFUSED // ${String(error)}`);
     } finally {
       setPublicResultBusy(false);
+    }
+  };
+
+  const exportSelectedPortableBundle = async () => {
+    if (!selectedSuiteId || publicResultReportId === null) {
+      setNotice("PORTABLE EVIDENCE EXPORT REQUIRES A SELECTED SUITE REPORT");
+      return;
+    }
+
+    setPortableBundleBusy(true);
+    try {
+      const artifact = await exportPortableEvidenceBundle(
+        selectedSuiteId,
+        publicResultReportId,
+      );
+      setLastPortableBundle(artifact);
+      setNotice(
+        `PORTABLE EVIDENCE VERIFIED // ${artifact.manifest.suiteId.toUpperCase()} #${artifact.manifest.reportId} // ${artifact.manifest.files.length} FILES // ZIP ${artifact.bundleSha256.slice(0, 12)}…`,
+      );
+    } catch (error) {
+      setLastPortableBundle(null);
+      setNotice(`PORTABLE EVIDENCE EXPORT REFUSED // ${String(error)}`);
+    } finally {
+      setPortableBundleBusy(false);
     }
   };
 
@@ -1625,7 +1655,7 @@ export function App() {
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
                   <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : selectedRuntime ? `RUNTIME // ${selectedRuntime.core.libraryName} ${selectedRuntime.core.libraryVersion}` : "SELECT CARTRIDGE OR RUNTIME"}</p>
-                  <small>RUNG 42 // EVIDENCE CLOSURE ONLINE</small>
+                  <small>RUNG 43 // PORTABLE EVIDENCE BUNDLE ONLINE</small>
                 </div>
               )}
             </div>
@@ -1869,6 +1899,7 @@ export function App() {
               onClick={() => void exportSelectedPublicSuiteResult()}
               disabled={
                 publicResultBusy
+                || portableBundleBusy
                 || publicResultReportId === null
                 || autodrive?.active
                 || campaignStatus?.active
@@ -1876,10 +1907,24 @@ export function App() {
             >
               {publicResultBusy ? "REVERIFYING..." : "EXPORT JSON + MD"}
             </button>
+            <button
+              onClick={() => void exportSelectedPortableBundle()}
+              disabled={
+                portableBundleBusy
+                || publicResultBusy
+                || publicResultReportId === null
+                || autodrive?.active
+                || campaignStatus?.active
+              }
+            >
+              {portableBundleBusy ? "PACKING..." : "EXPORT EVIDENCE ZIP"}
+            </button>
             <small>
-              {lastPublicSuiteResult
-                ? `V${lastPublicSuiteResult.receipt.suiteVersion} #${lastPublicSuiteResult.receipt.reportId} // JSON ${lastPublicSuiteResult.jsonSha256.slice(0, 12)}… // MD ${lastPublicSuiteResult.markdownSha256.slice(0, 12)}… // ${lastPublicSuiteResult.markdownPath}`
-                : "REVALIDATES SUITE REPORT + UNDERLYING CAMPAIGNS BEFORE EXPORT"}
+              {lastPortableBundle
+                ? `ZIP ${lastPortableBundle.bundleSha256.slice(0, 12)}… // ${lastPortableBundle.manifest.files.length} FILES // ${lastPortableBundle.bundlePath}`
+                : lastPublicSuiteResult
+                  ? `V${lastPublicSuiteResult.receipt.suiteVersion} #${lastPublicSuiteResult.receipt.reportId} // JSON ${lastPublicSuiteResult.jsonSha256.slice(0, 12)}… // MD ${lastPublicSuiteResult.markdownSha256.slice(0, 12)}… // ${lastPublicSuiteResult.markdownPath}`
+                  : "FULL CLOSURE BEFORE JSON/MD OR PORTABLE ZIP EXPORT"}
             </small>
           </div>
           <div className="comparison-strip">
@@ -2003,7 +2048,7 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 42</div>
+          <div className="panel-title">RUNTIME // RUNG 43</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
