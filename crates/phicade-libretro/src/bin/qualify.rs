@@ -83,13 +83,13 @@ fn run() -> Result<(), String> {
     let mut core = LibretroCore::open(&core_path, &system_dir, &save_dir)
         .map_err(|error| format!("open core: {error:?}"))?;
     let identity = core.identity().clone();
-    let capability_manifest = core.capability_manifest();
     if !identity.library_name.to_ascii_lowercase().contains("sameboy") {
         return Err(format!("expected SameBoy core, got {} {}", identity.library_name, identity.library_version));
     }
 
     let image = GameImage::new(&rom_path, SystemId::GameBoy, "dmg-acid2");
     core.load_game(&image).map_err(|error| format!("load fixture: {error:?}"))?;
+    let capability_manifest = core.capability_manifest();
 
     let mut frame = FrameBuffer::default();
     let mut audio = AudioBuffer::default();
