@@ -62,6 +62,24 @@ The `EmulatorCore` trait itself guarantees only:
 
 All stronger claims default to `UNSUPPORTED`. Adapters must opt in explicitly.
 
+## Generic libretro probing
+
+For unqualified libretro cores, PhiCade does not infer optional capabilities
+from ABI symbol presence alone.
+
+After content is loaded:
+
+- a non-zero `retro_serialize_size()` promotes `stateSnapshots` to SUPPORTED;
+- non-zero libretro save RAM promotes `persistentSaveData` to SUPPORTED;
+- `exactReplay` remains UNSUPPORTED unless a separate qualification profile
+  proves it.
+
+Before those behaviors are observed, the optional capability remains
+UNSUPPORTED.
+
+This distinction is important for cores that implement the standard entry
+points but intentionally return no serializable state.
+
 ## SameBoy / libretro profile
 
 The current pinned SameBoy 1.0.3 profile declares:
