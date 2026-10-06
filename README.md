@@ -161,8 +161,9 @@ See [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 PhiCade can turn a verified Suite Report into a deterministic **Public Suite
 Result v1**.
 
-The desktop **PUBLIC RESULT** lane revalidates the selected Suite Report and all
-referenced campaigns, then exports both JSON and Markdown containing:
+The desktop **PUBLIC RESULT** lane revalidates the selected Suite Report through
+its campaigns, model-gameplay receipts, Autodrive receipts, and exact
+model-qualification receipt, then exports both JSON and Markdown containing:
 
 - model name and exact digest;
 - model qualification SHA-256;
@@ -232,8 +233,9 @@ PhiCade's evidence stack includes:
 - session-scoped operator approval;
 - deterministic Replay v1 where supported;
 - governed Phi-Bot / Agent Driver control;
-- exact model digest qualification;
+- exact model digest qualification with immutable receipt-SHA archival;
 - bounded Autodrive receipts;
+- transitive evidence closure from Suite Report through trial/Autodrive evidence;
 - source-first benchmark task hashes;
 - negative and shortcut controls;
 - repeated task campaigns;
@@ -245,7 +247,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 41 — Public Suite Results v1**
+**Rung 42 — Evidence Closure v1**
 
 The current desktop can:
 
@@ -257,8 +259,8 @@ The current desktop can:
 6. explicitly approve one session;
 7. launch FILE content or a supported no-content launcher;
 8. expose only the replay/state/save controls supported by that runtime;
-9. revalidate an existing Suite Report and export deterministic public JSON +
-   Markdown with evidence hashes.
+9. close an existing Suite Report through campaign, trial, Autodrive, and exact
+   model-qualification evidence before comparison or deterministic public export.
 
 ## Documentation
 
@@ -266,6 +268,7 @@ Start here:
 
 - [Benchmarks](docs/BENCHMARKS.md)
 - [Evidence and qualification](docs/EVIDENCE.md)
+- [Evidence Closure](docs/EVIDENCE_CLOSURE.md)
 - [Public Suite Results](docs/PUBLIC_RESULTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
