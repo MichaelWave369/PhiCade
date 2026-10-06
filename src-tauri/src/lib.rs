@@ -1942,6 +1942,8 @@ fn start_emulation(
 
     core.load_game(&GameImage::new(&game, system, display_name))
         .map_err(|error| format!("cannot load game image: {error:?}"))?;
+    let capability_manifest = core.capability_manifest();
+    let runtime_features = runtime_session_features(&capability_manifest);
 
     let paths = session_paths(&root, &game_key, &identity)?;
     restore_save_ram(&mut core, &paths.save_ram)?;
@@ -1953,6 +1955,15 @@ fn start_emulation(
         game_key: game_key.clone(),
         core_path: core_file.to_string_lossy().to_string(),
         core: identity,
+        capability_manifest,
+        runtime_features: runtime_features.clone(),
+        route_evidence: SessionRouteEvidence {
+            route: "legacy-direct-sameboy".into(),
+            registered_core_sha256: None,
+            registration_binary_evidence_bound: false,
+            registration_authority_granted: false,
+            session_operator_approved: true,
+        },
         profile: profile.clone(),
         benchmark_task: benchmark_task_by_rom_sha256(&game_key).map(benchmark_task_info),
     };
@@ -1968,6 +1979,7 @@ fn start_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        runtime_features: runtime_features.clone(),
         game_path: info.game_path.clone(),
         game_key,
         profile,
@@ -1998,9 +2010,11 @@ fn start_emulation(
         next_campaign_comparison_id,
     };
 
-    push_rewind_snapshot(&mut emulator_session)?;
-    emulator_session.next_rewind_frame =
-        u64::from(emulator_session.profile.rewind_interval_frames);
+    if emulator_session.runtime_features.state_snapshots {
+        push_rewind_snapshot(&mut emulator_session)?;
+        emulator_session.next_rewind_frame =
+            u64::from(emulator_session.profile.rewind_interval_frames);
+    }
 
     let mut session = state
         .session
