@@ -6141,6 +6141,135 @@ mod tests {
         let _ = fs::remove_dir_all(directory);
     }
 
+    fn evidence_closure_test_benchmark(
+        campaign: &BenchmarkCampaignReceipt,
+        trial: &CampaignTrialEvidence,
+    ) -> ModelGameplayBenchmarkReceipt {
+        ModelGameplayBenchmarkReceipt {
+            schema: MODEL_GAMEPLAY_BENCHMARK_SCHEMA.into(),
+            record_status: trial.record_status.clone(),
+            benchmark_id: campaign.benchmark_id.clone(),
+            benchmark_run_id: trial.benchmark_run_id,
+            provider: campaign.provider.clone(),
+            model: campaign.model.clone(),
+            model_digest: campaign.model_digest.clone(),
+            model_qualification_sha256: campaign.model_qualification_sha256.clone(),
+            gym_source_sha256: campaign.gym_source_sha256.clone(),
+            gym_rom_sha256: campaign.gym_rom_sha256.clone(),
+            core_sha256: campaign.core_sha256.clone(),
+            core_name: campaign.core_name.clone(),
+            core_version: campaign.core_version.clone(),
+            autodrive_receipt_sha256: "f".repeat(64),
+            autodrive_run_id: 91,
+            policy: campaign.policy.clone(),
+            stop_reason: trial.stop_reason,
+            started_frame: 100,
+            ended_frame: 200,
+            start_player: PixelPoint { x: 16, y: 24 },
+            final_player: Some(PixelPoint { x: 24, y: 24 }),
+            target: PixelPoint { x: 136, y: 112 },
+            initial_distance: 208,
+            final_distance: Some(200),
+            progress: Some(8),
+            score_1000: trial.score_1000,
+            task_success: trial.task_success,
+            turns_issued: 4,
+            turns_completed: 4,
+            total_actions: 8,
+            final_frame_sha256: "9".repeat(64),
+            scoring_error: None,
+        }
+    }
+
+    fn evidence_closure_test_autodrive(
+        campaign: &BenchmarkCampaignReceipt,
+        benchmark: &ModelGameplayBenchmarkReceipt,
+    ) -> AutodriveReceipt {
+        AutodriveReceipt {
+            schema: AUTODRIVE_RECEIPT_SCHEMA.into(),
+            run_id: benchmark.autodrive_run_id,
+            provider: benchmark.provider.clone(),
+            model: format!("{}@{}", benchmark.model, benchmark.model_digest),
+            game_sha256: benchmark.gym_rom_sha256.clone(),
+            core_name: benchmark.core_name.clone(),
+            core_version: benchmark.core_version.clone(),
+            started_frame: benchmark.started_frame,
+            ended_frame: benchmark.ended_frame,
+            turns_issued: benchmark.turns_issued,
+            turns_completed: benchmark.turns_completed,
+            total_actions: benchmark.total_actions,
+            total_scheduled_cadence_wait_frames: 0,
+            max_scheduled_cadence_wait_frames: 0,
+            last_observation_frame: Some(benchmark.ended_frame),
+            stop_reason: benchmark.stop_reason,
+            final_frame_sha256: benchmark.final_frame_sha256.clone(),
+            initial_memory_sha256: "1".repeat(64),
+            final_memory_sha256: "2".repeat(64),
+            final_memory_content: String::new(),
+            final_memory_bytes: 0,
+            memory_revision: 0,
+            memory_updates: 0,
+            memory_bytes_written: 0,
+            memory_refusals: 0,
+            policy: campaign.policy.clone(),
+        }
+    }
+
+    #[test]
+    fn evidence_closure_rejects_model_benchmark_semantic_drift() {
+        let campaign = comparison_test_campaign(1, "model-a", "digest-a");
+        let trial = &campaign.trials[0];
+        let receipt = evidence_closure_test_benchmark(&campaign, trial);
+        validate_model_gameplay_receipt_against_campaign(&campaign, trial, &receipt)
+            .expect("matching benchmark evidence");
+
+        let mut drifted = receipt.clone();
+        drifted.model_digest = "other-digest".into();
+        assert!(
+            validate_model_gameplay_receipt_against_campaign(&campaign, trial, &drifted)
+                .is_err()
+        );
+
+        let mut drifted_score = receipt;
+        drifted_score.score_1000 = Some(1);
+        assert!(
+            validate_model_gameplay_receipt_against_campaign(
+                &campaign,
+                trial,
+                &drifted_score,
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn evidence_closure_rejects_autodrive_semantic_drift() {
+        let campaign = comparison_test_campaign(1, "model-a", "digest-a");
+        let trial = &campaign.trials[0];
+        let benchmark = evidence_closure_test_benchmark(&campaign, trial);
+        let receipt = evidence_closure_test_autodrive(&campaign, &benchmark);
+        validate_autodrive_receipt_against_benchmark(&campaign, &benchmark, &receipt)
+            .expect("matching Autodrive evidence");
+
+        let mut drifted = receipt.clone();
+        drifted.game_sha256 = "wrong-game".into();
+        assert!(
+            validate_autodrive_receipt_against_benchmark(&campaign, &benchmark, &drifted)
+                .is_err()
+        );
+
+        let mut drifted_model = receipt;
+        drifted_model.model = "model-a@wrong-digest".into();
+        assert!(
+            validate_autodrive_receipt_against_benchmark(
+                &campaign,
+                &benchmark,
+                &drifted_model,
+            )
+            .is_err()
+        );
+    }
+
     #[test]
     fn comparison_trial_hash_verifier_detects_mutation() {
         let directory = comparison_test_dir("comparison-hash");
