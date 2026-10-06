@@ -129,15 +129,19 @@ See:
 
 ## Empirical results
 
-PhiCade supports persistent model benchmark campaigns and suite reports, but
-this repository does **not currently freeze a public Suite v13 model result as
-a canonical README result**.
+PhiCade supports persistent model benchmark campaigns, Suite Reports, and
+**Public Suite Results v1**.
 
-That is intentional. A public result should name the exact model, digest,
-qualification receipt, suite version, policy, trial count, and evidence ID.
+A verified Suite Report can be selected in the desktop **PUBLIC RESULT** lane.
+PhiCade then revalidates the report and every referenced campaign before
+exporting deterministic JSON and Markdown with model/core digests, qualification
+hashes, aggregate statistics, per-task results, and campaign receipt hashes.
 
-Until such a cohort is committed, the project publishes the benchmark design,
-qualification controls, and reporting machinery without inventing a leaderboard.
+The repository does **not currently freeze a canonical Suite v13 local-model
+result**. The exporter exists so that the first published result can come from
+verified evidence instead of a manually copied table.
+
+See `PUBLIC_RESULTS.md`.
 
 ## Deep benchmark documentation
 
