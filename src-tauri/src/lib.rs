@@ -2058,16 +2058,14 @@ fn process_session_actions(
 ) -> Result<(), String> {
     for envelope in actions {
         match &envelope.action {
-            ActionKind::System {
-                command: SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind,
-                ..
-            } if !session.runtime_features.state_snapshots => {
+            ActionKind::System { command, .. }
+                if matches!(
+                    command,
+                    SystemCommand::SaveState | SystemCommand::LoadState | SystemCommand::Rewind
+                ) && !session.runtime_features.state_snapshots =>
+            {
                 return Err(format!(
-                    "{:?} is unavailable: the active runtime does not support state snapshots",
-                    match &envelope.action {
-                        ActionKind::System { command, .. } => command,
-                        _ => unreachable!(),
-                    }
+                    "{command:?} is unavailable: the active runtime does not support state snapshots"
                 ));
             }
             ActionKind::System {
