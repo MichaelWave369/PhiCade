@@ -8,8 +8,8 @@ use phicade_runtime::{
     BenchmarkTrialOutcome, CampaignComparisonStats, ControlMode, EmulatorCore, FrameBuffer,
     GameImage,
     PhiBotObservation, PixelPoint, ReplayCheckpoint, ReplayLedger, ReplayReceipt,
-    ReplayVerification, ReplayVerificationResult, SuiteTaskAggregateInput, SystemCommand,
-    SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suite_v9_tasks, benchmark_suite_v10_tasks, benchmark_suite_v11_tasks, benchmark_suite_v12_tasks, benchmark_suite_v13_tasks, benchmark_suites,
+    ReplayVerification, ReplayVerificationResult, RuntimeCapabilityManifest,
+    SuiteTaskAggregateInput, SystemCommand, SystemId, benchmark_suite_by_id, benchmark_suite_v1_tasks, benchmark_suite_v3_tasks, benchmark_suite_v4_tasks, benchmark_suite_v5_tasks, benchmark_suite_v6_tasks, benchmark_suite_v7_tasks, benchmark_suite_v8_tasks, benchmark_suite_v9_tasks, benchmark_suite_v10_tasks, benchmark_suite_v11_tasks, benchmark_suite_v12_tasks, benchmark_suite_v13_tasks, benchmark_suites,
     benchmark_suites_for_task, benchmark_task_by_id, benchmark_task_by_rom_sha256,
     compare_benchmark_suites,
     compare_campaign_samples, score_benchmark_task_frame,
@@ -51,6 +51,7 @@ const MIN_CAMPAIGN_TRIALS: u16 = 3;
 const MAX_CAMPAIGN_TRIALS: u16 = 20;
 const MANUAL_AGENT_MEMORY_MAX_BYTES: u32 = 4_096;
 const MANUAL_AGENT_MEMORY_UPDATE_MAX_BYTES: u32 = 1_024;
+const RUNTIME_REGISTRATION_SCHEMA: &str = "phicade.runtime-registration.v1";
 
 #[derive(Default)]
 struct EmulatorState {
@@ -674,6 +675,20 @@ struct SessionInfo {
     benchmark_task: Option<BenchmarkTaskInfo>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RuntimeRegistrationReceipt {
+    schema: String,
+    record_status: String,
+    core_path: String,
+    core_sha256: String,
+    core: CoreIdentity,
+    capability_manifest: RuntimeCapabilityManifest,
+    qualification_profile_id: Option<String>,
+    binary_evidence_bound: bool,
+    authority_granted: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FramePacket {
@@ -951,6 +966,116 @@ fn scan_rom_directory(path: String) -> Result<Vec<RomEntry>, String> {
 fn validate_action_envelope(envelope: ActionEnvelope) -> Result<ActionEnvelope, String> {
     envelope.validate()?;
     Ok(envelope)
+}
+
+fn runtime_registry_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("cannot resolve app data directory: {error}"))?;
+    let registry = root.join("runtime-registry");
+    fs::create_dir_all(&registry)
+        .map_err(|error| format!("cannot create {}: {error}", registry.display()))?;
+    Ok(registry)
+}
+
+fn runtime_registration_receipt(
+    core_path: &Path,
+    core_sha256: String,
+    core: CoreIdentity,
+    capability_manifest: RuntimeCapabilityManifest,
+) -> RuntimeRegistrationReceipt {
+    let qualification_profile_id = capability_manifest
+        .qualification_profile
+        .as_ref()
+        .map(|profile| profile.profile_id.clone());
+
+    RuntimeRegistrationReceipt {
+        schema: RUNTIME_REGISTRATION_SCHEMA.into(),
+        record_status: "REGISTERED".into(),
+        core_path: core_path.to_string_lossy().to_string(),
+        core_sha256,
+        core,
+        capability_manifest,
+        qualification_profile_id,
+        binary_evidence_bound: false,
+        authority_granted: false,
+    }
+}
+
+#[tauri::command]
+fn register_runtime_core(
+    app: AppHandle,
+    core_path: String,
+) -> Result<RuntimeRegistrationReceipt, String> {
+    let core_file = PathBuf::from(&core_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve selected core: {error}"))?;
+    if !core_file.is_file() {
+        return Err("selected runtime core is not a file".into());
+    }
+
+    let core_sha256 = sha256_file(&core_file)?;
+    let (_, system_dir, save_dir) = app_runtime_dirs(&app)?;
+    let core = LibretroCore::open(&core_file, &system_dir, &save_dir)
+        .map_err(|error| format!("cannot inspect libretro core: {error:?}"))?;
+    let identity = core.identity().clone();
+    let capability_manifest = core.capability_manifest();
+    drop(core);
+
+    let receipt = runtime_registration_receipt(
+        &core_file,
+        core_sha256.clone(),
+        identity,
+        capability_manifest,
+    );
+
+    let registry = runtime_registry_dir(&app)?;
+    let path = registry.join(format!("{core_sha256}.json"));
+    let json = serde_json::to_vec_pretty(&receipt)
+        .map_err(|error| format!("cannot serialize runtime registration: {error}"))?;
+    write_atomic(&path, &json)?;
+
+    Ok(receipt)
+}
+
+#[tauri::command]
+fn list_runtime_registrations(
+    app: AppHandle,
+) -> Result<Vec<RuntimeRegistrationReceipt>, String> {
+    let registry = runtime_registry_dir(&app)?;
+    let mut receipts = Vec::new();
+
+    for entry in fs::read_dir(&registry)
+        .map_err(|error| format!("cannot list {}: {error}", registry.display()))?
+    {
+        let entry = entry.map_err(|error| format!("cannot read runtime registry entry: {error}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        let receipt = serde_json::from_slice::<RuntimeRegistrationReceipt>(&bytes)
+            .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+        if receipt.schema != RUNTIME_REGISTRATION_SCHEMA {
+            return Err(format!(
+                "unsupported runtime registration schema in {}: {}",
+                path.display(),
+                receipt.schema
+            ));
+        }
+        receipts.push(receipt);
+    }
+
+    receipts.sort_by(|left, right| {
+        left.core
+            .library_name
+            .cmp(&right.core.library_name)
+            .then_with(|| left.core.library_version.cmp(&right.core.library_version))
+            .then_with(|| left.core_sha256.cmp(&right.core_sha256))
+    });
+    Ok(receipts)
 }
 
 fn app_runtime_dirs(app: &AppHandle) -> Result<(PathBuf, PathBuf, PathBuf), String> {
@@ -4763,6 +4888,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
+            register_runtime_core,
+            list_runtime_registrations,
             scan_rom_directory,
             validate_action_envelope,
             start_emulation,
@@ -4815,6 +4942,34 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn runtime_registration_is_provenance_only_not_authority() {
+        let identity = CoreIdentity {
+            library_name: "ScummVM".into(),
+            library_version: "v2026.3.0".into(),
+            valid_extensions: "scummvm".into(),
+            need_fullpath: true,
+            fps: 60.0,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = phicade_libretro::libretro_capability_manifest(&identity, false, false);
+        let receipt = runtime_registration_receipt(
+            Path::new("/tmp/scummvm_libretro.so"),
+            "a".repeat(64),
+            identity,
+            manifest,
+        );
+
+        assert_eq!(receipt.schema, RUNTIME_REGISTRATION_SCHEMA);
+        assert_eq!(receipt.record_status, "REGISTERED");
+        assert_eq!(
+            receipt.qualification_profile_id.as_deref(),
+            Some(phicade_libretro::SCUMMVM_QUALIFICATION_PROFILE_ID)
+        );
+        assert!(!receipt.binary_evidence_bound);
+        assert!(!receipt.authority_granted);
+    }
 
     #[test]
     fn classifier_accepts_known_cartridge_formats() {
