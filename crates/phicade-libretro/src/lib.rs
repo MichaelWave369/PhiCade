@@ -1,8 +1,8 @@
 use libloading::Library;
 use phicade_runtime::{
-    ActionEnvelope, ActionKind, AudioBuffer, CapabilityStatus, CoreError, EmulatorCore,
-    FrameBuffer, GameImage, RuntimeCapabilities, RuntimeCapabilityManifest,
-    RuntimeExecutionModel, RuntimeQualificationProfile, SystemCommand, SystemId,
+    ActionEnvelope, ActionKind, AudioBuffer, CapabilityStatus, ContentDescriptor, ContentLocator,
+    CoreError, EmulatorCore, FrameBuffer, GameImage, RuntimeCapabilities,
+    RuntimeCapabilityManifest, RuntimeExecutionModel, RuntimeQualificationProfile, SystemCommand,
 };
 use serde::Serialize;
 use std::{
@@ -20,8 +20,11 @@ pub const LIBRETRO_ADAPTER_ID: &str = "phicade.libretro";
 pub const SAMEBOY_QUALIFICATION_PROFILE_ID: &str = "phicade.sameboy-1.0.3-qualified.v1";
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
+const RETRO_DEVICE_ANALOG: c_uint = 5;
 const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
+
 const B: c_uint = 0;
+const Y: c_uint = 1;
 const SELECT: c_uint = 2;
 const START: c_uint = 3;
 const UP: c_uint = 4;
@@ -29,6 +32,18 @@ const DOWN: c_uint = 5;
 const LEFT: c_uint = 6;
 const RIGHT: c_uint = 7;
 const A: c_uint = 8;
+const X: c_uint = 9;
+const L: c_uint = 10;
+const R: c_uint = 11;
+const L2: c_uint = 12;
+const R2: c_uint = 13;
+const L3: c_uint = 14;
+const R3: c_uint = 15;
+
+const ANALOG_LEFT: c_uint = 0;
+const ANALOG_RIGHT: c_uint = 1;
+const ANALOG_X: c_uint = 0;
+const ANALOG_Y: c_uint = 1;
 
 const GET_CAN_DUPE: c_uint = 3;
 const SHUTDOWN: c_uint = 7;
@@ -73,6 +88,7 @@ struct CallbackState {
     video: RawVideo,
     audio: Vec<i16>,
     input_mask: u16,
+    analog_inputs: [i16; 4],
     system_dir: CString,
     save_dir: CString,
     variables: Vec<(CString, CString)>,
@@ -86,6 +102,7 @@ impl Default for CallbackState {
             video: RawVideo::default(),
             audio: Vec::new(),
             input_mask: 0,
+            analog_inputs: [0; 4],
             system_dir: CString::new(".").unwrap(),
             save_dir: CString::new(".").unwrap(),
             variables: Vec::new(),
@@ -185,13 +202,21 @@ pub struct CoreIdentity {
     pub sample_rate_hz: u32,
 }
 
-pub fn libretro_capability_manifest(identity: &CoreIdentity) -> RuntimeCapabilityManifest {
+pub fn libretro_capability_manifest(
+    identity: &CoreIdentity,
+    state_snapshots_available: bool,
+    persistent_save_data_available: bool,
+) -> RuntimeCapabilityManifest {
     let mut capabilities = RuntimeCapabilities::core_baseline();
 
-    // The libretro adapter exposes these APIs, but generic cores are not
-    // promoted to QUALIFIED merely because the ABI symbols exist.
-    capabilities.state_snapshots = CapabilityStatus::Supported;
-    capabilities.persistent_save_data = CapabilityStatus::Supported;
+    // Generic libretro cores only receive stronger capability claims after the
+    // loaded runtime actually exposes them. ABI symbol presence is not proof.
+    if state_snapshots_available {
+        capabilities.state_snapshots = CapabilityStatus::Supported;
+    }
+    if persistent_save_data_available {
+        capabilities.persistent_save_data = CapabilityStatus::Supported;
+    }
 
     let is_pinned_sameboy_profile =
         identity.library_name.eq_ignore_ascii_case("SameBoy")
@@ -211,6 +236,7 @@ pub fn libretro_capability_manifest(identity: &CoreIdentity) -> RuntimeCapabilit
         manifest.capabilities.governed_actions = CapabilityStatus::Qualified;
         manifest.capabilities.state_snapshots = CapabilityStatus::Qualified;
         manifest.capabilities.exact_replay = CapabilityStatus::Qualified;
+        manifest.capabilities.persistent_save_data = CapabilityStatus::Supported;
         manifest = manifest.with_qualification_profile(RuntimeQualificationProfile {
             profile_id: SAMEBOY_QUALIFICATION_PROFILE_ID.into(),
             source_revision: Some(SAMEBOY_SOURCE_REVISION.into()),
@@ -288,6 +314,7 @@ impl LibretroCore {
                 state.video = RawVideo::default();
                 state.audio.clear();
                 state.input_mask = 0;
+                state.analog_inputs = [0; 4];
                 state.variables.clear();
                 state.shutdown = false;
             }
@@ -355,11 +382,22 @@ impl LibretroCore {
         }
     }
 
+    pub fn serialize_size(&self) -> usize {
+        if !self.loaded {
+            return 0;
+        }
+        unsafe { (self.serialize_size_fn)() }
+    }
+
+    pub fn supports_state_snapshots(&self) -> bool {
+        self.serialize_size() > 0
+    }
+
     pub fn serialize_state(&self) -> Result<Vec<u8>, CoreError> {
         if !self.loaded {
             return Err(CoreError::InvalidState("no game loaded".into()));
         }
-        let size = unsafe { (self.serialize_size_fn)() };
+        let size = self.serialize_size();
         if size == 0 {
             return Err(CoreError::Runtime("core reported zero-byte serialize state".into()));
         }
@@ -386,6 +424,7 @@ impl LibretroCore {
         self.input_mask = 0;
         if let Ok(mut state) = callbacks().lock() {
             state.input_mask = 0;
+            state.analog_inputs = [0; 4];
             state.audio.clear();
         }
         Ok(())
@@ -429,6 +468,50 @@ impl LibretroCore {
         Ok(())
     }
 
+    fn load_path(&mut self, path: &Path) -> Result<(), CoreError> {
+        if self.loaded {
+            unsafe { (self.unload_game)() };
+            self.loaded = false;
+        }
+
+        self.game_path = Some(path_cstring(path)?);
+        if self.identity.need_fullpath {
+            self.game_bytes.clear();
+        } else {
+            self.game_bytes = fs::read(path)
+                .map_err(|e| CoreError::Runtime(format!("cannot read {}: {e}", path.display())))?;
+        }
+
+        let info = RetroGameInfo {
+            path: self.game_path.as_ref().map_or(ptr::null(), |p| p.as_ptr()),
+            data: if self.identity.need_fullpath {
+                ptr::null()
+            } else {
+                self.game_bytes.as_ptr().cast()
+            },
+            size: if self.identity.need_fullpath { 0 } else { self.game_bytes.len() },
+            meta: ptr::null(),
+        };
+        let ok = unsafe { (self.load_game_fn)(&info) };
+        if !ok {
+            return Err(CoreError::UnsupportedImage);
+        }
+
+        self.loaded = true;
+        self.frame = 0;
+        self.input_mask = 0;
+        if let Ok(mut state) = callbacks().lock() {
+            state.input_mask = 0;
+            state.analog_inputs = [0; 4];
+            state.audio.clear();
+            state.video = RawVideo::default();
+        }
+        unsafe { (self.get_av)(&mut self.av) };
+        self.identity.fps = self.av.timing.fps;
+        self.identity.sample_rate_hz = self.av.timing.sample_rate.round().max(0.0) as u32;
+        Ok(())
+    }
+
     fn apply_actions(&mut self, actions: &[ActionEnvelope]) -> Result<(), CoreError> {
         for event in actions {
             event.validate().map_err(CoreError::InvalidState)?;
@@ -437,6 +520,13 @@ impl LibretroCore {
                     if let Some(id) = button_id(button) {
                         let bit = 1u16 << id;
                         if *pressed { self.input_mask |= bit; } else { self.input_mask &= !bit; }
+                    }
+                }
+                ActionKind::Axis { axis, value } => {
+                    if let Some(index) = analog_axis_index(axis) {
+                        if let Ok(mut state) = callbacks().lock() {
+                            state.analog_inputs[index] = *value;
+                        }
                     }
                 }
                 ActionKind::System { command: SystemCommand::Reset, .. } => unsafe { (self.reset_fn)() },
@@ -451,34 +541,23 @@ impl EmulatorCore for LibretroCore {
     fn core_id(&self) -> &str { &self.identity.library_name }
 
     fn capability_manifest(&self) -> RuntimeCapabilityManifest {
-        libretro_capability_manifest(&self.identity)
+        libretro_capability_manifest(
+            &self.identity,
+            self.supports_state_snapshots(),
+            self.save_ram_size() > 0,
+        )
     }
 
     fn load_game(&mut self, image: &GameImage) -> Result<(), CoreError> {
-        if !matches!(image.system, SystemId::GameBoy | SystemId::GameBoyColor) {
+        self.load_path(&image.path)
+    }
+
+    fn load_content(&mut self, content: &ContentDescriptor) -> Result<(), CoreError> {
+        content.validate().map_err(CoreError::InvalidState)?;
+        let ContentLocator::File { path } = &content.locator else {
             return Err(CoreError::UnsupportedImage);
-        }
-        if self.loaded {
-            unsafe { (self.unload_game)() };
-            self.loaded = false;
-        }
-        self.game_bytes = fs::read(&image.path)
-            .map_err(|e| CoreError::Runtime(format!("cannot read {}: {e}", image.path.display())))?;
-        self.game_path = Some(path_cstring(&image.path)?);
-        let info = RetroGameInfo {
-            path: self.game_path.as_ref().map_or(ptr::null(), |p| p.as_ptr()),
-            data: if self.identity.need_fullpath { ptr::null() } else { self.game_bytes.as_ptr().cast() },
-            size: if self.identity.need_fullpath { 0 } else { self.game_bytes.len() },
-            meta: ptr::null(),
         };
-        let ok = unsafe { (self.load_game_fn)(&info) };
-        if !ok { return Err(CoreError::UnsupportedImage); }
-        self.loaded = true;
-        self.frame = 0;
-        unsafe { (self.get_av)(&mut self.av) };
-        self.identity.fps = self.av.timing.fps;
-        self.identity.sample_rate_hz = self.av.timing.sample_rate.round().max(0.0) as u32;
-        Ok(())
+        self.load_path(path)
     }
 
     fn reset(&mut self) -> Result<(), CoreError> {
@@ -523,8 +602,32 @@ impl Drop for LibretroCore {
 
 fn button_id(button: &str) -> Option<c_uint> {
     match button.to_ascii_uppercase().as_str() {
-        "A" => Some(A), "B" => Some(B), "SELECT" => Some(SELECT), "START" => Some(START),
-        "UP" => Some(UP), "DOWN" => Some(DOWN), "LEFT" => Some(LEFT), "RIGHT" => Some(RIGHT),
+        "A" => Some(A),
+        "B" => Some(B),
+        "X" => Some(X),
+        "Y" => Some(Y),
+        "SELECT" => Some(SELECT),
+        "START" => Some(START),
+        "UP" => Some(UP),
+        "DOWN" => Some(DOWN),
+        "LEFT" => Some(LEFT),
+        "RIGHT" => Some(RIGHT),
+        "L" | "L1" => Some(L),
+        "R" | "R1" => Some(R),
+        "L2" => Some(L2),
+        "R2" => Some(R2),
+        "L3" => Some(L3),
+        "R3" => Some(R3),
+        _ => None,
+    }
+}
+
+fn analog_axis_index(axis: &str) -> Option<usize> {
+    match axis.to_ascii_uppercase().as_str() {
+        "LEFT_X" | "LX" => Some(0),
+        "LEFT_Y" | "LY" => Some(1),
+        "RIGHT_X" | "RX" => Some(2),
+        "RIGHT_Y" | "RY" => Some(3),
         _ => None,
     }
 }
@@ -649,19 +752,52 @@ unsafe extern "C" fn audio_batch_callback(data: *const i16, frames: usize) -> us
     } else { 0 }
 }
 unsafe extern "C" fn input_poll_callback() {}
-unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, _index:c_uint, id:c_uint)->i16 {
-    if port!=0 || device!=RETRO_DEVICE_JOYPAD || id>15 { return 0; }
-    callbacks().lock().map(|s| if s.input_mask & (1u16<<id)!=0 {1} else {0}).unwrap_or(0)
+unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_uint, id:c_uint)->i16 {
+    if port != 0 {
+        return 0;
+    }
+    let Ok(state) = callbacks().lock() else { return 0; };
+    match device {
+        RETRO_DEVICE_JOYPAD if id <= 15 => {
+            if state.input_mask & (1u16 << id) != 0 { 1 } else { 0 }
+        }
+        RETRO_DEVICE_ANALOG => match (index, id) {
+            (ANALOG_LEFT, ANALOG_X) => state.analog_inputs[0],
+            (ANALOG_LEFT, ANALOG_Y) => state.analog_inputs[1],
+            (ANALOG_RIGHT, ANALOG_X) => state.analog_inputs[2],
+            (ANALOG_RIGHT, ANALOG_Y) => state.analog_inputs[3],
+            _ => 0,
+        },
+        _ => 0,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn maps_gameboy_buttons() {
-        assert_eq!(button_id("A"), Some(A));
-        assert_eq!(button_id("left"), Some(LEFT));
+    fn maps_full_retropad_buttons() {
+        let buttons = [
+            ("B", B), ("Y", Y), ("SELECT", SELECT), ("START", START),
+            ("UP", UP), ("DOWN", DOWN), ("LEFT", LEFT), ("RIGHT", RIGHT),
+            ("A", A), ("X", X), ("L", L), ("R", R),
+            ("L2", L2), ("R2", R2), ("L3", L3), ("R3", R3),
+        ];
+        for (name, id) in buttons {
+            assert_eq!(button_id(name), Some(id), "{name}");
+        }
+        assert_eq!(button_id("l1"), Some(L));
+        assert_eq!(button_id("r1"), Some(R));
         assert_eq!(button_id("wat"), None);
+    }
+
+    #[test]
+    fn maps_standard_analog_axes() {
+        assert_eq!(analog_axis_index("LEFT_X"), Some(0));
+        assert_eq!(analog_axis_index("ly"), Some(1));
+        assert_eq!(analog_axis_index("RX"), Some(2));
+        assert_eq!(analog_axis_index("RIGHT_Y"), Some(3));
+        assert_eq!(analog_axis_index("wat"), None);
     }
     #[test]
     fn sameboy_manifest_marks_only_qualified_capabilities() {
@@ -673,7 +809,7 @@ mod tests {
             fps: 59.7,
             sample_rate_hz: 48_000,
         };
-        let manifest = libretro_capability_manifest(&identity);
+        let manifest = libretro_capability_manifest(&identity, false, false);
 
         assert_eq!(manifest.adapter_id, LIBRETRO_ADAPTER_ID);
         assert_eq!(manifest.execution_model, RuntimeExecutionModel::EmbeddedFrameCore);
@@ -702,10 +838,29 @@ mod tests {
             fps: 60.0,
             sample_rate_hz: 48_000,
         };
-        let manifest = libretro_capability_manifest(&identity);
+        let manifest = libretro_capability_manifest(&identity, false, false);
 
         assert_eq!(manifest.capabilities.frame_step, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.state_snapshots, CapabilityStatus::Unsupported);
+        assert_eq!(manifest.capabilities.persistent_save_data, CapabilityStatus::Unsupported);
+        assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Unsupported);
+        assert!(manifest.qualification_profile.is_none());
+    }
+
+    #[test]
+    fn generic_libretro_manifest_reports_observed_optional_capabilities() {
+        let identity = CoreIdentity {
+            library_name: "OtherCore".into(),
+            library_version: "9.9".into(),
+            valid_extensions: "rom".into(),
+            need_fullpath: false,
+            fps: 60.0,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = libretro_capability_manifest(&identity, true, true);
+
         assert_eq!(manifest.capabilities.state_snapshots, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.persistent_save_data, CapabilityStatus::Supported);
         assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Unsupported);
         assert!(manifest.qualification_profile.is_none());
     }
