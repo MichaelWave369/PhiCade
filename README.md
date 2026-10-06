@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 37
+## Current status — Rung 38
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -35,6 +35,7 @@ Benchmark suites:
 - **ScummVM 2026.3.0 qualification** — pinned upstream no-engine launcher build, real framebuffer/input qualification, explicit no-snapshot/no-exact-replay receipt
 - **Runtime Registration v1** — user-supplied libretro cores are fingerprinted, identified, capability-described, and persisted without implicitly receiving qualification or launch authority
 - **Registered Session Routing v1** — registered core SHA routing with stale-binary checks, explicit operator launch approval, FILE/no-content loading, and capability-aware timeline features
+- **Desktop Runtime Manager v1** — native UI for registering user-supplied libretro cores and inspecting SHA, identity, capability, qualification-profile, evidence-binding, and authority state
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -158,6 +159,19 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Desktop runtime manager
+
+Rung 38 exposes Runtime Registration v1 in the native desktop sidebar.
+
+Operators can select a local libretro core, have PhiCade inspect and fingerprint
+it through the governed backend, and review its runtime identity, capability
+counts, qualification profile, binary-evidence state, and authority state.
+
+Registration remains inventory/provenance only and does not launch the runtime
+or grant authority.
+
+See `docs/DESKTOP_RUNTIME_MANAGER.md`.
 
 ## Registered session routing
 
@@ -604,6 +618,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/DESKTOP_RUNTIME_MANAGER.md`
 - `docs/REGISTERED_SESSION_ROUTING.md`
 - `docs/RUNTIME_REGISTRATION.md`
 - `docs/SCUMMVM_QUALIFICATION.md`
