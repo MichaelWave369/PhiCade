@@ -106,6 +106,17 @@ Markdown bytes are deterministic.
 
 The returned desktop artifact includes SHA-256 for both files.
 
+## Portable bundle
+
+The same selected Suite Report can also be exported as **Portable Evidence
+Bundle v1**.
+
+That ZIP re-runs full evidence closure and includes the exact Suite Report,
+campaign, model-gameplay, Autodrive, and model-qualification receipts together
+with regenerated Public Result JSON/Markdown and a SHA-256 manifest.
+
+See `PORTABLE_EVIDENCE_BUNDLE.md`.
+
 ## Interpretation boundary
 
 A public export is one empirical cohort.

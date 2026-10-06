@@ -207,6 +207,18 @@ bytes pinned by older benchmark evidence.
 
 See `EVIDENCE_CLOSURE.md`.
 
+## Portable evidence
+
+After full Evidence Closure, PhiCade can package one Suite Report into a
+deterministic portable ZIP containing the Suite Report, campaigns, model
+gameplay receipts, Autodrive receipts, exact model-qualification receipt, and
+derived Public Result JSON/Markdown.
+
+The archive contains evidence only. It deliberately excludes ROMs, core
+binaries, model weights, save data, and commercial assets.
+
+See `PORTABLE_EVIDENCE_BUNDLE.md`.
+
 ## Comparison semantics
 
 Comparison Lab remains like-for-like at the task level.

@@ -617,6 +617,28 @@ export interface PublicSuiteResultArtifact {
   receipt: PublicSuiteResultReceipt;
 }
 
+export interface PortableEvidenceBundleFile {
+  path: string;
+  sha256: string;
+  sizeBytes: number;
+}
+
+export interface PortableEvidenceBundleManifest {
+  schema: "phicade.portable-evidence-bundle.v1";
+  recordStatus: "VERIFIED_EXPORT";
+  suiteId: string;
+  reportId: number;
+  suiteReportSha256: string;
+  modelDigest: string;
+  files: PortableEvidenceBundleFile[];
+}
+
+export interface PortableEvidenceBundleArtifact {
+  bundlePath: string;
+  bundleSha256: string;
+  manifest: PortableEvidenceBundleManifest;
+}
+
 export interface SuiteCandidateTask {
   taskId: string;
   taskTitle: string;
@@ -1164,6 +1186,16 @@ export async function exportBenchmarkSuitePublicResult(
   reportId: number,
 ): Promise<PublicSuiteResultArtifact> {
   return invoke<PublicSuiteResultArtifact>("export_benchmark_suite_public_result", {
+    suiteId,
+    reportId,
+  });
+}
+
+export async function exportPortableEvidenceBundle(
+  suiteId: string,
+  reportId: number,
+): Promise<PortableEvidenceBundleArtifact> {
+  return invoke<PortableEvidenceBundleArtifact>("export_portable_evidence_bundle", {
     suiteId,
     reportId,
   });

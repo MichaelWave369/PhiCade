@@ -35,6 +35,7 @@ use std::{
 };
 use tauri::{AppHandle, Manager, State};
 
+mod evidence_bundle;
 mod providers;
 
 use providers::ollama::{
@@ -477,6 +478,14 @@ struct PublicSuiteResultArtifact {
     json_sha256: String,
     markdown_sha256: String,
     receipt: PublicSuiteResultReceipt,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PortableEvidenceBundleArtifact {
+    bundle_path: String,
+    bundle_sha256: String,
+    manifest: evidence_bundle::BundleManifest,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -4538,6 +4547,123 @@ fn export_benchmark_suite_public_result(
     })
 }
 
+fn read_evidence_file(path: &Path, label: &str) -> Result<Vec<u8>, String> {
+    fs::read(path).map_err(|error| format!("cannot read {label} {}: {error}", path.display()))
+}
+
+#[tauri::command]
+fn export_portable_evidence_bundle(
+    app: AppHandle,
+    state: State<'_, EmulatorState>,
+    suite_id: String,
+    report_id: u64,
+) -> Result<PortableEvidenceBundleArtifact, String> {
+    let session = state
+        .session
+        .lock()
+        .map_err(|_| "emulator session lock poisoned".to_owned())?;
+    let session = session
+        .as_ref()
+        .ok_or_else(|| "no emulator session is running".to_owned())?;
+
+    let suite_id = suite_id.trim();
+    let (report_path, report) =
+        load_benchmark_suite_report_receipt(session, suite_id, report_id)?;
+    let campaigns = validate_suite_report_evidence_closure(&app, session, &report)?;
+    let report_sha256 = sha256_file(&report_path)?;
+
+    let public_receipt = public_suite_result_receipt(suite_id, &report_path, &report)?;
+    let public_json = serde_json::to_vec_pretty(&public_receipt)
+        .map_err(|error| format!("serialize portable public result JSON: {error}"))?;
+    let public_json_sha256 = sha256_bytes(&public_json);
+    let public_markdown =
+        render_public_suite_result_markdown(&public_receipt, &public_json_sha256).into_bytes();
+
+    let qualification = load_ollama_qualification_by_sha(
+        &app,
+        &report.model_digest,
+        &report.model_qualification_sha256,
+    )?;
+
+    let mut files = std::collections::BTreeMap::<String, Vec<u8>>::new();
+    files.insert(
+        "suite-report.json".into(),
+        read_evidence_file(&report_path, "suite report")?,
+    );
+    files.insert("public-result/result.json".into(), public_json);
+    files.insert("public-result/result.md".into(), public_markdown);
+    files.insert(
+        "model-qualification/receipt.json".into(),
+        read_evidence_file(Path::new(&qualification.receipt_path), "model qualification receipt")?,
+    );
+
+    for task_ref in &report.tasks {
+        let campaign = campaigns.get(&task_ref.task_id).ok_or_else(|| {
+            format!(
+                "suite report {} validated without campaign {}",
+                report.report_id, task_ref.task_id
+            )
+        })?;
+        let task_dir = sanitize_component(&task_ref.task_id);
+        let campaign_path = session
+            .paths
+            .benchmark_campaign_root
+            .join(&campaign.gym_rom_sha256)
+            .join(format!("campaign-{:06}.json", campaign.campaign_id));
+        files.insert(
+            format!("campaigns/{task_dir}/campaign-{:06}.json", campaign.campaign_id),
+            read_evidence_file(&campaign_path, "campaign receipt")?,
+        );
+
+        for trial in &campaign.trials {
+            let benchmark_path = session
+                .paths
+                .model_benchmark_root
+                .join(&campaign.gym_rom_sha256)
+                .join(format!("run-{:06}.json", trial.benchmark_run_id));
+            let benchmark_bytes = read_evidence_file(&benchmark_path, "model gameplay receipt")?;
+            let benchmark = serde_json::from_slice::<ModelGameplayBenchmarkReceipt>(&benchmark_bytes)
+                .map_err(|error| format!("cannot parse {} while bundling: {error}", benchmark_path.display()))?;
+            files.insert(
+                format!("trials/{task_dir}/run-{:06}.json", trial.benchmark_run_id),
+                benchmark_bytes,
+            );
+
+            let autodrive_path = session
+                .paths
+                .autodrive_root
+                .join(&campaign.gym_rom_sha256)
+                .join(format!("run-{:06}.json", benchmark.autodrive_run_id));
+            files.insert(
+                format!("autodrive/{task_dir}/run-{:06}.json", benchmark.autodrive_run_id),
+                read_evidence_file(&autodrive_path, "Autodrive receipt")?,
+            );
+        }
+    }
+
+    let (bundle_bytes, manifest) = evidence_bundle::assemble_bundle(
+        suite_id,
+        report_id,
+        &report_sha256,
+        &report.model_digest,
+        files,
+    )?;
+
+    let public_dir = suite_report_dir_for(session, suite_id)?.join("public");
+    fs::create_dir_all(&public_dir)
+        .map_err(|error| format!("cannot create portable evidence directory {}: {error}", public_dir.display()))?;
+    let bundle_path =
+        public_dir.join(format!("suite-report-{report_id:06}-evidence.zip"));
+    write_atomic(&bundle_path, &bundle_bytes)?;
+    let bundle_sha256 = sha256_file(&bundle_path)?;
+
+    Ok(PortableEvidenceBundleArtifact {
+        bundle_path: bundle_path.to_string_lossy().to_string(),
+        bundle_sha256,
+        manifest,
+    })
+}
+
 #[tauri::command]
 fn compare_benchmark_suite_reports(
     app: AppHandle,
@@ -5670,6 +5796,7 @@ pub fn run() {
             build_benchmark_suite_report,
             list_benchmark_suite_reports,
             export_benchmark_suite_public_result,
+            export_portable_evidence_bundle,
             compare_benchmark_suite_reports,
             compare_benchmark_campaigns,
             cancel_benchmark_campaign,
