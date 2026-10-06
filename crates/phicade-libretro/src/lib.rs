@@ -18,6 +18,11 @@ pub const SAMEBOY_VERSION: &str = "1.0.3";
 pub const SAMEBOY_LICENSE: &str = "Expat";
 pub const LIBRETRO_ADAPTER_ID: &str = "phicade.libretro";
 pub const SAMEBOY_QUALIFICATION_PROFILE_ID: &str = "phicade.sameboy-1.0.3-qualified.v1";
+pub const SCUMMVM_SOURCE_REVISION: &str = "fed42f2068dcafc6aafa1c28c77e4c88def74b66";
+pub const SCUMMVM_VERSION: &str = "v2026.3.0";
+pub const SCUMMVM_LICENSE: &str = "GPL-3.0-or-later";
+pub const SCUMMVM_QUALIFICATION_PROFILE_ID: &str =
+    "phicade.scummvm-2026.3.0-launcher-qualified.v1";
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
 const RETRO_DEVICE_ANALOG: c_uint = 5;
@@ -50,13 +55,17 @@ const SHUTDOWN: c_uint = 7;
 const GET_SYSTEM_DIRECTORY: c_uint = 9;
 const SET_PIXEL_FORMAT: c_uint = 10;
 const SET_INPUT_DESCRIPTORS: c_uint = 11;
+const SET_KEYBOARD_CALLBACK: c_uint = 12;
 const GET_VARIABLE: c_uint = 15;
 const SET_VARIABLES: c_uint = 16;
 const GET_VARIABLE_UPDATE: c_uint = 17;
+const SET_SUPPORT_NO_GAME: c_uint = 18;
+const GET_LIBRETRO_PATH: c_uint = 19;
 const GET_SAVE_DIRECTORY: c_uint = 31;
 const SET_SYSTEM_AV_INFO: c_uint = 32;
 const SET_CONTROLLER_INFO: c_uint = 35;
 const SET_GEOMETRY: c_uint = 37;
+const GET_AUDIO_VIDEO_ENABLE: c_uint = 47 | 0x10000;
 const GET_INPUT_BITMASKS: c_uint = 51;
 const GET_CORE_OPTIONS_VERSION: c_uint = 52;
 const SET_CORE_OPTIONS: c_uint = 53;
@@ -89,6 +98,8 @@ struct CallbackState {
     audio: Vec<i16>,
     input_mask: u16,
     analog_inputs: [i16; 4],
+    support_no_game: bool,
+    core_path: CString,
     system_dir: CString,
     save_dir: CString,
     variables: Vec<(CString, CString)>,
@@ -103,6 +114,8 @@ impl Default for CallbackState {
             audio: Vec::new(),
             input_mask: 0,
             analog_inputs: [0; 4],
+            support_no_game: false,
+            core_path: CString::new(".").unwrap(),
             system_dir: CString::new(".").unwrap(),
             save_dir: CString::new(".").unwrap(),
             variables: Vec::new(),
@@ -221,6 +234,9 @@ pub fn libretro_capability_manifest(
     let is_pinned_sameboy_profile =
         identity.library_name.eq_ignore_ascii_case("SameBoy")
             && identity.library_version == SAMEBOY_VERSION;
+    let is_pinned_scummvm_profile =
+        identity.library_name.eq_ignore_ascii_case("ScummVM")
+            && identity.library_version == SCUMMVM_VERSION;
 
     let mut manifest = RuntimeCapabilityManifest::new(
         identity.library_name.clone(),
@@ -240,6 +256,19 @@ pub fn libretro_capability_manifest(
         manifest = manifest.with_qualification_profile(RuntimeQualificationProfile {
             profile_id: SAMEBOY_QUALIFICATION_PROFILE_ID.into(),
             source_revision: Some(SAMEBOY_SOURCE_REVISION.into()),
+            binary_evidence_required: true,
+        });
+    } else if is_pinned_scummvm_profile {
+        manifest.capabilities.frame_step = CapabilityStatus::Qualified;
+        manifest.capabilities.rendered_framebuffer = CapabilityStatus::Qualified;
+        manifest.capabilities.governed_actions = CapabilityStatus::Supported;
+        manifest.capabilities.game_detection = CapabilityStatus::Supported;
+        manifest.capabilities.state_snapshots = CapabilityStatus::Unsupported;
+        manifest.capabilities.exact_replay = CapabilityStatus::Unsupported;
+        manifest.capabilities.persistent_save_data = CapabilityStatus::Unsupported;
+        manifest = manifest.with_qualification_profile(RuntimeQualificationProfile {
+            profile_id: SCUMMVM_QUALIFICATION_PROFILE_ID.into(),
+            source_revision: Some(SCUMMVM_SOURCE_REVISION.into()),
             binary_evidence_required: true,
         });
     }
@@ -315,6 +344,8 @@ impl LibretroCore {
                 state.audio.clear();
                 state.input_mask = 0;
                 state.analog_inputs = [0; 4];
+                state.support_no_game = false;
+                state.core_path = path_cstring(&core_path)?;
                 state.variables.clear();
                 state.shutdown = false;
             }
@@ -369,6 +400,14 @@ impl LibretroCore {
     pub fn frame_count(&self) -> u64 { self.frame }
     pub fn shutdown_requested(&self) -> bool {
         callbacks().lock().map(|s| s.shutdown).unwrap_or(false)
+    }
+
+    pub fn supports_no_game(&self) -> bool {
+        callbacks().lock().map(|s| s.support_no_game).unwrap_or(false)
+    }
+
+    pub fn analog_inputs_snapshot(&self) -> [i16; 4] {
+        callbacks().lock().map(|s| s.analog_inputs).unwrap_or([0; 4])
     }
 
     pub fn input_mask_snapshot(&self) -> u16 {
@@ -465,6 +504,37 @@ impl LibretroCore {
             return Err(CoreError::Runtime("core exposed save RAM size without data pointer".into()));
         }
         unsafe { ptr::copy_nonoverlapping(bytes.as_ptr(), data.cast::<u8>(), size) };
+        Ok(())
+    }
+
+    pub fn load_no_content(&mut self) -> Result<(), CoreError> {
+        if !self.supports_no_game() {
+            return Err(CoreError::UnsupportedImage);
+        }
+        if self.loaded {
+            unsafe { (self.unload_game)() };
+            self.loaded = false;
+        }
+
+        let ok = unsafe { (self.load_game_fn)(ptr::null()) };
+        if !ok {
+            return Err(CoreError::UnsupportedImage);
+        }
+
+        self.game_bytes.clear();
+        self.game_path = None;
+        self.loaded = true;
+        self.frame = 0;
+        self.input_mask = 0;
+        if let Ok(mut state) = callbacks().lock() {
+            state.input_mask = 0;
+            state.analog_inputs = [0; 4];
+            state.audio.clear();
+            state.video = RawVideo::default();
+        }
+        unsafe { (self.get_av)(&mut self.av) };
+        self.identity.fps = self.av.timing.fps;
+        self.identity.sample_rate_hz = self.av.timing.sample_rate.round().max(0.0) as u32;
         Ok(())
     }
 
@@ -688,6 +758,22 @@ unsafe extern "C" fn environment_callback(command: c_uint, data: *mut c_void) ->
             if data.is_null() { return false; }
             *(data as *mut *const c_char) = state.save_dir.as_ptr(); true
         }
+        SET_SUPPORT_NO_GAME => {
+            if data.is_null() { return false; }
+            state.support_no_game = *(data as *const bool);
+            true
+        }
+        GET_LIBRETRO_PATH => {
+            if data.is_null() { return false; }
+            *(data as *mut *const c_char) = state.core_path.as_ptr();
+            true
+        }
+        GET_AUDIO_VIDEO_ENABLE => {
+            if data.is_null() { return false; }
+            *(data as *mut c_uint) = 3;
+            true
+        }
+        SET_KEYBOARD_CALLBACK => true,
         SET_PIXEL_FORMAT => {
             if data.is_null() { return false; }
             state.format = match *(data as *const c_uint) {
@@ -845,6 +931,32 @@ mod tests {
         assert_eq!(manifest.capabilities.persistent_save_data, CapabilityStatus::Unsupported);
         assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Unsupported);
         assert!(manifest.qualification_profile.is_none());
+    }
+
+    #[test]
+    fn scummvm_profile_keeps_snapshots_and_exact_replay_unsupported() {
+        let identity = CoreIdentity {
+            library_name: "ScummVM".into(),
+            library_version: SCUMMVM_VERSION.into(),
+            valid_extensions: "scummvm".into(),
+            need_fullpath: true,
+            fps: 60.0,
+            sample_rate_hz: 48_000,
+        };
+        let manifest = libretro_capability_manifest(&identity, false, false);
+
+        assert_eq!(manifest.capabilities.frame_step, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.rendered_framebuffer, CapabilityStatus::Qualified);
+        assert_eq!(manifest.capabilities.governed_actions, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.game_detection, CapabilityStatus::Supported);
+        assert_eq!(manifest.capabilities.state_snapshots, CapabilityStatus::Unsupported);
+        assert_eq!(manifest.capabilities.exact_replay, CapabilityStatus::Unsupported);
+        assert_eq!(manifest.capabilities.persistent_save_data, CapabilityStatus::Unsupported);
+
+        let profile = manifest.qualification_profile.expect("scummvm qualification profile");
+        assert_eq!(profile.profile_id, SCUMMVM_QUALIFICATION_PROFILE_ID);
+        assert_eq!(profile.source_revision.as_deref(), Some(SCUMMVM_SOURCE_REVISION));
+        assert!(profile.binary_evidence_required);
     }
 
     #[test]
