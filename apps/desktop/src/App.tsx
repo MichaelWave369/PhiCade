@@ -54,8 +54,10 @@ import {
   selectRomDirectory,
   selectSameBoyCore,
   selectLibretroCore,
+  selectRuntimeContent,
   setGameProfile,
   startEmulation,
+  startRegisteredEmulation,
   stepEmulation,
   stopEmulation,
   validateActionEnvelope,
@@ -170,8 +172,12 @@ export function App() {
   const [scanning, setScanning] = useState(false);
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
+  const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
+  const [registeredLaunchApproved, setRegisteredLaunchApproved] = useState(false);
+  const [registeredLaunchBusy, setRegisteredLaunchBusy] = useState(false);
 
   const selectedSuite = suiteRegistry.find((suite) => suite.id === selectedSuiteId) ?? null;
+  const selectedRuntime = runtimeRegistrations.find((runtime) => runtime.coreSha256 === selectedRuntimeSha) ?? null;
 
   useEffect(() => {
     runningRef.current = running;
@@ -371,6 +377,8 @@ export function App() {
       const receipt = await registerRuntimeCore(selected);
       const registrations = await listRuntimeRegistrations();
       setRuntimeRegistrations(registrations);
+      setSelectedRuntimeSha(receipt.coreSha256);
+      setRegisteredLaunchApproved(false);
       const profile = receipt.qualificationProfileId ?? "UNQUALIFIED PROFILE";
       setNotice(
         `RUNTIME REGISTERED // ${receipt.core.libraryName} ${receipt.core.libraryVersion} // ${profile} // SHA ${receipt.coreSha256.slice(0, 12)}…`,
@@ -1194,6 +1202,99 @@ export function App() {
     }
   };
 
+  const prepareSessionLaunch = async () => {
+    if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+    await audioContextRef.current.resume();
+    nextAudioTimeRef.current = audioContextRef.current.currentTime;
+    gamepadRef.current = emptyGameBoyButtons();
+    frameRef.current = 0;
+    setFrameNumber(0);
+    setAudioRate(0);
+    setRewindSnapshots(0);
+    setReplayRecording(false);
+    setReplayActions(0);
+    setReplayCheckpoints(0);
+    setLastReplay(null);
+    setAuthority(null);
+    setLastObservation(null);
+    setDriverPendingTurnId(null);
+    setDriverQueuedActions(0);
+    setLastProviderDurationMs(null);
+    setAutodrive(null);
+    setLastAutodrive(null);
+    setBenchmarkRunning(false);
+    setBenchmarkRunId(null);
+    setLastModelBenchmark(null);
+    setCampaignStatus(null);
+    setLastCampaign(null);
+    setCampaignLedger([]);
+    setComparisonAId(null);
+    setComparisonBId(null);
+    setLastComparison(null);
+    setSuiteCandidates([]);
+    setSelectedSuiteCohortId(null);
+    setSelectedSuiteId("");
+    setLastSuiteReport(null);
+    setSuiteReportBusy(false);
+    setSuiteReportLedger([]);
+    setSuiteComparisonAId(null);
+    setSuiteComparisonBId(null);
+    setLastSuiteComparison(null);
+    setSuiteComparisonBusy(false);
+  };
+
+  const adoptSession = async (info: SessionInfo, label: string) => {
+    const [initialAuthority, initialDriver] = await Promise.all([
+      getAuthorityStatus(),
+      getDriverStatus(),
+    ]);
+    setSession(info);
+    setAuthority(initialAuthority);
+    setDriverPendingTurnId(initialDriver.pendingTurnId);
+    setDriverQueuedActions(initialDriver.queuedActions);
+    setDriverMemory(initialDriver);
+    setProfile(info.profile);
+    setRunning(true);
+    runningRef.current = true;
+
+    const suites = await listBenchmarkSuites();
+    setSuiteRegistry(suites);
+    const defaultSuiteId = suites[suites.length - 1]?.id ?? "";
+    setSelectedSuiteId(defaultSuiteId);
+    const [priorCampaigns, priorSuiteCandidates, allSuiteReports] = await Promise.all([
+      listBenchmarkCampaignReceipts(),
+      defaultSuiteId ? listBenchmarkSuiteReportCandidates(defaultSuiteId) : Promise.resolve([]),
+      listBenchmarkSuiteReports(),
+    ]);
+    const priorSuiteReports = allSuiteReports.filter((entry) => entry.suiteId === defaultSuiteId);
+    setCampaignLedger(priorCampaigns);
+    setSuiteCandidates(priorSuiteCandidates);
+    setSuiteReportLedger(priorSuiteReports);
+    if (priorSuiteReports.length >= 2) {
+      setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
+      setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
+    } else {
+      setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
+      setSuiteComparisonBId(null);
+    }
+
+    const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
+    const selectedDigest = modelQualification?.details.digest;
+    const matchingSuiteCandidate = selectedDigest
+      ? readySuiteCandidates.find((candidate) => candidate.modelDigest === selectedDigest)
+      : null;
+    setSelectedSuiteCohortId(matchingSuiteCandidate?.cohortId ?? readySuiteCandidates[0]?.cohortId ?? null);
+    const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
+    if (completeCampaigns.length >= 2) {
+      setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
+      setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
+    }
+
+    setNotice(
+      `CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${label} // ROUTE ${info.routeEvidence.route.toUpperCase()} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY`,
+    );
+  };
+
   const launchGame = async () => {
     if (!native) {
       setNotice("EMULATION REQUIRES THE TAURI DESKTOP SHELL");
@@ -1204,7 +1305,7 @@ export function App() {
       return;
     }
     if (!(["GB", "GBC"] as string[]).includes(selectedGame.system)) {
-      setNotice("RUNG 3 QUALIFICATION IS GB/GBC ONLY // OTHER SYSTEMS STAY GATED");
+      setNotice("LEGACY SAMEBOY LAUNCH IS GB/GBC ONLY // USE A REGISTERED RUNTIME FOR OTHER CONTENT");
       return;
     }
 
@@ -1216,93 +1317,56 @@ export function App() {
         return;
       }
 
-      if (!audioContextRef.current) audioContextRef.current = new AudioContext();
-      await audioContextRef.current.resume();
-      nextAudioTimeRef.current = audioContextRef.current.currentTime;
-      gamepadRef.current = emptyGameBoyButtons();
-      frameRef.current = 0;
-      setFrameNumber(0);
-      setAudioRate(0);
-      setRewindSnapshots(0);
-      setReplayRecording(false);
-      setReplayActions(0);
-      setReplayCheckpoints(0);
-      setLastReplay(null);
-      setAuthority(null);
-      setLastObservation(null);
-      setDriverPendingTurnId(null);
-      setDriverQueuedActions(0);
-      setLastProviderDurationMs(null);
-      setAutodrive(null);
-      setLastAutodrive(null);
-      setBenchmarkRunning(false);
-      setBenchmarkRunId(null);
-      setLastModelBenchmark(null);
-      setCampaignStatus(null);
-      setLastCampaign(null);
-      setCampaignLedger([]);
-      setComparisonAId(null);
-      setComparisonBId(null);
-      setLastComparison(null);
-      setSuiteCandidates([]);
-      setSelectedSuiteCohortId(null);
-      setSelectedSuiteId("");
-      setLastSuiteReport(null);
-      setSuiteReportBusy(false);
-      setSuiteReportLedger([]);
-      setSuiteComparisonAId(null);
-      setSuiteComparisonBId(null);
-      setLastSuiteComparison(null);
-      setSuiteComparisonBusy(false);
-
+      await prepareSessionLaunch();
       const info = await startEmulation(corePath, selectedGame.path);
-      const [initialAuthority, initialDriver] = await Promise.all([
-        getAuthorityStatus(),
-        getDriverStatus(),
-      ]);
-      setSession(info);
-      setAuthority(initialAuthority);
-      setDriverPendingTurnId(initialDriver.pendingTurnId);
-      setDriverQueuedActions(initialDriver.queuedActions);
-      setDriverMemory(initialDriver);
-      setProfile(info.profile);
-      setRunning(true);
-      runningRef.current = true;
-      const suites = await listBenchmarkSuites();
-      setSuiteRegistry(suites);
-      const defaultSuiteId = suites[suites.length - 1]?.id ?? "";
-      setSelectedSuiteId(defaultSuiteId);
-      const [priorCampaigns, priorSuiteCandidates, allSuiteReports] = await Promise.all([
-        listBenchmarkCampaignReceipts(),
-        defaultSuiteId ? listBenchmarkSuiteReportCandidates(defaultSuiteId) : Promise.resolve([]),
-        listBenchmarkSuiteReports(),
-      ]);
-      const priorSuiteReports = allSuiteReports.filter((entry) => entry.suiteId === defaultSuiteId);
-      setCampaignLedger(priorCampaigns);
-      setSuiteCandidates(priorSuiteCandidates);
-      setSuiteReportLedger(priorSuiteReports);
-      if (priorSuiteReports.length >= 2) {
-        setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
-        setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
-      } else {
-        setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
-        setSuiteComparisonBId(null);
-      }
-      const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
-      const selectedDigest = modelQualification?.details.digest;
-      const matchingSuiteCandidate = selectedDigest
-        ? readySuiteCandidates.find((candidate) => candidate.modelDigest === selectedDigest)
-        : null;
-      setSelectedSuiteCohortId(matchingSuiteCandidate?.cohortId ?? readySuiteCandidates[0]?.cohortId ?? null);
-      const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
-      if (completeCampaigns.length >= 2) {
-        setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
-        setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
-      }
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY // ${priorSuiteReports.length} SUITE REPORTS`);
+      await adoptSession(info, selectedGame.displayName);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
+    }
+  };
+
+  const launchRegisteredRuntime = async (mode: "launcher" | "file") => {
+    if (!native) {
+      setNotice("REGISTERED RUNTIME LAUNCH REQUIRES THE TAURI DESKTOP SHELL");
+      return;
+    }
+    if (!selectedRuntime) {
+      setNotice("SELECT A REGISTERED RUNTIME FIRST");
+      return;
+    }
+    if (!registeredLaunchApproved) {
+      setNotice("OPERATOR APPROVAL REQUIRED FOR THIS REGISTERED RUNTIME SESSION");
+      return;
+    }
+
+    setRegisteredLaunchBusy(true);
+    try {
+      let contentPath: string | null = null;
+      if (mode === "file") {
+        contentPath = await selectRuntimeContent();
+        if (!contentPath) {
+          setNotice("RUNTIME CONTENT SELECTION CANCELLED");
+          return;
+        }
+      }
+
+      await prepareSessionLaunch();
+      const info = await startRegisteredEmulation(
+        selectedRuntime.coreSha256,
+        contentPath,
+        true,
+      );
+      const label = contentPath
+        ? contentPath.split(/[\\/]/).pop() ?? "FILE CONTENT"
+        : "NO-CONTENT LAUNCHER";
+      await adoptSession(info, label);
+      setRegisteredLaunchApproved(false);
+    } catch (error) {
+      setNotice(`REGISTERED LAUNCH ERROR // ${String(error)}`);
+      setRunning(false);
+    } finally {
+      setRegisteredLaunchBusy(false);
     }
   };
 
@@ -1347,7 +1411,7 @@ export function App() {
       setSuiteComparisonBusy(false);
       providerBusyRef.current = false;
       setProviderBusy(false);
-      setNotice("CORE SESSION STOPPED // BATTERY RAM FLUSHED");
+      setNotice("CORE SESSION STOPPED // PERSISTENT DATA FLUSH ATTEMPT COMPLETE");
     } catch (error) {
       setNotice(`STOP ERROR // ${String(error)}`);
     }
@@ -1364,7 +1428,7 @@ export function App() {
         <div className="status-cluster" aria-label="runtime status">
           <span><i className={`lamp ${native ? "lamp-green" : "lamp-amber"}`} /> {native ? "TAURI NATIVE" : "WEB PREVIEW"}</span>
           <span><i className="lamp lamp-green" /> ACTION IPC READY</span>
-          <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? "SAMEBOY RUNNING" : "CORE HOST STANDBY"}</span>
+          <span><i className={`lamp ${running ? "lamp-green" : "lamp-amber"}`} /> {running ? `${session?.core.libraryName.toUpperCase() ?? "CORE"} RUNNING` : "CORE HOST STANDBY"}</span>
           <span><i className={`lamp ${replayRecording ? "lamp-amber" : "lamp-green"}`} /> {replayRecording ? "REPLAY RECORDING" : "LEDGER READY"}</span>
           <span><i className={`lamp ${authority?.mode === "phi-bot" || authority?.mode === "coop" ? "lamp-amber" : "lamp-green"}`} /> AUTHORITY {authority?.mode?.toUpperCase() ?? "OFFLINE"}</span>
           <span><i className={`lamp ${driverPendingTurnId !== null || driverQueuedActions > 0 ? "lamp-amber" : "lamp-green"}`} /> DRIVER {driverPendingTurnId !== null ? `TURN ${driverPendingTurnId}` : driverQueuedActions > 0 ? `${driverQueuedActions} QUEUED` : "READY"}</span>
@@ -1445,7 +1509,11 @@ export function App() {
                   const qualified = Object.values(capabilities).filter((status) => status === "QUALIFIED").length;
                   const supported = Object.values(capabilities).filter((status) => status !== "UNSUPPORTED").length;
                   return (
-                    <div className="runtime-row" key={runtime.coreSha256} title={runtime.corePath}>
+                    <div
+                      className={`runtime-row ${selectedRuntimeSha === runtime.coreSha256 ? "selected" : ""}`}
+                      key={runtime.coreSha256}
+                      title={runtime.corePath}
+                    >
                       <div className="runtime-row-main">
                         <strong>{runtime.core.libraryName} {runtime.core.libraryVersion}</strong>
                         <span>{runtime.capabilityManifest.executionModel.replaceAll("_", " ")}</span>
@@ -1455,9 +1523,53 @@ export function App() {
                       <small>
                         PROFILE // {runtime.qualificationProfileId ?? "NONE"} // EVIDENCE {runtime.binaryEvidenceBound ? "BOUND" : "UNBOUND"} // AUTHORITY {runtime.authorityGranted ? "GRANTED" : "NONE"}
                       </small>
+                      <button
+                        className="runtime-select"
+                        onClick={() => {
+                          setSelectedRuntimeSha(runtime.coreSha256);
+                          setRegisteredLaunchApproved(false);
+                        }}
+                        disabled={running || registeredLaunchBusy}
+                      >
+                        {selectedRuntimeSha === runtime.coreSha256 ? "SELECTED" : "SELECT"}
+                      </button>
                     </div>
                   );
                 })}
+              </div>
+            )}
+            {selectedRuntime && (
+              <div className="runtime-launch">
+                <div className="runtime-launch-heading">
+                  <strong>{selectedRuntime.core.libraryName} {selectedRuntime.core.libraryVersion}</strong>
+                  <small>{selectedRuntime.coreSha256.slice(0, 16)}…</small>
+                </div>
+                <label className="runtime-approval">
+                  <input
+                    type="checkbox"
+                    checked={registeredLaunchApproved}
+                    onChange={(event) => setRegisteredLaunchApproved(event.target.checked)}
+                    disabled={running || registeredLaunchBusy}
+                  />
+                  <span>APPROVE THIS SESSION LAUNCH</span>
+                </label>
+                <div className="runtime-launch-actions">
+                  <button
+                    onClick={() => void launchRegisteredRuntime("launcher")}
+                    disabled={!registeredLaunchApproved || running || registeredLaunchBusy}
+                  >
+                    {registeredLaunchBusy ? "STARTING..." : "RUN LAUNCHER"}
+                  </button>
+                  <button
+                    onClick={() => void launchRegisteredRuntime("file")}
+                    disabled={!registeredLaunchApproved || running || registeredLaunchBusy}
+                  >
+                    RUN FILE…
+                  </button>
+                </div>
+                <small>
+                  APPROVAL IS SESSION-SCOPED // REGISTRATION AUTHORITY REMAINS {selectedRuntime.authorityGranted ? "GRANTED" : "NONE"}
+                </small>
               </div>
             )}
           </div>
@@ -1472,8 +1584,8 @@ export function App() {
                 <div className="boot-copy">
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
-                  <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : "SELECT CARTRIDGE"}</p>
-                  <small>RUNG 19 // VERSIONED BENCHMARK SUITES ONLINE</small>
+                  <p>{selectedGame ? `${selectedGame.system} // ${selectedGame.displayName}` : selectedRuntime ? `RUNTIME // ${selectedRuntime.core.libraryName} ${selectedRuntime.core.libraryVersion}` : "SELECT CARTRIDGE OR RUNTIME"}</p>
+                  <small>RUNG 39 // REGISTERED RUNTIME LAUNCH ONLINE</small>
                 </div>
               )}
             </div>
@@ -1759,27 +1871,29 @@ export function App() {
             <button
               className={replayRecording ? "recording" : ""}
               onClick={replayRecording ? endReplayRecording : beginReplayRecording}
-              disabled={!running || autodrive?.active || (!replayRecording && profile?.fastForward !== 1)}
+              disabled={!running || autodrive?.active || !session?.runtimeFeatures.exactReplay || (!replayRecording && profile?.fastForward !== 1)}
             >
               {replayRecording ? "STOP + EXPORT" : "REC"}
             </button>
-            <button onClick={verifyReplay} disabled={!running || replayRecording || autodrive?.active || !lastReplay}>VERIFY LAST</button>
+            <button onClick={verifyReplay} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.exactReplay || !lastReplay}>VERIFY LAST</button>
             <small>
               {lastReplay
                 ? `${lastReplay.receipt.verification?.result?.toUpperCase() ?? "UNVERIFIED"} // ${lastReplay.replaySha256.slice(0, 12)}…`
                 : replayRecording
                   ? `${replayActions} ACTIONS / ${replayCheckpoints} CHECKPOINTS`
-                  : "NO EXPORTED REPLAY"}
+                  : session && !session.runtimeFeatures.exactReplay
+                    ? "EXACT REPLAY UNSUPPORTED BY RUNTIME"
+                    : "NO EXPORTED REPLAY"}
             </small>
           </div>
 
           <div className="session-tools">
-            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>SAVE S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active}>LOAD S{profile?.saveSlot ?? 0}</button>
-            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording || autodrive?.active}>REWIND 2S</button>
+            <button onClick={() => queueSystem("save-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>SAVE S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("load-state", profile?.saveSlot ?? 0)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>LOAD S{profile?.saveSlot ?? 0}</button>
+            <button onClick={() => queueSystem("rewind", 2)} disabled={!running || replayRecording || autodrive?.active || !session?.runtimeFeatures.stateSnapshots}>REWIND 2S</button>
             <button onClick={() => queueSystem("reset")} disabled={!running || replayRecording || autodrive?.active}>RESET</button>
             <button onClick={takeScreenshot} disabled={!running}>SCREENSHOT</button>
-            <button onClick={flushBatteryRam} disabled={!running}>FLUSH SRAM</button>
+            <button onClick={flushBatteryRam} disabled={!running || !session?.runtimeFeatures.persistentSaveData}>FLUSH SRAM</button>
           </div>
 
           <div className="speed-strip">
@@ -1794,7 +1908,7 @@ export function App() {
                 {speed}×
               </button>
             ))}
-            <small>{profile ? `REWIND ${profile.rewindSeconds}S / EVERY ${profile.rewindIntervalFrames}F` : "PROFILE OFFLINE"}</small>
+            <small>{profile ? (session?.runtimeFeatures.stateSnapshots ? `REWIND ${profile.rewindSeconds}S / EVERY ${profile.rewindIntervalFrames}F` : "REWIND UNSUPPORTED BY RUNTIME") : "PROFILE OFFLINE"}</small>
           </div>
 
           <div className="control-strip">
@@ -1814,22 +1928,29 @@ export function App() {
         </section>
 
         <aside className="panel telemetry-panel">
-          <div className="panel-title">RUNTIME // RUNG 19</div>
+          <div className="panel-title">RUNTIME // RUNG 39</div>
           <dl>
             <div><dt>FRAME</dt><dd>{frameNumber.toString().padStart(6, "0")}</dd></div>
             <div><dt>INPUT QUEUE</dt><dd>{bus.pending.toString().padStart(6, "0")}</dd></div>
             <div><dt>LIBRARY</dt><dd>{games.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>GAMEPADS</dt><dd>{controllers.length.toString().padStart(6, "0")}</dd></div>
             <div><dt>CORE</dt><dd>{running ? "ONLINE" : "STANDBY"}</dd></div>
+            <div><dt>ROUTE</dt><dd>{session?.routeEvidence.route.toUpperCase() ?? "NONE"}</dd></div>
+            <div><dt>OP APPROVAL</dt><dd>{session?.routeEvidence.sessionOperatorApproved ? "YES" : "NO"}</dd></div>
+            <div><dt>STATE SNAP</dt><dd>{session ? (session.runtimeFeatures.stateSnapshots ? "YES" : "NO") : "----"}</dd></div>
+            <div><dt>EXACT REPLAY</dt><dd>{session ? (session.runtimeFeatures.exactReplay ? "YES" : "NO") : "----"}</dd></div>
+            <div><dt>SAVE DATA</dt><dd>{session ? (session.runtimeFeatures.persistentSaveData ? "YES" : "NO") : "----"}</dd></div>
             <div><dt>AUDIO</dt><dd>{running ? (audioRate ? `${audioRate} HZ` : "SYNC") : "OFFLINE"}</dd></div>
             <div><dt>SPEED</dt><dd>{running ? `${profile?.fastForward ?? 1}×` : "OFFLINE"}</dd></div>
-            <div><dt>REWIND</dt><dd>{rewindSnapshots.toString().padStart(6, "0")}</dd></div>
-            <div><dt>STATE SLOT</dt><dd>S{profile?.saveSlot ?? 0}</dd></div>
+            <div><dt>REWIND</dt><dd>{session?.runtimeFeatures.stateSnapshots ? rewindSnapshots.toString().padStart(6, "0") : "N/A"}</dd></div>
+            <div><dt>STATE SLOT</dt><dd>{session?.runtimeFeatures.stateSnapshots ? `S${profile?.saveSlot ?? 0}` : "N/A"}</dd></div>
             <div><dt>GAME HASH</dt><dd>{session ? session.gameKey.slice(0, 8).toUpperCase() : "--------"}</dd></div>
-            <div><dt>REPLAY</dt><dd>{replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
+            <div><dt>REG SHA</dt><dd>{session?.routeEvidence.registeredCoreSha256?.slice(0, 8).toUpperCase() ?? "--------"}</dd></div>
+            <div><dt>BIN EVIDENCE</dt><dd>{session ? (session.routeEvidence.registrationBinaryEvidenceBound ? "BOUND" : "UNBOUND") : "----"}</dd></div>
+            <div><dt>REPLAY</dt><dd>{session && !session.runtimeFeatures.exactReplay ? "UNSUPPORTED" : replayRecording ? "RECORDING" : lastReplay ? "EXPORTED" : "STANDBY"}</dd></div>
             <div><dt>ACTIONS</dt><dd>{replayActions.toString().padStart(6, "0")}</dd></div>
             <div><dt>CHECKPOINTS</dt><dd>{replayCheckpoints.toString().padStart(6, "0")}</dd></div>
-            <div><dt>VERIFY</dt><dd>{lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
+            <div><dt>VERIFY</dt><dd>{session && !session.runtimeFeatures.exactReplay ? "N/A" : lastReplay?.receipt.verification?.result.toUpperCase() ?? "UNVERIFIED"}</dd></div>
             <div><dt>AUTHORITY</dt><dd>{authority?.mode.toUpperCase() ?? "OFFLINE"}</dd></div>
             <div><dt>AGENT</dt><dd>{authority?.agentId ?? "NONE"}</dd></div>
             <div><dt>REJECTED</dt><dd>{(authority?.rejectedActions ?? 0).toString().padStart(6, "0")}</dd></div>

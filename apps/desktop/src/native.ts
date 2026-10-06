@@ -796,6 +796,16 @@ export async function selectLibretroCore(): Promise<string | null> {
   return typeof selected === "string" ? selected : null;
 }
 
+export async function selectRuntimeContent(): Promise<string | null> {
+  if (!isNativeShell()) return null;
+  const selected = await open({
+    directory: false,
+    multiple: false,
+    title: "Select runtime content",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
 export async function registerRuntimeCore(corePath: string): Promise<RuntimeRegistrationReceipt> {
   return invoke<RuntimeRegistrationReceipt>("register_runtime_core", { corePath });
 }
@@ -831,6 +841,18 @@ export async function startEmulation(
   gamePath: string,
 ): Promise<SessionInfo> {
   return invoke<SessionInfo>("start_emulation", { corePath, gamePath });
+}
+
+export async function startRegisteredEmulation(
+  coreSha256: string,
+  contentPath: string | null,
+  operatorApproved: boolean,
+): Promise<SessionInfo> {
+  return invoke<SessionInfo>("start_registered_emulation", {
+    coreSha256,
+    contentPath,
+    operatorApproved,
+  });
 }
 
 export async function stepEmulation(

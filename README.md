@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 38
+## Current status — Rung 39
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -36,6 +36,7 @@ Benchmark suites:
 - **Runtime Registration v1** — user-supplied libretro cores are fingerprinted, identified, capability-described, and persisted without implicitly receiving qualification or launch authority
 - **Registered Session Routing v1** — registered core SHA routing with stale-binary checks, explicit operator launch approval, FILE/no-content loading, and capability-aware timeline features
 - **Desktop Runtime Manager v1** — native UI for registering user-supplied libretro cores and inspecting SHA, identity, capability, qualification-profile, evidence-binding, and authority state
+- **Registered Launch UI v1** — operator-approved desktop launch for registered libretro FILE/no-content sessions with capability-aware replay/state/save controls
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -159,6 +160,21 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Registered launch UI
+
+Rung 39 connects the desktop Runtime Manager to registered session routing.
+
+Operators can select a registered runtime, explicitly approve one session, and
+start either a no-content launcher or a user-selected FILE. The native backend
+still re-hashes the core and verifies the stored identity before launch.
+
+The desktop now also disables save-state, rewind, exact Replay v1, and save-RAM
+controls when the active runtime does not support those capabilities. ScummVM
+therefore presents an honest governed play surface instead of emulator features
+it cannot provide.
+
+See `docs/REGISTERED_LAUNCH_UI.md`.
 
 ## Desktop runtime manager
 
@@ -618,6 +634,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/REGISTERED_LAUNCH_UI.md`
 - `docs/DESKTOP_RUNTIME_MANAGER.md`
 - `docs/REGISTERED_SESSION_ROUTING.md`
 - `docs/RUNTIME_REGISTRATION.md`
