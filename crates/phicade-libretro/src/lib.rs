@@ -61,6 +61,7 @@ const SET_VARIABLES: c_uint = 16;
 const GET_VARIABLE_UPDATE: c_uint = 17;
 const SET_SUPPORT_NO_GAME: c_uint = 18;
 const GET_LIBRETRO_PATH: c_uint = 19;
+const GET_LOG_INTERFACE: c_uint = 27;
 const GET_SAVE_DIRECTORY: c_uint = 31;
 const SET_SYSTEM_AV_INFO: c_uint = 32;
 const SET_CONTROLLER_INFO: c_uint = 35;
@@ -175,6 +176,15 @@ struct RetroGameInfo {
 struct RetroVariable {
     key: *const c_char,
     value: *const c_char,
+}
+
+#[repr(C)]
+struct RetroLogCallback {
+    log: *const c_void,
+}
+
+unsafe extern "C" {
+    fn phicade_libretro_log();
 }
 
 type EnvironmentCallback = unsafe extern "C" fn(c_uint, *mut c_void) -> bool;
@@ -768,6 +778,12 @@ unsafe extern "C" fn environment_callback(command: c_uint, data: *mut c_void) ->
             *(data as *mut *const c_char) = state.core_path.as_ptr();
             true
         }
+        GET_LOG_INTERFACE => {
+            if data.is_null() { return false; }
+            let callback = &mut *(data as *mut RetroLogCallback);
+            callback.log = phicade_libretro_log as *const () as *const c_void;
+            true
+        }
         GET_AUDIO_VIDEO_ENABLE => {
             if data.is_null() { return false; }
             *(data as *mut c_uint) = 3;
@@ -861,6 +877,20 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exposes_non_null_libretro_log_callback() {
+        let mut callback = RetroLogCallback { log: ptr::null() };
+        let ok = unsafe {
+            environment_callback(
+                GET_LOG_INTERFACE,
+                (&mut callback as *mut RetroLogCallback).cast(),
+            )
+        };
+
+        assert!(ok);
+        assert!(!callback.log.is_null());
+    }
+
     #[test]
     fn maps_full_retropad_buttons() {
         let buttons = [
