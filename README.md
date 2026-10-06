@@ -22,8 +22,8 @@ deserves the same powers.
 - **Use a local Ollama vision model** over loopback-only provider access.
 - **Run bounded Autodrive** with governed memory, cadence, and action receipts.
 - **Benchmark agent behavior** across a frozen 77-task Suite v13 ladder.
-- **Build campaign, suite, and comparison evidence** without collapsing unlike
-  tasks into one mystery score.
+- **Build campaign, suite, comparison, and public-result evidence** without
+  collapsing unlike tasks into one mystery score.
 
 ## Why PhiCade is different
 
@@ -158,23 +158,26 @@ See [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
 ## Results
 
-PhiCade can build persistent benchmark campaigns and frozen Suite Reports, but
-the repository does **not yet publish a canonical Suite v13 local-model score**
-as a project result.
+PhiCade can turn a verified Suite Report into a deterministic **Public Suite
+Result v1**.
 
-A public result should include the exact:
+The desktop **PUBLIC RESULT** lane revalidates the selected Suite Report and all
+referenced campaigns, then exports both JSON and Markdown containing:
 
-- model name and digest;
-- model qualification receipt;
-- suite version;
-- core identity and binary evidence;
+- model name and exact digest;
+- model qualification SHA-256;
+- suite version and source Suite Report SHA-256;
+- core identity and SHA-256;
 - Autodrive policy;
 - trials per task;
-- Suite Report evidence ID.
+- aggregate suite statistics;
+- every task's campaign receipt SHA-256.
 
-Until that evidence is frozen, PhiCade publishes the benchmark design and
-controls without inventing a leaderboard. Humanity has enough leaderboards
-made from vibes already.
+The repository still does **not yet publish a canonical Suite v13 local-model
+score**. The export machinery exists so the first published result can come
+from verified evidence instead of a manually copied leaderboard.
+
+See [docs/PUBLIC_RESULTS.md](docs/PUBLIC_RESULTS.md).
 
 ## Quickstart
 
@@ -235,13 +238,14 @@ PhiCade's evidence stack includes:
 - negative and shortcut controls;
 - repeated task campaigns;
 - frozen Suite Reports;
+- deterministic verified public result exports;
 - like-for-like comparison receipts.
 
 See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 40 — Public README v1**
+**Rung 41 — Public Suite Results v1**
 
 The current desktop can:
 
@@ -252,7 +256,9 @@ The current desktop can:
 5. select a registered runtime;
 6. explicitly approve one session;
 7. launch FILE content or a supported no-content launcher;
-8. expose only the replay/state/save controls supported by that runtime.
+8. expose only the replay/state/save controls supported by that runtime;
+9. revalidate an existing Suite Report and export deterministic public JSON +
+   Markdown with evidence hashes.
 
 ## Documentation
 
@@ -260,6 +266,7 @@ Start here:
 
 - [Benchmarks](docs/BENCHMARKS.md)
 - [Evidence and qualification](docs/EVIDENCE.md)
+- [Public Suite Results](docs/PUBLIC_RESULTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
