@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 33
+## Current status — Rung 34
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -31,6 +31,7 @@ Benchmark suites:
 - **Suite v13** — the exact v12 tasks + the sixteen **Indirect Context Routing** 2×2×2×2 factorial variants
 - **Runtime Capability Manifest v1** — adapters declare execution model and per-capability UNSUPPORTED / SUPPORTED / QUALIFIED status without inflating weaker runtimes into emulator-shaped interfaces
 - **Content Descriptor v1** — FILE / DIRECTORY / LAUNCH_TARGET content locators with optional system and runtime hints, while legacy GameImage behavior remains intact
+- **Generic libretro Host v1** — generic FILE loading, full 16-button RetroPad, analog axes, and runtime-observed optional capability claims
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -127,6 +128,10 @@ Current evidence stack includes:
 - capability manifest embedded in the SameBoy qualification receipt
 - Content Descriptor v1 with fail-closed legacy EmulatorCore compatibility bridge
 - GameImage ↔ FILE+system descriptor compatibility with no SameBoy behavior change
+- generic libretro FILE loading without a SystemId allowlist
+- full 16-button RetroPad mapping plus left/right analog axes
+- state-snapshot/save-data capability probes for unqualified libretro cores
+- generic exact replay remains unsupported unless separately qualified
 - memory limits frozen into Autodrive policy v1
 - memory revision/update/refusal evidence in Autodrive receipts
 - migration-safe legacy cadence policy deserialization
@@ -145,6 +150,22 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Generic libretro host
+
+Rung 34 removes the Game Boy-specific compatibility gate from the libretro
+adapter. A FILE Content Descriptor can now be offered directly to the loaded
+core even without a `SystemId`; the core itself decides whether the content is
+valid.
+
+The governed input surface now covers all 16 standard RetroPad buttons plus
+left/right analog X/Y axes. Generic cores only advertise optional snapshot/save
+capabilities after the loaded runtime actually exposes them. Exact replay stays
+UNSUPPORTED unless a named qualification profile proves otherwise.
+
+SameBoy keeps its existing pinned qualification and benchmark behavior.
+
+See `docs/GENERIC_LIBRETRO_HOST.md`.
 
 ## Runtime-neutral content
 
@@ -532,6 +553,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/GENERIC_LIBRETRO_HOST.md`
 - `docs/CONTENT_DESCRIPTOR.md`
 - `docs/RUNTIME_CAPABILITY_MANIFEST.md`
 - `docs/INDIRECT_CONTEXT_ROUTING_BENCHMARK.md`
