@@ -52,6 +52,7 @@ const MAX_CAMPAIGN_TRIALS: u16 = 20;
 const MANUAL_AGENT_MEMORY_MAX_BYTES: u32 = 4_096;
 const MANUAL_AGENT_MEMORY_UPDATE_MAX_BYTES: u32 = 1_024;
 const RUNTIME_REGISTRATION_SCHEMA: &str = "phicade.runtime-registration.v1";
+const PUBLIC_SUITE_RESULT_SCHEMA: &str = "phicade.public-suite-result.v1";
 
 #[derive(Default)]
 struct EmulatorState {
@@ -424,6 +425,57 @@ struct BenchmarkSuiteReportListEntry {
     macro_mean_score_1000: f64,
     overall_success_rate: f64,
     receipt_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteTaskResult {
+    task_id: String,
+    task_title: String,
+    campaign_id: u64,
+    campaign_receipt_sha256: String,
+    observed_trials: u16,
+    scored_trials: u16,
+    scoring_error_trials: u16,
+    successful_trials: u16,
+    success_rate: f64,
+    mean_score_1000: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteResultReceipt {
+    schema: String,
+    record_status: String,
+    suite_id: String,
+    suite_version: u16,
+    suite_title: String,
+    report_id: u64,
+    suite_report_sha256: String,
+    cohort_id: String,
+    provider: String,
+    model: String,
+    model_digest: String,
+    model_qualification_sha256: String,
+    core_sha256: String,
+    core_name: String,
+    core_version: String,
+    policy: AutodrivePolicy,
+    trials_per_task: u16,
+    total_scored_trials: u32,
+    total_scoring_error_trials: u32,
+    stats: BenchmarkSuiteAggregateStats,
+    tasks: Vec<PublicSuiteTaskResult>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PublicSuiteResultArtifact {
+    json_path: String,
+    markdown_path: String,
+    json_sha256: String,
+    markdown_sha256: String,
+    receipt: PublicSuiteResultReceipt,
 }
 
 #[derive(Debug, Clone, Serialize)]
