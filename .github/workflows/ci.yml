@@ -74,3 +74,27 @@ jobs:
           name: phicade-qualification-receipts
           path: artifacts/*.json
           if-no-files-found: error
+
+  scummvm:
+    name: core / ScummVM 2026.3.0 launcher qualification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ScummVM build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            curl \
+            pkg-config \
+            python3 \
+            cmake \
+            nasm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash ./scripts/qualify-scummvm.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phicade-scummvm-qualification
+          path: artifacts/scummvm-qualification.json
+          if-no-files-found: error
