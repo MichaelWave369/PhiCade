@@ -891,6 +891,21 @@ fn ollama_qualification_path(app: &AppHandle, digest: &str) -> Result<PathBuf, S
         .join(format!("{}.json", sanitize_component(digest))))
 }
 
+fn ollama_qualification_archive_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(ollama_qualification_dir(app)?.join("receipts"))
+}
+
+fn ollama_qualification_archive_path(
+    app: &AppHandle,
+    receipt_sha256: &str,
+) -> Result<PathBuf, String> {
+    let digest = receipt_sha256.trim().to_ascii_lowercase();
+    if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("model qualification receipt SHA-256 must be 64 hexadecimal characters".into());
+    }
+    Ok(ollama_qualification_archive_dir(app)?.join(format!("{digest}.json")))
+}
+
 fn persist_ollama_qualification(
     app: &AppHandle,
     receipt: &OllamaQualificationReceipt,
@@ -903,6 +918,19 @@ fn persist_ollama_qualification(
         .map_err(|error| format!("cannot create {}: {error}", parent.display()))?;
     let json = serde_json::to_vec_pretty(receipt)
         .map_err(|error| format!("serialize Ollama qualification receipt: {error}"))?;
+    let receipt_sha256 = sha256_bytes(&json);
+    let archive_path = ollama_qualification_archive_path(app, &receipt_sha256)?;
+    if archive_path.exists() {
+        let observed = sha256_file(&archive_path)?;
+        if observed != receipt_sha256 {
+            return Err(format!(
+                "qualification archive {} does not match its SHA-256 filename",
+                archive_path.display()
+            ));
+        }
+    } else {
+        write_atomic(&archive_path, &json)?;
+    }
     write_atomic(&path, &json)?;
 
     Ok(OllamaQualificationArtifact {
@@ -928,6 +956,51 @@ fn load_ollama_qualification(
         receipt_path: path.to_string_lossy().to_string(),
         receipt,
     }))
+}
+
+fn load_ollama_qualification_by_sha(
+    app: &AppHandle,
+    digest: &str,
+    expected_sha256: &str,
+) -> Result<OllamaQualificationArtifact, String> {
+    let archive_path = ollama_qualification_archive_path(app, expected_sha256)?;
+    let path = if archive_path.exists() {
+        archive_path
+    } else {
+        let alias = ollama_qualification_path(app, digest)?;
+        if !alias.exists() {
+            return Err(format!(
+                "model qualification receipt {} is missing",
+                expected_sha256
+            ));
+        }
+        let observed = sha256_file(&alias)?;
+        if observed != expected_sha256 {
+            return Err(format!(
+                "model qualification receipt {} is not available in immutable archive or current digest alias",
+                expected_sha256
+            ));
+        }
+        alias
+    };
+
+    let observed = sha256_file(&path)?;
+    if observed != expected_sha256 {
+        return Err(format!(
+            "model qualification receipt {} hash mismatch at {}",
+            expected_sha256,
+            path.display()
+        ));
+    }
+    let bytes = fs::read(&path)
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let receipt = serde_json::from_slice::<OllamaQualificationReceipt>(&bytes)
+        .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+
+    Ok(OllamaQualificationArtifact {
+        receipt_path: path.to_string_lossy().to_string(),
+        receipt,
+    })
 }
 
 fn qualification_receipt_passes(
@@ -3568,21 +3641,11 @@ fn validate_suite_report_evidence_closure(
             receipt.report_id, receipt.provider
         ));
     }
-    let qualification = load_ollama_qualification(app, &receipt.model_digest)?
-        .ok_or_else(|| {
-            format!(
-                "suite report {} model qualification receipt is missing",
-                receipt.report_id
-            )
-        })?;
-    let qualification_path = Path::new(&qualification.receipt_path);
-    let qualification_sha256 = sha256_file(qualification_path)?;
-    if qualification_sha256 != receipt.model_qualification_sha256 {
-        return Err(format!(
-            "suite report {} model qualification receipt hash mismatch",
-            receipt.report_id
-        ));
-    }
+    let qualification = load_ollama_qualification_by_sha(
+        app,
+        &receipt.model_digest,
+        &receipt.model_qualification_sha256,
+    )?;
     if !qualification_receipt_passes(
         &qualification.receipt,
         &receipt.model,
