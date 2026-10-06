@@ -22,8 +22,8 @@ deserves the same powers.
 - **Use a local Ollama vision model** over loopback-only provider access.
 - **Run bounded Autodrive** with governed memory, cadence, and action receipts.
 - **Benchmark agent behavior** across a frozen 77-task Suite v13 ladder.
-- **Build campaign, suite, comparison, and public-result evidence** without
-  collapsing unlike tasks into one mystery score.
+- **Build campaign, suite, comparison, public-result, and portable evidence**
+  without collapsing unlike tasks into one mystery score.
 
 ## Why PhiCade is different
 
@@ -174,11 +174,17 @@ model-qualification receipt, then exports both JSON and Markdown containing:
 - aggregate suite statistics;
 - every task's campaign receipt SHA-256.
 
+The same verified report can also be exported as a deterministic **Portable
+Evidence Bundle v1** containing the closed receipt chain, regenerated public
+JSON/Markdown, and a SHA-256 manifest. ROMs, cores, model weights, save data,
+and commercial assets are deliberately excluded.
+
 The repository still does **not yet publish a canonical Suite v13 local-model
 score**. The export machinery exists so the first published result can come
 from verified evidence instead of a manually copied leaderboard.
 
-See [docs/PUBLIC_RESULTS.md](docs/PUBLIC_RESULTS.md).
+See [docs/PUBLIC_RESULTS.md](docs/PUBLIC_RESULTS.md) and
+[docs/PORTABLE_EVIDENCE_BUNDLE.md](docs/PORTABLE_EVIDENCE_BUNDLE.md).
 
 ## Quickstart
 
@@ -241,13 +247,14 @@ PhiCade's evidence stack includes:
 - repeated task campaigns;
 - frozen Suite Reports;
 - deterministic verified public result exports;
+- deterministic portable evidence ZIPs;
 - like-for-like comparison receipts.
 
 See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 42 — Evidence Closure v1**
+**Rung 43 — Portable Evidence Bundle v1**
 
 The current desktop can:
 
@@ -260,7 +267,9 @@ The current desktop can:
 7. launch FILE content or a supported no-content launcher;
 8. expose only the replay/state/save controls supported by that runtime;
 9. close an existing Suite Report through campaign, trial, Autodrive, and exact
-   model-qualification evidence before comparison or deterministic public export.
+   model-qualification evidence before comparison or deterministic public export;
+10. package that closed evidence graph into a deterministic portable ZIP without
+    bundling ROMs, cores, model weights, or commercial assets.
 
 ## Documentation
 
@@ -269,6 +278,7 @@ Start here:
 - [Benchmarks](docs/BENCHMARKS.md)
 - [Evidence and qualification](docs/EVIDENCE.md)
 - [Evidence Closure](docs/EVIDENCE_CLOSURE.md)
+- [Portable Evidence Bundle](docs/PORTABLE_EVIDENCE_BUNDLE.md)
 - [Public Suite Results](docs/PUBLIC_RESULTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
