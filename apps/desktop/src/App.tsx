@@ -36,7 +36,9 @@ import {
   listBenchmarkSuiteReports,
   listBenchmarkSuites,
   listOllamaModels,
+  listRuntimeRegistrations,
   qualifyOllamaModel,
+  registerRuntimeCore,
   loadSettings,
   setControlMode,
   startAutodrive,
@@ -51,6 +53,7 @@ import {
   scanRomDirectory,
   selectRomDirectory,
   selectSameBoyCore,
+  selectLibretroCore,
   setGameProfile,
   startEmulation,
   stepEmulation,
@@ -79,6 +82,7 @@ import {
   type OllamaQualificationStatus,
   type ReplayArtifact,
   type RomEntry,
+  type RuntimeRegistrationReceipt,
   type SessionInfo,
 } from "./native";
 
@@ -164,6 +168,8 @@ export function App() {
   const [lastSuiteComparison, setLastSuiteComparison] = useState<BenchmarkSuiteComparisonArtifact | null>(null);
   const [suiteComparisonBusy, setSuiteComparisonBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
+  const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
 
   const selectedSuite = suiteRegistry.find((suite) => suite.id === selectedSuiteId) ?? null;
 
@@ -178,6 +184,10 @@ export function App() {
         if (cancelled) return;
         const merged = { ...defaultSettings, ...loaded };
         setSettings(merged);
+        if (native) {
+          const registrations = await listRuntimeRegistrations();
+          if (!cancelled) setRuntimeRegistrations(registrations);
+        }
         if (native && merged.autoScan && merged.romDirectory) {
           const found = await scanRomDirectory(merged.romDirectory);
           if (!cancelled) {
@@ -344,6 +354,32 @@ export function App() {
     setSettings(nextSettings);
     setNotice("SAMEBOY CORE PATH SAVED // IDENTITY STILL VERIFIED AT LOAD");
     return selected;
+  };
+
+  const registerRuntime = async () => {
+    if (!native) {
+      setNotice("RUNTIME REGISTRY REQUIRES THE TAURI DESKTOP SHELL");
+      return;
+    }
+    setRuntimeRegistryBusy(true);
+    try {
+      const selected = await selectLibretroCore();
+      if (!selected) {
+        setNotice("RUNTIME REGISTRATION CANCELLED");
+        return;
+      }
+      const receipt = await registerRuntimeCore(selected);
+      const registrations = await listRuntimeRegistrations();
+      setRuntimeRegistrations(registrations);
+      const profile = receipt.qualificationProfileId ?? "UNQUALIFIED PROFILE";
+      setNotice(
+        `RUNTIME REGISTERED // ${receipt.core.libraryName} ${receipt.core.libraryVersion} // ${profile} // SHA ${receipt.coreSha256.slice(0, 12)}…`,
+      );
+    } catch (error) {
+      setNotice(`RUNTIME REGISTRY ERROR // ${String(error)}`);
+    } finally {
+      setRuntimeRegistryBusy(false);
+    }
   };
 
   const toggleAutoScan = async () => {
@@ -1383,9 +1419,48 @@ export function App() {
 
           <div className="rule" />
           <button className="utility-button" onClick={chooseDirectory} disabled={scanning}>CHANGE DIRECTORY</button>
-          <button className="utility-button" onClick={chooseCore} disabled={!native}>SAMEBOY CORE: {settings.sameboyCorePath ? "SET" : "SELECT"}</button>
+          <button className="utility-button" onClick={chooseCore} disabled={!native}>LEGACY SAMEBOY CORE: {settings.sameboyCorePath ? "SET" : "SELECT"}</button>
           <button className="utility-button" onClick={toggleAutoScan} disabled={!native}>AUTO-SCAN: {settings.autoScan ? "ON" : "OFF"}</button>
           <p className="microcopy path-copy">{settings.romDirectory ?? "NO DIRECTORY SAVED"}</p>
+
+          <div className="rule" />
+          <div className="runtime-manager">
+            <div className="runtime-manager-heading">
+              <span>RUNTIME REGISTRY</span>
+              <strong>{runtimeRegistrations.length}</strong>
+            </div>
+            <button
+              className="utility-button"
+              onClick={() => void registerRuntime()}
+              disabled={!native || runtimeRegistryBusy || running}
+            >
+              {runtimeRegistryBusy ? "INSPECTING CORE..." : "REGISTER LIBRETRO CORE"}
+            </button>
+            {runtimeRegistrations.length === 0 ? (
+              <p className="microcopy">NO REGISTERED RUNTIMES // REGISTRATION GRANTS NO LAUNCH AUTHORITY</p>
+            ) : (
+              <div className="runtime-list">
+                {runtimeRegistrations.map((runtime) => {
+                  const capabilities = runtime.capabilityManifest.capabilities;
+                  const qualified = Object.values(capabilities).filter((status) => status === "QUALIFIED").length;
+                  const supported = Object.values(capabilities).filter((status) => status !== "UNSUPPORTED").length;
+                  return (
+                    <div className="runtime-row" key={runtime.coreSha256} title={runtime.corePath}>
+                      <div className="runtime-row-main">
+                        <strong>{runtime.core.libraryName} {runtime.core.libraryVersion}</strong>
+                        <span>{runtime.capabilityManifest.executionModel.replaceAll("_", " ")}</span>
+                      </div>
+                      <small>SHA // {runtime.coreSha256.slice(0, 16)}…</small>
+                      <small>CAPS // {qualified} QUALIFIED / {supported} AVAILABLE</small>
+                      <small>
+                        PROFILE // {runtime.qualificationProfileId ?? "NONE"} // EVIDENCE {runtime.binaryEvidenceBound ? "BOUND" : "UNBOUND"} // AUTHORITY {runtime.authorityGranted ? "GRANTED" : "NONE"}
+                      </small>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </aside>
 
         <section className="screen-panel" aria-label="emulator display">
