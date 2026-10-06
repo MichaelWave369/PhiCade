@@ -5,7 +5,7 @@
 PhiCade is an open-source retro game runtime and emulator front end built around
 one rule: controllers may propose actions; the runtime owns authority.
 
-## Current status — Rung 35
+## Current status — Rung 36
 
 PhiCade now has an indirect context-routing benchmark. The briefing exposes
 two competing memory banks plus a STAR/MOON pointer map. After both the bank
@@ -33,6 +33,7 @@ Benchmark suites:
 - **Content Descriptor v1** — FILE / DIRECTORY / LAUNCH_TARGET content locators with optional system and runtime hints, while legacy GameImage behavior remains intact
 - **Generic libretro Host v1** — generic FILE loading, full 16-button RetroPad, analog axes, and runtime-observed optional capability claims
 - **ScummVM 2026.3.0 qualification** — pinned upstream no-engine launcher build, real framebuffer/input qualification, explicit no-snapshot/no-exact-replay receipt
+- **Runtime Registration v1** — user-supplied libretro cores are fingerprinted, identified, capability-described, and persisted without implicitly receiving qualification or launch authority
 - **Wall Detour** — target is directly right, but a visible wall forces a
   DOWN → RIGHT → UP route through a lower gap
 - **Temporal Cue pair** — opposite initial cues lead to an identical later
@@ -156,6 +157,18 @@ Current evidence stack includes:
 - task-paired per-task Welch/Hedges comparisons
 - descriptive cross-suite A−B statistics
 - persistent evidence IDs across app sessions
+
+## Runtime registration
+
+Rung 36 adds `phicade.runtime-registration.v1`.
+
+The native shell can now inspect and persist a user-supplied libretro core by
+canonical path and SHA-256. The receipt includes the core's identity and
+capability manifest, but explicitly records `binaryEvidenceBound=false` and
+`authorityGranted=false` until later evidence-binding/session-routing steps
+prove more.
+
+See `docs/RUNTIME_REGISTRATION.md`.
 
 ## ScummVM qualification
 
@@ -576,6 +589,7 @@ coverage, provenance path uniqueness, digest splitting, and trial-tamper refusal
 
 See:
 
+- `docs/RUNTIME_REGISTRATION.md`
 - `docs/SCUMMVM_QUALIFICATION.md`
 - `docs/GENERIC_LIBRETRO_HOST.md`
 - `docs/CONTENT_DESCRIPTOR.md`
