@@ -39,10 +39,16 @@ ScummVM launcher path, including:
 
 - no-content launcher support;
 - retrieval of the loaded core path;
+- a standard libretro variadic log callback;
 - explicit audio/video enablement;
 - keyboard callback registration acknowledgement.
 
 The core may then be loaded with a null content pointer and run its launcher.
+
+The logging interface is required for safe lifecycle cleanup in this pinned
+ScummVM release: `retro_deinit()` reports the ScummVM exit code through the
+frontend logger. PhiCade therefore supplies a real C-ABI variadic callback
+rather than leaving the logger null.
 
 ## Required PASS evidence
 
