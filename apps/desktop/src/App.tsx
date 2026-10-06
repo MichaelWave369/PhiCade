@@ -1200,6 +1200,99 @@ export function App() {
     }
   };
 
+  const prepareSessionLaunch = async () => {
+    if (!audioContextRef.current) audioContextRef.current = new AudioContext();
+    await audioContextRef.current.resume();
+    nextAudioTimeRef.current = audioContextRef.current.currentTime;
+    gamepadRef.current = emptyGameBoyButtons();
+    frameRef.current = 0;
+    setFrameNumber(0);
+    setAudioRate(0);
+    setRewindSnapshots(0);
+    setReplayRecording(false);
+    setReplayActions(0);
+    setReplayCheckpoints(0);
+    setLastReplay(null);
+    setAuthority(null);
+    setLastObservation(null);
+    setDriverPendingTurnId(null);
+    setDriverQueuedActions(0);
+    setLastProviderDurationMs(null);
+    setAutodrive(null);
+    setLastAutodrive(null);
+    setBenchmarkRunning(false);
+    setBenchmarkRunId(null);
+    setLastModelBenchmark(null);
+    setCampaignStatus(null);
+    setLastCampaign(null);
+    setCampaignLedger([]);
+    setComparisonAId(null);
+    setComparisonBId(null);
+    setLastComparison(null);
+    setSuiteCandidates([]);
+    setSelectedSuiteCohortId(null);
+    setSelectedSuiteId("");
+    setLastSuiteReport(null);
+    setSuiteReportBusy(false);
+    setSuiteReportLedger([]);
+    setSuiteComparisonAId(null);
+    setSuiteComparisonBId(null);
+    setLastSuiteComparison(null);
+    setSuiteComparisonBusy(false);
+  };
+
+  const adoptSession = async (info: SessionInfo, label: string) => {
+    const [initialAuthority, initialDriver] = await Promise.all([
+      getAuthorityStatus(),
+      getDriverStatus(),
+    ]);
+    setSession(info);
+    setAuthority(initialAuthority);
+    setDriverPendingTurnId(initialDriver.pendingTurnId);
+    setDriverQueuedActions(initialDriver.queuedActions);
+    setDriverMemory(initialDriver);
+    setProfile(info.profile);
+    setRunning(true);
+    runningRef.current = true;
+
+    const suites = await listBenchmarkSuites();
+    setSuiteRegistry(suites);
+    const defaultSuiteId = suites[suites.length - 1]?.id ?? "";
+    setSelectedSuiteId(defaultSuiteId);
+    const [priorCampaigns, priorSuiteCandidates, allSuiteReports] = await Promise.all([
+      listBenchmarkCampaignReceipts(),
+      defaultSuiteId ? listBenchmarkSuiteReportCandidates(defaultSuiteId) : Promise.resolve([]),
+      listBenchmarkSuiteReports(),
+    ]);
+    const priorSuiteReports = allSuiteReports.filter((entry) => entry.suiteId === defaultSuiteId);
+    setCampaignLedger(priorCampaigns);
+    setSuiteCandidates(priorSuiteCandidates);
+    setSuiteReportLedger(priorSuiteReports);
+    if (priorSuiteReports.length >= 2) {
+      setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
+      setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
+    } else {
+      setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
+      setSuiteComparisonBId(null);
+    }
+
+    const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
+    const selectedDigest = modelQualification?.details.digest;
+    const matchingSuiteCandidate = selectedDigest
+      ? readySuiteCandidates.find((candidate) => candidate.modelDigest === selectedDigest)
+      : null;
+    setSelectedSuiteCohortId(matchingSuiteCandidate?.cohortId ?? readySuiteCandidates[0]?.cohortId ?? null);
+    const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
+    if (completeCampaigns.length >= 2) {
+      setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
+      setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
+    }
+
+    setNotice(
+      `CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${label} // ROUTE ${info.routeEvidence.route.toUpperCase()} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY`,
+    );
+  };
+
   const launchGame = async () => {
     if (!native) {
       setNotice("EMULATION REQUIRES THE TAURI DESKTOP SHELL");
@@ -1210,7 +1303,7 @@ export function App() {
       return;
     }
     if (!(["GB", "GBC"] as string[]).includes(selectedGame.system)) {
-      setNotice("RUNG 3 QUALIFICATION IS GB/GBC ONLY // OTHER SYSTEMS STAY GATED");
+      setNotice("LEGACY SAMEBOY LAUNCH IS GB/GBC ONLY // USE A REGISTERED RUNTIME FOR OTHER CONTENT");
       return;
     }
 
@@ -1222,93 +1315,56 @@ export function App() {
         return;
       }
 
-      if (!audioContextRef.current) audioContextRef.current = new AudioContext();
-      await audioContextRef.current.resume();
-      nextAudioTimeRef.current = audioContextRef.current.currentTime;
-      gamepadRef.current = emptyGameBoyButtons();
-      frameRef.current = 0;
-      setFrameNumber(0);
-      setAudioRate(0);
-      setRewindSnapshots(0);
-      setReplayRecording(false);
-      setReplayActions(0);
-      setReplayCheckpoints(0);
-      setLastReplay(null);
-      setAuthority(null);
-      setLastObservation(null);
-      setDriverPendingTurnId(null);
-      setDriverQueuedActions(0);
-      setLastProviderDurationMs(null);
-      setAutodrive(null);
-      setLastAutodrive(null);
-      setBenchmarkRunning(false);
-      setBenchmarkRunId(null);
-      setLastModelBenchmark(null);
-      setCampaignStatus(null);
-      setLastCampaign(null);
-      setCampaignLedger([]);
-      setComparisonAId(null);
-      setComparisonBId(null);
-      setLastComparison(null);
-      setSuiteCandidates([]);
-      setSelectedSuiteCohortId(null);
-      setSelectedSuiteId("");
-      setLastSuiteReport(null);
-      setSuiteReportBusy(false);
-      setSuiteReportLedger([]);
-      setSuiteComparisonAId(null);
-      setSuiteComparisonBId(null);
-      setLastSuiteComparison(null);
-      setSuiteComparisonBusy(false);
-
+      await prepareSessionLaunch();
       const info = await startEmulation(corePath, selectedGame.path);
-      const [initialAuthority, initialDriver] = await Promise.all([
-        getAuthorityStatus(),
-        getDriverStatus(),
-      ]);
-      setSession(info);
-      setAuthority(initialAuthority);
-      setDriverPendingTurnId(initialDriver.pendingTurnId);
-      setDriverQueuedActions(initialDriver.queuedActions);
-      setDriverMemory(initialDriver);
-      setProfile(info.profile);
-      setRunning(true);
-      runningRef.current = true;
-      const suites = await listBenchmarkSuites();
-      setSuiteRegistry(suites);
-      const defaultSuiteId = suites[suites.length - 1]?.id ?? "";
-      setSelectedSuiteId(defaultSuiteId);
-      const [priorCampaigns, priorSuiteCandidates, allSuiteReports] = await Promise.all([
-        listBenchmarkCampaignReceipts(),
-        defaultSuiteId ? listBenchmarkSuiteReportCandidates(defaultSuiteId) : Promise.resolve([]),
-        listBenchmarkSuiteReports(),
-      ]);
-      const priorSuiteReports = allSuiteReports.filter((entry) => entry.suiteId === defaultSuiteId);
-      setCampaignLedger(priorCampaigns);
-      setSuiteCandidates(priorSuiteCandidates);
-      setSuiteReportLedger(priorSuiteReports);
-      if (priorSuiteReports.length >= 2) {
-        setSuiteComparisonAId(priorSuiteReports[priorSuiteReports.length - 2].reportId);
-        setSuiteComparisonBId(priorSuiteReports[priorSuiteReports.length - 1].reportId);
-      } else {
-        setSuiteComparisonAId(priorSuiteReports[0]?.reportId ?? null);
-        setSuiteComparisonBId(null);
-      }
-      const readySuiteCandidates = priorSuiteCandidates.filter((candidate) => candidate.ready);
-      const selectedDigest = modelQualification?.details.digest;
-      const matchingSuiteCandidate = selectedDigest
-        ? readySuiteCandidates.find((candidate) => candidate.modelDigest === selectedDigest)
-        : null;
-      setSelectedSuiteCohortId(matchingSuiteCandidate?.cohortId ?? readySuiteCandidates[0]?.cohortId ?? null);
-      const completeCampaigns = priorCampaigns.filter((entry) => entry.recordStatus === "COMPLETE");
-      if (completeCampaigns.length >= 2) {
-        setComparisonAId(completeCampaigns[completeCampaigns.length - 2].campaignId);
-        setComparisonBId(completeCampaigns[completeCampaigns.length - 1].campaignId);
-      }
-      setNotice(`CORE ONLINE // ${info.core.libraryName} ${info.core.libraryVersion} // ${selectedGame.displayName} // ${priorCampaigns.length} CAMPAIGNS // ${readySuiteCandidates.length} SUITE COHORTS READY // ${priorSuiteReports.length} SUITE REPORTS`);
+      await adoptSession(info, selectedGame.displayName);
     } catch (error) {
       setNotice(`LAUNCH ERROR // ${String(error)}`);
       setRunning(false);
+    }
+  };
+
+  const launchRegisteredRuntime = async (mode: "launcher" | "file") => {
+    if (!native) {
+      setNotice("REGISTERED RUNTIME LAUNCH REQUIRES THE TAURI DESKTOP SHELL");
+      return;
+    }
+    if (!selectedRuntime) {
+      setNotice("SELECT A REGISTERED RUNTIME FIRST");
+      return;
+    }
+    if (!registeredLaunchApproved) {
+      setNotice("OPERATOR APPROVAL REQUIRED FOR THIS REGISTERED RUNTIME SESSION");
+      return;
+    }
+
+    setRegisteredLaunchBusy(true);
+    try {
+      let contentPath: string | null = null;
+      if (mode === "file") {
+        contentPath = await selectRuntimeContent();
+        if (!contentPath) {
+          setNotice("RUNTIME CONTENT SELECTION CANCELLED");
+          return;
+        }
+      }
+
+      await prepareSessionLaunch();
+      const info = await startRegisteredEmulation(
+        selectedRuntime.coreSha256,
+        contentPath,
+        true,
+      );
+      const label = contentPath
+        ? contentPath.split(/[\\/]/).pop() ?? "FILE CONTENT"
+        : "NO-CONTENT LAUNCHER";
+      await adoptSession(info, label);
+      setRegisteredLaunchApproved(false);
+    } catch (error) {
+      setNotice(`REGISTERED LAUNCH ERROR // ${String(error)}`);
+      setRunning(false);
+    } finally {
+      setRegisteredLaunchBusy(false);
     }
   };
 
