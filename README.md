@@ -25,6 +25,7 @@ deserves the same powers.
 - **Build campaign, suite, comparison, public-result, and portable evidence**
   without collapsing unlike tasks into one mystery score.
 - **Run a real PixelForge cartridge through PhiCade** over the pinned Runtime Bridge v1 JSONL seam while keeping PhiCade authority and cartridge semantics separate.
+- **Govern canonical SPARK through PixelForge** so a PhiCade-authorized action reaches the real SPARK Threshold engine and returns semantic evidence.
 
 ## Why PhiCade is different
 
@@ -65,6 +66,7 @@ disabled because its pinned libretro profile does not expose serialization.
 | Pinned ScummVM v2026.3.0 profile | Yes | Qualified frame/input path | Unsupported | Unsupported | Unsupported |
 | Other registered libretro core | Capability-derived | Capability-derived | Probed / profile-dependent | Unsupported unless separately qualified | Probed / profile-dependent |
 | PixelForge / The Legend of More Bounce | Bridged scene runtime | Qualified governed MOVE proof | Unsupported | Unsupported | Unsupported |
+| PixelForge / SPARK: The Substrate | Bridged external game runtime | Rung 46 candidate: governed Threshold MOVE | Unsupported | Unsupported | Unsupported |
 
 Registered core identity is checked again at launch, and the local binary is
 re-hashed before a registered session starts.
@@ -256,7 +258,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 45 — PixelForge Real-Cartridge Qualification**
+**Rung 46 — Govern SPARK Through PixelForge**
 
 The current desktop can:
 
@@ -274,7 +276,8 @@ The current desktop can:
     bundling ROMs, cores, model weights, or commercial assets;
 11. qualify the pinned PixelForge v5.32 JSONL bridge as a `BRIDGED_RUNTIME`
     path with PhiCade authority applied before the first transported game intent;
-12. qualify the pinned PixelForge v5.33 **The Legend of More Bounce** cartridge by moving its real Bouncehome Grove player through the scene's actual collision-governed runtime.
+12. qualify the pinned PixelForge v5.33 **The Legend of More Bounce** cartridge by moving its real Bouncehome Grove player through the scene's actual collision-governed runtime;
+13. govern one canonical **SPARK: The Substrate** Threshold MOVE through PixelForge v5.34 and bind the returned SPARK semantic event and runtime hash into PhiCade evidence.
 
 ## Documentation
 
@@ -287,6 +290,7 @@ Start here:
 - [Public Suite Results](docs/PUBLIC_RESULTS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [PixelForge Runtime Adapter](docs/PIXELFORGE_RUNTIME_ADAPTER.md)
+- [SPARK through PixelForge](docs/SPARK_PIXELFORGE_CHAIN.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)

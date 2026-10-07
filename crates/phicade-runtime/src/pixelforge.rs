@@ -26,6 +26,12 @@ pub const PIXELFORGE_PINNED_QUALIFICATION_REVISION: &str =
     "8fda48073b5d2ea6273df54c47c194bdac8231d6";
 pub const PIXELFORGE_PINNED_REFERENCE_REVISION: &str =
     PIXELFORGE_PINNED_QUALIFICATION_REVISION;
+pub const PIXELFORGE_SPARK_CHAIN_QUALIFICATION_SCHEMA: &str =
+    "phicade.pixelforge-spark-chain-qualification.v1";
+pub const PIXELFORGE_PINNED_SPARK_RUNTIME_REVISION: &str =
+    "8790c3b00b5184136fb8fa6a2fbdabe834eeca22";
+pub const SPARK_PINNED_BRIDGE_REVISION: &str =
+    "fae7879820bef63a550fea486b2defbc3cee5304";
 
 #[derive(Debug)]
 pub enum PixelForgeBridgeError {
@@ -190,6 +196,34 @@ impl PixelForgeJsonlClient {
             .arg(cartridge)
             .arg("--scene")
             .arg(scene)
+            .current_dir(pixelforge_root);
+
+        Self::spawn(command)
+    }
+
+    pub fn spawn_external_spark(
+        pixelforge_root: &Path,
+        spark_root: &Path,
+    ) -> Result<Self, PixelForgeBridgeError> {
+        let server = pixelforge_root.join("scripts/serve_external_spark_runtime.mjs");
+        if !server.is_file() {
+            return Err(PixelForgeBridgeError::Process(format!(
+                "PixelForge SPARK server not found: {}",
+                server.display()
+            )));
+        }
+        if !spark_root.is_dir() {
+            return Err(PixelForgeBridgeError::Process(format!(
+                "SPARK root was not found: {}",
+                spark_root.display()
+            )));
+        }
+
+        let mut command = Command::new("node");
+        command
+            .arg(&server)
+            .arg("--spark-root")
+            .arg(spark_root)
             .current_dir(pixelforge_root);
 
         Self::spawn(command)
@@ -476,6 +510,58 @@ pub fn legend_bouncehome_intent_from_action(
     }))
 }
 
+pub fn spark_threshold_move_intent_from_action(
+    action: &ActionEnvelope,
+) -> Result<Value, PixelForgeBridgeError> {
+    let (x, y) = match &action.action {
+        ActionKind::Button { button, pressed } if *pressed => match button.as_str() {
+            "UP" => (0, -1),
+            "DOWN" => (0, 1),
+            "LEFT" => (-1, 0),
+            "RIGHT" => (1, 0),
+            _ => {
+                return Err(PixelForgeBridgeError::Protocol(
+                    "SPARK Threshold qualification accepts only directional button presses".into(),
+                ))
+            }
+        },
+        _ => {
+            return Err(PixelForgeBridgeError::Protocol(
+                "SPARK Threshold qualification requires a pressed directional button".into(),
+            ))
+        }
+    };
+
+    Ok(json!({
+        "type": "MOVE",
+        "actorId": "spark",
+        "params": { "x": x, "y": y }
+    }))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PixelForgeSparkChainQualificationReceipt {
+    pub schema: String,
+    pub record_status: String,
+    pub phicade_revision: String,
+    pub pixelforge_revision: String,
+    pub spark_revision: String,
+    pub transport_request_schema: String,
+    pub transport_response_schema: String,
+    pub descriptor: PixelForgeBridgeDescriptor,
+    pub capability_manifest: RuntimeCapabilityManifest,
+    pub controller_id: String,
+    pub initial_observation: Value,
+    pub authority_decision: AuthorityDecision,
+    pub source_action: ActionEnvelope,
+    pub submitted_intent: Value,
+    pub direct_events: Vec<Value>,
+    pub semantic_events: Vec<Value>,
+    pub final_observation: Value,
+    pub final_hash: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PixelForgeCartridgeQualificationReceipt {
@@ -600,6 +686,33 @@ mod tests {
         assert_eq!(intent["actorId"], "more-bounce");
         assert_eq!(intent["params"]["direction"], "RIGHT");
         assert!(legend_bouncehome_intent_from_action(&a).is_err());
+    }
+
+    #[test]
+    fn spark_threshold_mapping_is_deliberately_move_only() {
+        let right = ActionEnvelope {
+            sequence: 0,
+            frame: 0,
+            source: ActionSource::Human { seat: 1 },
+            action: ActionKind::Button {
+                button: "RIGHT".into(),
+                pressed: true,
+            },
+        };
+        let dash = ActionEnvelope {
+            action: ActionKind::Button {
+                button: "DASH".into(),
+                pressed: true,
+            },
+            ..right.clone()
+        };
+
+        let intent = spark_threshold_move_intent_from_action(&right).unwrap();
+        assert_eq!(intent["type"], "MOVE");
+        assert_eq!(intent["actorId"], "spark");
+        assert_eq!(intent["params"]["x"], 1);
+        assert_eq!(intent["params"]["y"], 0);
+        assert!(spark_threshold_move_intent_from_action(&dash).is_err());
     }
 
     #[test]
