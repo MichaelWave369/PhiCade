@@ -24,6 +24,8 @@ deserves the same powers.
 - **Benchmark agent behavior** across a frozen 77-task Suite v13 ladder.
 - **Build campaign, suite, comparison, public-result, and portable evidence**
   without collapsing unlike tasks into one mystery score.
+- **Qualify PixelForge Runtime Bridge v1** through a pinned local JSONL bridge
+  while keeping PhiCade authority and PixelForge cartridge semantics separate.
 
 ## Why PhiCade is different
 
@@ -269,7 +271,9 @@ The current desktop can:
 9. close an existing Suite Report through campaign, trial, Autodrive, and exact
    model-qualification evidence before comparison or deterministic public export;
 10. package that closed evidence graph into a deterministic portable ZIP without
-    bundling ROMs, cores, model weights, or commercial assets.
+    bundling ROMs, cores, model weights, or commercial assets;
+11. qualify the pinned PixelForge v5.32 JSONL bridge as a `BRIDGED_RUNTIME`
+    path with PhiCade authority applied before the first transported game intent.
 
 ## Documentation
 
@@ -280,7 +284,8 @@ Start here:
 - [Evidence Closure](docs/EVIDENCE_CLOSURE.md)
 - [Portable Evidence Bundle](docs/PORTABLE_EVIDENCE_BUNDLE.md)
 - [Public Suite Results](docs/PUBLIC_RESULTS.md)
-- [Architecture](docs/ARCHITECTURE.md)\n- [PixelForge Runtime Adapter](docs/PIXELFORGE_RUNTIME_ADAPTER.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [PixelForge Runtime Adapter](docs/PIXELFORGE_RUNTIME_ADAPTER.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)
