@@ -298,13 +298,6 @@ fn system_prompt(request: &AgentTurnRequest) -> String {
     } else {
         request.memory.as_str()
     };
-    let objective = request
-        .objective
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or("(no explicit objective)");
-
     format!(
         concat!(
             "You are the gameplay policy for PhiCade turn {turn}. ",
@@ -387,6 +380,12 @@ fn spark_system_prompt(request: &SparkAgentTurnRequest) -> String {
     } else {
         request.memory.as_str()
     };
+    let objective = request
+        .objective
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("(no explicit objective)");
 
     format!(
         concat!(
