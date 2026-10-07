@@ -24,8 +24,7 @@ deserves the same powers.
 - **Benchmark agent behavior** across a frozen 77-task Suite v13 ladder.
 - **Build campaign, suite, comparison, public-result, and portable evidence**
   without collapsing unlike tasks into one mystery score.
-- **Qualify PixelForge Runtime Bridge v1** through a pinned local JSONL bridge
-  while keeping PhiCade authority and PixelForge cartridge semantics separate.
+- **Run a real PixelForge cartridge through PhiCade** over the pinned Runtime Bridge v1 JSONL seam while keeping PhiCade authority and cartridge semantics separate.
 
 ## Why PhiCade is different
 
@@ -65,6 +64,7 @@ disabled because its pinned libretro profile does not expose serialization.
 | Qualified SameBoy 1.0.3 | Yes | Yes | Qualified | Qualified | Qualified |
 | Pinned ScummVM v2026.3.0 profile | Yes | Qualified frame/input path | Unsupported | Unsupported | Unsupported |
 | Other registered libretro core | Capability-derived | Capability-derived | Probed / profile-dependent | Unsupported unless separately qualified | Probed / profile-dependent |
+| PixelForge / The Legend of More Bounce | Bridged scene runtime | Qualified governed MOVE proof | Unsupported | Unsupported | Unsupported |
 
 Registered core identity is checked again at launch, and the local binary is
 re-hashed before a registered session starts.
@@ -256,7 +256,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 44 — PixelForge Runtime Adapter v1**
+**Rung 45 — PixelForge Real-Cartridge Qualification**
 
 The current desktop can:
 
@@ -273,7 +273,8 @@ The current desktop can:
 10. package that closed evidence graph into a deterministic portable ZIP without
     bundling ROMs, cores, model weights, or commercial assets;
 11. qualify the pinned PixelForge v5.32 JSONL bridge as a `BRIDGED_RUNTIME`
-    path with PhiCade authority applied before the first transported game intent.
+    path with PhiCade authority applied before the first transported game intent;
+12. qualify the pinned PixelForge v5.33 **The Legend of More Bounce** cartridge by moving its real Bouncehome Grove player through the scene's actual collision-governed runtime.
 
 ## Documentation
 
