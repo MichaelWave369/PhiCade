@@ -28,6 +28,10 @@ pub const PIXELFORGE_PINNED_REFERENCE_REVISION: &str =
     PIXELFORGE_PINNED_QUALIFICATION_REVISION;
 pub const PIXELFORGE_SPARK_CHAIN_QUALIFICATION_SCHEMA: &str =
     "phicade.pixelforge-spark-chain-qualification.v1";
+pub const PIXELFORGE_SPARK_PHIBOT_QUALIFICATION_SCHEMA: &str =
+    "phicade.pixelforge-spark-phibot-qualification.v1";
+pub const SPARK_SEMANTIC_OBSERVATION_SCHEMA: &str =
+    "phicade.spark-semantic-observation.v1";
 pub const PIXELFORGE_PINNED_SPARK_RUNTIME_REVISION: &str =
     "8790c3b00b5184136fb8fa6a2fbdabe834eeca22";
 pub const SPARK_PINNED_BRIDGE_REVISION: &str =
@@ -539,6 +543,252 @@ pub fn spark_threshold_move_intent_from_action(
     }))
 }
 
+pub fn spark_threshold_intent_from_action(
+    action: &ActionEnvelope,
+) -> Result<Value, PixelForgeBridgeError> {
+    let button = match &action.action {
+        ActionKind::Button { button, pressed } if *pressed => button.as_str(),
+        _ => {
+            return Err(PixelForgeBridgeError::Protocol(
+                "SPARK Threshold control requires a pressed gameplay button".into(),
+            ))
+        }
+    };
+
+    let intent = match button {
+        "UP" => json!({ "type": "MOVE", "actorId": "spark", "params": { "x": 0, "y": -1 } }),
+        "DOWN" => json!({ "type": "MOVE", "actorId": "spark", "params": { "x": 0, "y": 1 } }),
+        "LEFT" => json!({ "type": "MOVE", "actorId": "spark", "params": { "x": -1, "y": 0 } }),
+        "RIGHT" => json!({ "type": "MOVE", "actorId": "spark", "params": { "x": 1, "y": 0 } }),
+        "DASH_UP" => json!({ "type": "DASH", "actorId": "spark", "params": { "x": 0, "y": -1 } }),
+        "DASH_DOWN" => json!({ "type": "DASH", "actorId": "spark", "params": { "x": 0, "y": 1 } }),
+        "DASH_LEFT" => json!({ "type": "DASH", "actorId": "spark", "params": { "x": -1, "y": 0 } }),
+        "DASH_RIGHT" => json!({ "type": "DASH", "actorId": "spark", "params": { "x": 1, "y": 0 } }),
+        "PULSE" => json!({ "type": "PULSE", "actorId": "spark", "params": {} }),
+        _ => {
+            return Err(PixelForgeBridgeError::Protocol(
+                "SPARK Threshold action is outside the qualified control surface".into(),
+            ))
+        }
+    };
+
+    Ok(intent)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SparkSemanticPlayer {
+    pub x: f64,
+    pub y: f64,
+    pub hp: f64,
+    pub max_hp: f64,
+    pub dash_ready: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SparkSemanticEnemy {
+    pub kind: String,
+    pub x: f64,
+    pub y: f64,
+    pub hp: f64,
+    pub distance_squared: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SparkSemanticObservation {
+    pub schema: String,
+    pub tick: u64,
+    pub room: String,
+    pub world: String,
+    pub phase: String,
+    pub form: String,
+    pub player: SparkSemanticPlayer,
+    pub power_name: String,
+    pub power_cooldown: f64,
+    pub enemy_count: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nearest_enemy: Option<SparkSemanticEnemy>,
+    pub fragment_count: u32,
+    pub exit_directions: Vec<String>,
+    pub allowed_actions: Vec<String>,
+    pub dashes: u64,
+    pub powers: u64,
+}
+
+fn spark_required_str(value: &Value, path: &str) -> Result<String, PixelForgeBridgeError> {
+    value.as_str().map(str::to_owned).ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(format!(
+            "SPARK semantic observation requires string {path}"
+        ))
+    })
+}
+
+fn spark_required_f64(value: &Value, path: &str) -> Result<f64, PixelForgeBridgeError> {
+    value.as_f64().filter(|number| number.is_finite()).ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(format!(
+            "SPARK semantic observation requires finite number {path}"
+        ))
+    })
+}
+
+pub fn spark_semantic_observation_from_bridge(
+    observation: &Value,
+) -> Result<SparkSemanticObservation, PixelForgeBridgeError> {
+    let state = observation.get("state").ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state".into(),
+        )
+    })?;
+
+    let player = state.get("player").ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state.player".into(),
+        )
+    })?;
+    let player_x = spark_required_f64(&player["x"], "state.player.x")?;
+    let player_y = spark_required_f64(&player["y"], "state.player.y")?;
+
+    let nearest_enemy = state["enemies"]
+        .as_array()
+        .ok_or_else(|| {
+            PixelForgeBridgeError::Protocol(
+                "SPARK semantic observation requires state.enemies".into(),
+            )
+        })?
+        .iter()
+        .map(|enemy| {
+            let x = spark_required_f64(&enemy["x"], "state.enemies[].x")?;
+            let y = spark_required_f64(&enemy["y"], "state.enemies[].y")?;
+            let dx = x - player_x;
+            let dy = y - player_y;
+            Ok(SparkSemanticEnemy {
+                kind: spark_required_str(&enemy["kind"], "state.enemies[].kind")?,
+                x,
+                y,
+                hp: spark_required_f64(&enemy["hp"], "state.enemies[].hp")?,
+                distance_squared: dx * dx + dy * dy,
+            })
+        })
+        .collect::<Result<Vec<_>, PixelForgeBridgeError>>()?
+        .into_iter()
+        .min_by(|left, right| {
+            left.distance_squared
+                .partial_cmp(&right.distance_squared)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+    let exit_directions = state["exits"]
+        .as_array()
+        .ok_or_else(|| {
+            PixelForgeBridgeError::Protocol(
+                "SPARK semantic observation requires state.exits".into(),
+            )
+        })?
+        .iter()
+        .map(|exit| spark_required_str(&exit["direction"], "state.exits[].direction"))
+        .collect::<Result<Vec<_>, PixelForgeBridgeError>>()?;
+
+    let allowed_actions = observation["allowedActions"]
+        .as_array()
+        .ok_or_else(|| {
+            PixelForgeBridgeError::Protocol(
+                "SPARK semantic observation requires allowedActions".into(),
+            )
+        })?
+        .iter()
+        .map(|action| spark_required_str(action, "allowedActions[]"))
+        .collect::<Result<Vec<_>, PixelForgeBridgeError>>()?;
+
+    let enemies = state["enemies"].as_array().expect("validated above");
+    let fragments = state["fragments"].as_array().ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state.fragments".into(),
+        )
+    })?;
+
+    let tick = observation["tick"].as_u64().ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires integer tick".into(),
+        )
+    })?;
+    let dash_ready = player["dashReady"].as_bool().ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state.player.dashReady".into(),
+        )
+    })?;
+    let dashes = state["stats"]["dashes"].as_u64().ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state.stats.dashes".into(),
+        )
+    })?;
+    let powers = state["stats"]["powers"].as_u64().ok_or_else(|| {
+        PixelForgeBridgeError::Protocol(
+            "SPARK semantic observation requires state.stats.powers".into(),
+        )
+    })?;
+
+    Ok(SparkSemanticObservation {
+        schema: SPARK_SEMANTIC_OBSERVATION_SCHEMA.into(),
+        tick,
+        room: spark_required_str(&state["room"], "state.room")?,
+        world: spark_required_str(&state["world"], "state.world")?,
+        phase: spark_required_str(&state["phase"], "state.phase")?,
+        form: spark_required_str(&state["form"], "state.form")?,
+        player: SparkSemanticPlayer {
+            x: player_x,
+            y: player_y,
+            hp: spark_required_f64(&player["hp"], "state.player.hp")?,
+            max_hp: spark_required_f64(&player["maxHp"], "state.player.maxHp")?,
+            dash_ready,
+        },
+        power_name: spark_required_str(&state["power"]["name"], "state.power.name")?,
+        power_cooldown: spark_required_f64(
+            &state["power"]["cooldownRemaining"],
+            "state.power.cooldownRemaining",
+        )?,
+        enemy_count: u32::try_from(enemies.len()).map_err(|_| {
+            PixelForgeBridgeError::Protocol(
+                "SPARK enemy count exceeds semantic observation range".into(),
+            )
+        })?,
+        nearest_enemy,
+        fragment_count: u32::try_from(fragments.len()).map_err(|_| {
+            PixelForgeBridgeError::Protocol(
+                "SPARK fragment count exceeds semantic observation range".into(),
+            )
+        })?,
+        exit_directions,
+        allowed_actions,
+        dashes,
+        powers,
+    })
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PixelForgeSparkPhiBotQualificationReceipt {
+    pub schema: String,
+    pub record_status: String,
+    pub phicade_revision: String,
+    pub pixelforge_revision: String,
+    pub spark_revision: String,
+    pub transport_request_schema: String,
+    pub transport_response_schema: String,
+    pub descriptor: PixelForgeBridgeDescriptor,
+    pub capability_manifest: RuntimeCapabilityManifest,
+    pub controller_id: String,
+    pub agent_id: String,
+    pub semantic_observations: Vec<SparkSemanticObservation>,
+    pub authority_decisions: Vec<AuthorityDecision>,
+    pub source_actions: Vec<ActionEnvelope>,
+    pub submitted_intents: Vec<Value>,
+    pub direct_events: Vec<Value>,
+    pub semantic_events: Vec<Value>,
+    pub final_hash: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PixelForgeSparkChainQualificationReceipt {
@@ -713,6 +963,95 @@ mod tests {
         assert_eq!(intent["params"]["x"], 1);
         assert_eq!(intent["params"]["y"], 0);
         assert!(spark_threshold_move_intent_from_action(&dash).is_err());
+    }
+
+    #[test]
+    fn spark_threshold_extended_mapping_qualifies_dash_and_pulse() {
+        let base = ActionEnvelope {
+            sequence: 0,
+            frame: 0,
+            source: ActionSource::PhiBot {
+                agent_id: "phi-spark".into(),
+                seat: 1,
+            },
+            action: ActionKind::Button {
+                button: "DASH_RIGHT".into(),
+                pressed: true,
+            },
+        };
+
+        let dash = spark_threshold_intent_from_action(&base).unwrap();
+        assert_eq!(dash["type"], "DASH");
+        assert_eq!(dash["params"]["x"], 1);
+        assert_eq!(dash["params"]["y"], 0);
+
+        let pulse = ActionEnvelope {
+            action: ActionKind::Button {
+                button: "PULSE".into(),
+                pressed: true,
+            },
+            ..base.clone()
+        };
+        let pulse_intent = spark_threshold_intent_from_action(&pulse).unwrap();
+        assert_eq!(pulse_intent["type"], "PULSE");
+
+        let invalid = ActionEnvelope {
+            action: ActionKind::Button {
+                button: "START".into(),
+                pressed: true,
+            },
+            ..base
+        };
+        assert!(spark_threshold_intent_from_action(&invalid).is_err());
+    }
+
+    #[test]
+    fn spark_semantic_observation_is_bounded_and_selects_nearest_enemy() {
+        let raw = json!({
+            "tick": 7,
+            "allowedActions": ["MOVE", "DASH", "PULSE"],
+            "state": {
+                "room": "threshold",
+                "world": "threshold",
+                "phase": "playing",
+                "form": "spark",
+                "player": {
+                    "x": 10.0,
+                    "y": 20.0,
+                    "hp": 112.0,
+                    "maxHp": 112.0,
+                    "dashReady": true
+                },
+                "power": {
+                    "name": "Lumen pulse",
+                    "cooldownRemaining": 0.0
+                },
+                "stats": { "dashes": 2, "powers": 3 },
+                "enemies": [
+                    { "kind": "far", "x": 100.0, "y": 100.0, "hp": 5.0 },
+                    { "kind": "near", "x": 12.0, "y": 21.0, "hp": 4.0 }
+                ],
+                "fragments": [{ "x": 1, "y": 2, "value": 1 }],
+                "exits": [
+                    { "direction": "north" },
+                    { "direction": "east" }
+                ]
+            }
+        });
+
+        let semantic = spark_semantic_observation_from_bridge(&raw).unwrap();
+        assert_eq!(semantic.schema, SPARK_SEMANTIC_OBSERVATION_SCHEMA);
+        assert_eq!(semantic.tick, 7);
+        assert_eq!(semantic.enemy_count, 2);
+        assert_eq!(semantic.fragment_count, 1);
+        assert_eq!(
+            semantic.nearest_enemy.as_ref().map(|enemy| enemy.kind.as_str()),
+            Some("near")
+        );
+        assert_eq!(semantic.exit_directions, vec!["north", "east"]);
+        assert_eq!(semantic.allowed_actions, vec!["MOVE", "DASH", "PULSE"]);
+        assert_eq!(semantic.dashes, 2);
+        assert_eq!(semantic.powers, 3);
     }
 
     #[test]

@@ -40,6 +40,31 @@ impl AgentGrant {
         }
     }
 
+    pub fn spark_threshold(agent_id: impl Into<String>, seat: u8) -> Self {
+        Self {
+            agent_id: agent_id.into(),
+            seat,
+            allowed_buttons: [
+                "UP",
+                "DOWN",
+                "LEFT",
+                "RIGHT",
+                "DASH_UP",
+                "DASH_DOWN",
+                "DASH_LEFT",
+                "DASH_RIGHT",
+                "PULSE",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
+            allowed_axes: BTreeSet::new(),
+            allowed_system_commands: BTreeSet::new(),
+            max_actions_per_frame: 1,
+            expires_at_frame: None,
+        }
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         if self.agent_id.trim().is_empty() {
             return Err("agent grant requires a non-empty agentId".into());
@@ -374,6 +399,17 @@ mod tests {
             "A",
         );
         assert!(!policy.authorize_batch(&[event], 51)[0].1.accepted);
+    }
+
+    #[test]
+    fn spark_threshold_grant_is_bounded_to_gameplay_buttons() {
+        let grant = AgentGrant::spark_threshold("phi-spark", 1);
+        assert_eq!(grant.max_actions_per_frame, 1);
+        assert!(grant.allowed_buttons.contains("RIGHT"));
+        assert!(grant.allowed_buttons.contains("DASH_RIGHT"));
+        assert!(grant.allowed_buttons.contains("PULSE"));
+        assert!(!grant.allowed_buttons.contains("START"));
+        assert!(grant.allowed_system_commands.is_empty());
     }
 
     #[test]

@@ -180,13 +180,17 @@ pub use observation::{PhiBotObservation, PHIBOT_OBSERVATION_SCHEMA};
 
 pub use pixelforge::{
     legend_bouncehome_intent_from_action, reference_counter_intent_from_action,
+    spark_semantic_observation_from_bridge, spark_threshold_intent_from_action,
     spark_threshold_move_intent_from_action, PixelForgeBridgeDescriptor, PixelForgeBridgeError,
     PixelForgeBridgeQualificationReceipt, PixelForgeCartridgeQualificationReceipt,
-    PixelForgeJsonlClient, PixelForgeSparkChainQualificationReceipt, PIXELFORGE_ADAPTER_ID,
+    PixelForgeJsonlClient, PixelForgeSparkChainQualificationReceipt,
+    PixelForgeSparkPhiBotQualificationReceipt, SparkSemanticEnemy,
+    SparkSemanticObservation, SparkSemanticPlayer, PIXELFORGE_ADAPTER_ID,
     PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA,
     PIXELFORGE_PINNED_QUALIFICATION_REVISION, PIXELFORGE_PINNED_REFERENCE_REVISION,
     PIXELFORGE_PINNED_SPARK_RUNTIME_REVISION, PIXELFORGE_RUNTIME_PROTOCOL,
     PIXELFORGE_RUNTIME_PROTOCOL_VERSION, PIXELFORGE_SPARK_CHAIN_QUALIFICATION_SCHEMA,
-    PIXELFORGE_TRANSPORT_REQUEST_SCHEMA, PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA,
-    SPARK_PINNED_BRIDGE_REVISION,
+    PIXELFORGE_SPARK_PHIBOT_QUALIFICATION_SCHEMA, PIXELFORGE_TRANSPORT_REQUEST_SCHEMA,
+    PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA, SPARK_PINNED_BRIDGE_REVISION,
+    SPARK_SEMANTIC_OBSERVATION_SCHEMA,
 };
