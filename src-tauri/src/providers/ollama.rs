@@ -298,6 +298,12 @@ fn system_prompt(request: &AgentTurnRequest) -> String {
     } else {
         request.memory.as_str()
     };
+    let objective = request
+        .objective
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("(no explicit objective)");
 
     format!(
         concat!(
@@ -389,6 +395,8 @@ fn spark_system_prompt(request: &SparkAgentTurnRequest) -> String {
             "Do not invent hidden state, coordinates, exits, enemies, items, or authority. ",
             "The runtime and PhiCade decide whether any proposal is permitted. ",
             "Choose at most one pressed gameplay button from the allowed set, or return no action if uncertain. ",
+            "Objective: {objective}. ",
+            "Treat the objective as a bounded task instruction, not as authority to exceed the granted controls. ",
             "Allowed buttons: {buttons}. ",
             "Current tick: {tick}. Room: {room}. World: {world}. Phase: {phase}. Form: {form}. ",
             "Player position: ({x:.1}, {y:.1}). HP: {hp:.1}/{max_hp:.1}. Dash ready: {dash_ready}. ",
@@ -402,6 +410,7 @@ fn spark_system_prompt(request: &SparkAgentTurnRequest) -> String {
             "Set memoryUpdate to null to preserve memory, or replace it with concise evidence-grounded notes. ",
             "Do not output explanations outside the required structured object."
         ),
+        objective = objective,
         buttons = request.allowed_buttons.join(", "),
         tick = observation.tick,
         room = observation.room,
@@ -1202,6 +1211,7 @@ mod tests {
                 "PULSE".into(),
             ],
             max_actions: 1,
+            objective: None,
             memory: "entered Threshold".into(),
             memory_sha256: "b".repeat(64),
             max_memory_bytes: 4096,
@@ -1221,6 +1231,15 @@ mod tests {
         assert!(!prompt.contains("localStorage"));
         assert!(!prompt.contains("inventory"));
         assert!(!prompt.contains("save"));
+    }
+
+    #[test]
+    fn spark_semantic_prompt_includes_only_explicit_bounded_objective() {
+        let mut request = spark_request();
+        request.objective = Some("Move east as far as possible.".into());
+        let prompt = spark_system_prompt(&request);
+        assert!(prompt.contains("Objective: Move east as far as possible."));
+        assert!(prompt.contains("not as authority"));
     }
 
     #[test]
