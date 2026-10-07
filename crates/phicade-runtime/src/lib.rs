@@ -199,8 +199,8 @@ pub use pixelforge::{
 
 pub use spark_agent::{
     compile_spark_agent_turn, SparkAgentTurnRequest, SparkAgentTurnResponse,
-    SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_TURN_REQUEST_SCHEMA,
-    SPARK_AGENT_TURN_RESPONSE_SCHEMA,
+    SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_OBJECTIVE_MAX_BYTES,
+    SPARK_AGENT_TURN_REQUEST_SCHEMA, SPARK_AGENT_TURN_RESPONSE_SCHEMA,
 };
 
 pub use model_admissibility::{
