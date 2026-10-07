@@ -17,6 +17,7 @@ pub mod driver;
 pub mod library;
 pub mod replay;
 pub mod observation;
+pub mod pixelforge;
 
 pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
@@ -176,3 +177,11 @@ pub use replay::{
 };
 
 pub use observation::{PhiBotObservation, PHIBOT_OBSERVATION_SCHEMA};
+
+pub use pixelforge::{
+    reference_counter_intent_from_action, PixelForgeBridgeDescriptor, PixelForgeBridgeError,
+    PixelForgeBridgeQualificationReceipt, PixelForgeJsonlClient, PIXELFORGE_ADAPTER_ID,
+    PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_PINNED_REFERENCE_REVISION,
+    PIXELFORGE_RUNTIME_PROTOCOL, PIXELFORGE_RUNTIME_PROTOCOL_VERSION,
+    PIXELFORGE_TRANSPORT_REQUEST_SCHEMA, PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA,
+};
