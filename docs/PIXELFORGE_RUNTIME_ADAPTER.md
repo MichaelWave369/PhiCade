@@ -2,12 +2,20 @@
 
 ## Purpose
 
-Rung 44 connects PhiCade to PixelForge Runtime Bridge v1 through PixelForge's
-bounded JSONL transport.
+Rung 44 established the local PhiCade ↔ PixelForge Runtime Bridge v1 seam over
+PixelForge's bounded JSONL transport.
 
-This is the first concrete proof of the intended split:
+Rung 45 keeps that transport unchanged and upgrades the qualification target from
+the deterministic reference counter to a real PixelForge cartridge artifact:
 
-\`\`\`text
+```text
+The Legend of More Bounce
+scene: Bouncehome Grove
+```
+
+The split remains:
+
+```text
 PixelForge builds / owns cartridge semantics
                 |
                 v
@@ -21,57 +29,74 @@ PhiCade governs the session
      +----------+----------+
      |          |          |
    Human      Phi-Bot    Replay/later
-\`\`\`
+```
 
 Neither project absorbs the other.
 
 ## Pinned PixelForge source
 
-The qualification target is the exact merged PixelForge v5.32 transport revision:
+The real-cartridge qualification target is the exact merged PixelForge v5.33
+revision:
 
-\`\`\`text
-96809c5ef9608e994a14c300bce9032f59041d0a
-\`\`\`
+```text
+8fda48073b5d2ea6273df54c47c194bdac8231d6
+```
 
-PhiCade refuses the qualification if the local PixelForge checkout is at a
-different revision.
+PhiCade refuses qualification if the local PixelForge checkout is at a different
+revision.
 
-The pinned proof uses PixelForge's deliberately boring deterministic reference
-counter before any real game cartridge is connected.
+The earlier v5.32 counter proof remains useful as the transport-level historical
+qualification. Rung 45 proves that the same seam can carry actual game state.
+
+## Cartridge target
+
+PixelForge launches:
+
+```text
+scripts/serve_cartridge_runtime.mjs
+```
+
+with:
+
+```text
+--cartridge the-legend-of-more-bounce
+--scene bouncehome-grove
+```
+
+That runtime loads the existing PixelForge scene packet:
+
+```text
+games/the-legend-of-more-bounce/runtime/
+bouncehome-grove.runtime-scene.v5.11.json
+```
+
+The scene's real spawn and collision data decide movement outcomes.
 
 ## Transport
 
-PixelForge supplies:
+The adapter still uses:
 
-- \`pixelforge.runtime-transport.request.v1\`
-- \`pixelforge.runtime-transport.response.v1\`
+- `pixelforge.runtime-transport.request.v1`
+- `pixelforge.runtime-transport.response.v1`
 
-PhiCade launches the local PixelForge reference process and communicates only
-through stdin/stdout newline-delimited JSON.
+It validates response schema, request/response IDs, Runtime Bridge protocol
+identity, Runtime Bridge version, game/runtime identity, and explicit remote
+errors.
 
-The adapter validates:
+No new transport protocol was introduced for the cartridge.
 
-- response schema,
-- request/response ID matching,
-- PixelForge Runtime Bridge protocol identity,
-- Runtime Bridge version,
-- game/runtime identity,
-- explicit remote errors.
+## Capability projection
 
-EOF owns normal process shutdown.
-
-## PhiCade capability projection
-
-The first adapter declares:
+The adapter declares:
 
 - execution model: **BRIDGED_RUNTIME**
 - governed actions: **SUPPORTED**
 - external process lifecycle: **SUPPORTED**
 - semantic events: **SUPPORTED**
 - frame step: **SUPPORTED** only when the PixelForge descriptor is externally
-  stepped, or when the Runtime Bridge v1 deterministic compatibility rule applies
+  stepped or satisfies the Runtime Bridge deterministic compatibility rule
 
-It deliberately leaves these **UNSUPPORTED** until separately proven:
+It still leaves these **UNSUPPORTED** until separately proven:
 
 - rendered framebuffer,
 - audio stream,
@@ -81,105 +106,106 @@ It deliberately leaves these **UNSUPPORTED** until separately proven:
 - persistent save data,
 - game detection.
 
-A PixelForge \`snapshot()\` response is not treated as a restorable emulator save
-state merely because the method exists.
+A callable `snapshot()` method is not promoted into emulator-style restorable
+state support.
 
 ## Authority proof
 
-The qualification does not submit directly merely because a transport exists.
+The qualification constructs a normal PhiCade human Action Bus envelope:
 
-It constructs a normal PhiCade human Action Bus envelope:
+```text
+seat 1 / RIGHT pressed
+```
 
-\`\`\`text
-seat 1 / A pressed
-\`\`\`
+The existing PhiCade `AuthorityPolicy` must accept that action first.
 
-The existing PhiCade \`AuthorityPolicy\` must accept that action first.
+Only then does the narrow qualification mapper translate it into the cartridge's
+own PixelForge action grammar:
 
-Only then does the qualification-only mapper translate it to the reference
-counter's PixelForge intent:
-
-\`\`\`json
+```json
 {
-  "type": "ADD",
-  "actorId": "counter",
-  "params": { "amount": 1 }
+  "type": "MOVE",
+  "actorId": "more-bounce",
+  "params": { "direction": "RIGHT" }
 }
-\`\`\`
+```
 
-That mapping is intentionally narrow and is not a generic PixelForge gameplay
-grammar. SPARK and other cartridges keep ownership of their own actions.
+That mapper is specific to the first cartridge qualification. It is not a
+universal PixelForge action grammar and does not define SPARK's future controls.
 
 ## Qualification chain
 
 The pinned proof requires:
 
-1. exact PixelForge source revision,
-2. launch the real PixelForge JSONL reference server,
-3. validate \`describe()\`,
-4. register the PhiCade controller,
-5. observe counter value \`0\`,
-6. authorize one PhiCade action through the existing authority layer,
-7. submit the translated PixelForge intent,
-8. advance the bridge,
-9. require \`ACTION_ACCEPTED\`,
-10. consume the same semantic event through \`events(0)\`,
-11. observe counter value \`1\`,
-12. capture the PixelForge runtime hash,
-13. write a PASS receipt.
+1. exact PixelForge v5.33 source revision,
+2. launch the real cartridge JSONL server,
+3. validate `describe()`,
+4. require gameId `the-legend-of-more-bounce`,
+5. require runtimeVersion `legend-bouncehome/1`,
+6. register the PhiCade controller,
+7. observe Bouncehome Grove at player spawn `(2.5, 8.5)`,
+8. authorize one RIGHT action through PhiCade authority,
+9. submit the translated PixelForge MOVE intent,
+10. advance the cartridge runtime,
+11. require a `PLAYER_MOVED` semantic event,
+12. consume the same event through `events(0)`,
+13. observe the player at `(3.5, 8.5)`,
+14. capture a non-empty cartridge runtime hash,
+15. write a PASS receipt.
 
 Receipt:
 
-\`\`\`text
-artifacts/pixelforge-bridge-qualification.json
-\`\`\`
+```text
+artifacts/pixelforge-cartridge-qualification.json
+```
 
 Schema:
 
-\`\`\`text
-phicade.pixelforge-bridge-qualification.v1
-\`\`\`
+```text
+phicade.pixelforge-cartridge-qualification.v1
+```
 
 ## Local qualification
 
 From PhiCade:
 
-\`\`\`bash
+```bash
 bash ./scripts/qualify-pixelforge.sh /path/to/parallax-pixelforge
-\`\`\`
+```
 
-Or directly, including on Windows PowerShell:
+Or directly on Windows PowerShell:
 
-\`\`\`powershell
-cargo run -p phicade-runtime --example qualify_pixelforge -- --pixelforge-root "C:\\path\\to\\parallax-pixelforge"
-\`\`\`
+```powershell
+cargo run -p phicade-runtime --example qualify_pixelforge -- --pixelforge-root "C:\path\to\parallax-pixelforge"
+```
 
-The PixelForge checkout must be at the pinned revision above and Node must be
-available on PATH.
+The checkout must be at the pinned revision and Node must be on PATH.
 
-## What this proves
+## What PASS proves
 
-PASS proves that the exact pinned PixelForge bridge transport can be inhabited by
-PhiCade through a local process, that one PhiCade-authorized action crosses the
-boundary, that PixelForge remains responsible for accepting the game intent, and
-that semantic events plus a runtime hash return across the same seam.
+PASS proves that PhiCade can govern an action that crosses the real PixelForge
+Runtime Bridge into an actual cartridge scene, that PixelForge's own scene data
+controls the outcome, and that semantic events plus runtime hash return across
+the same seam.
 
 ## What it does not prove
 
-This rung does not claim:
+Rung 45 does not claim:
 
 - SPARK is connected yet,
-- PixelForge framebuffer/audio streaming exists,
+- framebuffer/audio streaming exists,
 - PixelForge snapshots are restorable,
 - exact replay exists for bridged cartridges,
-- agent Autodrive is enabled for arbitrary PixelForge games,
-- Unreal is bridged,
-- a browser/WebGL cartridge has production performance.
+- arbitrary PixelForge games share one action grammar,
+- agent Autodrive is enabled for arbitrary cartridges,
+- Unreal is bridged.
 
-Those are later capability-specific rungs.
+Those remain later capability-specific rungs.
 
 ## Next rung
 
-Connect one real PixelForge cartridge through the same adapter without changing
-the transport contract. After that seam survives a real game, SPARK can become
-the first large multi-incarnation consumer.
+SPARK becomes the next intended large consumer.
+
+The correct next proof is not to copy SPARK into PhiCade. PixelForge should expose
+one deliberately narrow SPARK incarnation through Runtime Bridge v1, then PhiCade
+should qualify that exact incarnation through the already-proven governed seam.
