@@ -849,7 +849,11 @@ pub async fn complete_spark_semantic_turn(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use phicade_runtime::{PhiBotObservation, AGENT_TURN_REQUEST_SCHEMA, PHIBOT_OBSERVATION_SCHEMA};
+    use phicade_runtime::{
+        PhiBotObservation, SparkAgentTurnRequest, SparkSemanticObservation, SparkSemanticPlayer,
+        AGENT_TURN_REQUEST_SCHEMA, PHIBOT_OBSERVATION_SCHEMA,
+        SPARK_AGENT_TURN_REQUEST_SCHEMA, SPARK_SEMANTIC_OBSERVATION_SCHEMA,
+    };
 
     fn request() -> AgentTurnRequest {
         AgentTurnRequest {
@@ -1158,6 +1162,82 @@ mod tests {
         assert!(!prompt.contains("CROSS / Square / FLIP"));
     }
 
+    fn spark_request() -> SparkAgentTurnRequest {
+        SparkAgentTurnRequest {
+            schema: SPARK_AGENT_TURN_REQUEST_SCHEMA.into(),
+            turn_id: 12,
+            agent_id: "phi-spark".into(),
+            seat: 1,
+            observation: SparkSemanticObservation {
+                schema: SPARK_SEMANTIC_OBSERVATION_SCHEMA.into(),
+                tick: 5,
+                room: "threshold".into(),
+                world: "threshold".into(),
+                phase: "playing".into(),
+                form: "spark".into(),
+                player: SparkSemanticPlayer {
+                    x: 484.0,
+                    y: 390.0,
+                    hp: 112.0,
+                    max_hp: 112.0,
+                    dash_ready: true,
+                },
+                power_name: "Lumen pulse".into(),
+                power_cooldown: 0.0,
+                enemy_count: 1,
+                nearest_enemy: None,
+                fragment_count: 2,
+                exit_directions: vec!["north".into(), "east".into()],
+                allowed_actions: vec!["MOVE".into(), "DASH".into(), "PULSE".into()],
+                dashes: 0,
+                powers: 0,
+            },
+            observation_runtime_hash: "a".repeat(64),
+            allowed_buttons: vec![
+                "UP".into(),
+                "DOWN".into(),
+                "LEFT".into(),
+                "RIGHT".into(),
+                "DASH_RIGHT".into(),
+                "PULSE".into(),
+            ],
+            max_actions: 1,
+            memory: "entered Threshold".into(),
+            memory_sha256: "b".repeat(64),
+            max_memory_bytes: 4096,
+            max_memory_update_bytes: 512,
+        }
+    }
+
+    #[test]
+    fn spark_semantic_prompt_uses_only_bounded_projection_and_governed_memory() {
+        let prompt = spark_system_prompt(&spark_request());
+        assert!(prompt.contains("Room: threshold"));
+        assert!(prompt.contains("Player position: (484.0, 390.0)"));
+        assert!(prompt.contains("HP: 112.0/112.0"));
+        assert!(prompt.contains("Allowed buttons: UP, DOWN, LEFT, RIGHT, DASH_RIGHT, PULSE"));
+        assert!(prompt.contains("entered Threshold"));
+        assert!(prompt.contains("never authority"));
+        assert!(!prompt.contains("localStorage"));
+        assert!(!prompt.contains("inventory"));
+        assert!(!prompt.contains("save"));
+    }
+
+    #[test]
+    fn spark_response_schema_is_single_action_and_grant_bounded() {
+        let schema = spark_response_schema(&spark_request());
+        assert_eq!(schema["properties"]["actions"]["maxItems"], 1);
+        assert_eq!(
+            schema["properties"]["actions"]["items"]["properties"]["delayFrames"]["enum"][0],
+            0
+        );
+        assert_eq!(
+            schema["properties"]["actions"]["items"]["properties"]["pressed"]["enum"][0],
+            true
+        );
+        assert_eq!(schema["properties"]["memoryUpdate"]["maxLength"], 512);
+    }
+
     #[test]
     fn response_schema_uses_request_budgets() {
         let schema = response_schema(&request());
@@ -1257,6 +1337,50 @@ mod tests {
         assert_eq!(receipt.result, "FAIL");
         assert!(!receipt.vision_advertised);
         assert!(!receipt.vision_probe_pass);
+    }
+
+    #[test]
+    fn converts_structured_semantic_reply_into_spark_agent_turn_response() {
+        let base = mock_server(
+            r#"{"model":"qwen3.6:latest","message":{"content":"{\"actions\":[{\"delayFrames\":0,\"button\":\"DASH_RIGHT\",\"pressed\":true}],\"memoryUpdate\":\"dash east from Threshold entry\"}"},"done":true,"total_duration":99000000,"eval_count":11}"#,
+        );
+        let result = tauri::async_runtime::block_on(complete_spark_semantic_turn(
+            spark_request(),
+            &base,
+            "qwen3.6:latest",
+        ))
+        .expect("complete SPARK semantic turn");
+
+        assert_eq!(result.provider, "ollama");
+        assert_eq!(result.response.turn_id, 12);
+        assert_eq!(result.response.observation_tick, 5);
+        assert_eq!(result.response.observation_runtime_hash, "a".repeat(64));
+        assert_eq!(result.response.actions.len(), 1);
+        assert_eq!(
+            result.response.memory_update.as_deref(),
+            Some("dash east from Threshold entry")
+        );
+        match &result.response.actions[0].action {
+            ActionKind::Button { button, pressed } => {
+                assert_eq!(button, "DASH_RIGHT");
+                assert!(*pressed);
+            }
+            other => panic!("unexpected action: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn semantic_provider_rejects_out_of_grant_button() {
+        let base = mock_server(
+            r#"{"model":"qwen3.6:latest","message":{"content":"{\"actions\":[{\"delayFrames\":0,\"button\":\"START\",\"pressed\":true}],\"memoryUpdate\":null}"},"done":true}"#,
+        );
+        let error = tauri::async_runtime::block_on(complete_spark_semantic_turn(
+            spark_request(),
+            &base,
+            "qwen3.6:latest",
+        ))
+        .expect_err("out-of-scope button must fail");
+        assert!(error.contains("out-of-scope SPARK button START"));
     }
 
     #[test]
