@@ -1,7 +1,7 @@
 use phicade_runtime::{
-    reference_counter_intent_from_action, ActionEnvelope, ActionKind, ActionSource,
-    AuthorityPolicy, PixelForgeBridgeQualificationReceipt, PixelForgeJsonlClient,
-    PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_PINNED_REFERENCE_REVISION,
+    legend_bouncehome_intent_from_action, ActionEnvelope, ActionKind, ActionSource,
+    AuthorityPolicy, PixelForgeCartridgeQualificationReceipt, PixelForgeJsonlClient,
+    PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_PINNED_QUALIFICATION_REVISION,
     PIXELFORGE_TRANSPORT_REQUEST_SCHEMA, PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA,
 };
 use serde_json::json;
@@ -11,9 +11,12 @@ use std::{
     process::Command,
 };
 
+const CARTRIDGE_ID: &str = "the-legend-of-more-bounce";
+const SCENE_ID: &str = "bouncehome-grove";
+
 fn usage() -> ! {
     eprintln!(
-        "Usage: cargo run -p phicade-runtime --example qualify_pixelforge -- --pixelforge-root /path/to/parallax-pixelforge [--out artifacts/pixelforge-bridge-qualification.json]"
+        "Usage: cargo run -p phicade-runtime --example qualify_pixelforge -- --pixelforge-root /path/to/parallax-pixelforge [--out artifacts/pixelforge-cartridge-qualification.json]"
     );
     std::process::exit(2);
 }
@@ -21,7 +24,7 @@ fn usage() -> ! {
 fn parse_args() -> (PathBuf, PathBuf) {
     let mut args = env::args().skip(1);
     let mut root = None;
-    let mut out = PathBuf::from("artifacts/pixelforge-bridge-qualification.json");
+    let mut out = PathBuf::from("artifacts/pixelforge-cartridge-qualification.json");
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -63,17 +66,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (root, out) = parse_args();
 
     let revision = git_head(&root)?;
-    if revision != PIXELFORGE_PINNED_REFERENCE_REVISION {
+    if revision != PIXELFORGE_PINNED_QUALIFICATION_REVISION {
         return Err(format!(
             "PixelForge revision mismatch: expected {}, got {}",
-            PIXELFORGE_PINNED_REFERENCE_REVISION, revision
+            PIXELFORGE_PINNED_QUALIFICATION_REVISION, revision
         )
         .into());
     }
 
-    let mut client = PixelForgeJsonlClient::spawn_node_reference(&root, 0)?;
+    let mut client = PixelForgeJsonlClient::spawn_node_cartridge(
+        &root,
+        CARTRIDGE_ID,
+        SCENE_ID,
+    )?;
     let descriptor = client.descriptor().clone();
     let capability_manifest = client.capability_manifest();
+
+    if descriptor.game_id != CARTRIDGE_ID {
+        return Err(format!(
+            "expected PixelForge gameId {}, got {}",
+            CARTRIDGE_ID, descriptor.game_id
+        )
+        .into());
+    }
+    if descriptor.runtime_version != "legend-bouncehome/1" {
+        return Err(format!(
+            "expected Legend runtime version legend-bouncehome/1, got {}",
+            descriptor.runtime_version
+        )
+        .into());
+    }
 
     let controller_id = "phicade-pixelforge-seat-1";
     let registration = client.register_controller(json!({
@@ -86,10 +108,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let initial_observation = client.observe(controller_id)?;
-    if initial_observation["value"].as_i64() != Some(0) {
+    if initial_observation["cartridgeId"].as_str() != Some(CARTRIDGE_ID)
+        || initial_observation["sceneId"].as_str() != Some(SCENE_ID)
+    {
         return Err(format!(
-            "expected reference counter to start at 0, got {}",
-            initial_observation["value"]
+            "unexpected initial cartridge observation: {}",
+            initial_observation
+        )
+        .into());
+    }
+    if initial_observation["self"]["x"].as_f64() != Some(2.5)
+        || initial_observation["self"]["y"].as_f64() != Some(8.5)
+    {
+        return Err(format!(
+            "expected Bouncehome player spawn at (2.5, 8.5), got {}",
+            initial_observation["self"]
         )
         .into());
     }
@@ -99,7 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         frame: 0,
         source: ActionSource::Human { seat: 1 },
         action: ActionKind::Button {
-            button: "A".into(),
+            button: "RIGHT".into(),
             pressed: true,
         },
     };
@@ -117,15 +150,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let submitted_intent = reference_counter_intent_from_action(&source_action)?;
+    let submitted_intent = legend_bouncehome_intent_from_action(&source_action)?;
     let queue = client.submit(controller_id, submitted_intent.clone(), 0)?;
     if queue["queued"].as_bool() != Some(true) || queue["tick"].as_u64() != Some(0) {
         return Err(format!("unexpected PixelForge queue receipt: {queue}").into());
     }
 
     let direct_events = client.advance()?;
-    if direct_events.len() != 1 || direct_events[0]["type"].as_str() != Some("ACTION_ACCEPTED") {
+    if direct_events.len() != 1 || direct_events[0]["type"].as_str() != Some("PLAYER_MOVED") {
         return Err(format!("unexpected direct event stream: {direct_events:?}").into());
+    }
+    if direct_events[0]["payload"]["direction"].as_str() != Some("RIGHT") {
+        return Err(format!(
+            "expected RIGHT movement event, got {}",
+            direct_events[0]
+        )
+        .into());
     }
 
     let semantic_events = client.events(0)?;
@@ -134,23 +174,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let final_observation = client.observe(controller_id)?;
-    if final_observation["value"].as_i64() != Some(1) {
+    if final_observation["self"]["x"].as_f64() != Some(3.5)
+        || final_observation["self"]["y"].as_f64() != Some(8.5)
+    {
         return Err(format!(
-            "expected governed A press to move counter 0 -> 1, got {}",
-            final_observation["value"]
+            "expected governed RIGHT press to move player to (3.5, 8.5), got {}",
+            final_observation["self"]
         )
         .into());
     }
 
     let final_hash = client.hash()?;
-    if final_hash.trim().is_empty() {
-        return Err("PixelForge returned an empty runtime hash".into());
+    if final_hash.trim().is_empty() || !final_hash.contains(CARTRIDGE_ID) {
+        return Err("PixelForge returned an invalid cartridge runtime hash".into());
     }
 
-    let receipt = PixelForgeBridgeQualificationReceipt {
-        schema: PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA.into(),
+    let receipt = PixelForgeCartridgeQualificationReceipt {
+        schema: PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA.into(),
         record_status: "PASS".into(),
         pixelforge_revision: revision,
+        cartridge_id: CARTRIDGE_ID.into(),
+        scene_id: SCENE_ID.into(),
         transport_request_schema: PIXELFORGE_TRANSPORT_REQUEST_SCHEMA.into(),
         transport_response_schema: PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA.into(),
         descriptor,
@@ -172,10 +216,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(&out, serde_json::to_vec_pretty(&receipt)?)?;
     client.close()?;
 
-    println!("PixelForge bridge qualification PASS");
+    println!("PixelForge real-cartridge qualification PASS");
+    println!("Cartridge: {CARTRIDGE_ID}");
+    println!("Scene: {SCENE_ID}");
     println!(
         "Pinned PixelForge revision: {}",
-        PIXELFORGE_PINNED_REFERENCE_REVISION
+        PIXELFORGE_PINNED_QUALIFICATION_REVISION
     );
     println!("Receipt: {}", out.display());
     Ok(())
