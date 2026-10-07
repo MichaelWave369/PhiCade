@@ -254,7 +254,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 43 — Portable Evidence Bundle v1**
+**Rung 44 — PixelForge Runtime Adapter v1**
 
 The current desktop can:
 
@@ -280,7 +280,7 @@ Start here:
 - [Evidence Closure](docs/EVIDENCE_CLOSURE.md)
 - [Portable Evidence Bundle](docs/PORTABLE_EVIDENCE_BUNDLE.md)
 - [Public Suite Results](docs/PUBLIC_RESULTS.md)
-- [Architecture](docs/ARCHITECTURE.md)
+- [Architecture](docs/ARCHITECTURE.md)\n- [PixelForge Runtime Adapter](docs/PIXELFORGE_RUNTIME_ADAPTER.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)
