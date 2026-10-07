@@ -98,3 +98,27 @@ jobs:
           name: phicade-scummvm-qualification
           path: artifacts/scummvm-qualification.json
           if-no-files-found: error
+
+
+  pixelforge:
+    name: runtime / PixelForge bridge qualification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PhiCade
+        uses: actions/checkout@v4
+      - name: Checkout pinned PixelForge
+        uses: actions/checkout@v4
+        with:
+          repository: MichaelWave369/parallax-pixelforge
+          ref: 96809c5ef9608e994a14c300bce9032f59041d0a
+          path: _pixelforge
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+      - run: bash ./scripts/qualify-pixelforge.sh "$GITHUB_WORKSPACE/_pixelforge"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phicade-pixelforge-bridge-qualification
+          path: artifacts/pixelforge-bridge-qualification.json
+          if-no-files-found: error
