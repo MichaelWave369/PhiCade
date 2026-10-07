@@ -12,4 +12,4 @@ fi
 cd "$ROOT"
 cargo run -p phicade-runtime --example qualify_pixelforge -- \
   --pixelforge-root "$PIXELFORGE_ROOT" \
-  --out "$ROOT/artifacts/pixelforge-bridge-qualification.json"
+  --out "$ROOT/artifacts/pixelforge-cartridge-qualification.json"
