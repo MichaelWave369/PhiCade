@@ -179,9 +179,11 @@ pub use replay::{
 pub use observation::{PhiBotObservation, PHIBOT_OBSERVATION_SCHEMA};
 
 pub use pixelforge::{
-    reference_counter_intent_from_action, PixelForgeBridgeDescriptor, PixelForgeBridgeError,
-    PixelForgeBridgeQualificationReceipt, PixelForgeJsonlClient, PIXELFORGE_ADAPTER_ID,
-    PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_PINNED_REFERENCE_REVISION,
+    legend_bouncehome_intent_from_action, reference_counter_intent_from_action,
+    PixelForgeBridgeDescriptor, PixelForgeBridgeError, PixelForgeBridgeQualificationReceipt,
+    PixelForgeCartridgeQualificationReceipt, PixelForgeJsonlClient, PIXELFORGE_ADAPTER_ID,
+    PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA,
+    PIXELFORGE_PINNED_QUALIFICATION_REVISION, PIXELFORGE_PINNED_REFERENCE_REVISION,
     PIXELFORGE_RUNTIME_PROTOCOL, PIXELFORGE_RUNTIME_PROTOCOL_VERSION,
     PIXELFORGE_TRANSPORT_REQUEST_SCHEMA, PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA,
 };

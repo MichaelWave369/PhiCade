@@ -101,7 +101,7 @@ jobs:
 
 
   pixelforge:
-    name: runtime / PixelForge bridge qualification
+    name: runtime / PixelForge real-cartridge qualification
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PhiCade
@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: MichaelWave369/parallax-pixelforge
-          ref: 96809c5ef9608e994a14c300bce9032f59041d0a
+          ref: 8fda48073b5d2ea6273df54c47c194bdac8231d6
           path: _pixelforge
       - uses: actions/setup-node@v4
         with:
@@ -119,6 +119,6 @@ jobs:
       - run: bash ./scripts/qualify-pixelforge.sh "$GITHUB_WORKSPACE/_pixelforge"
       - uses: actions/upload-artifact@v4
         with:
-          name: phicade-pixelforge-bridge-qualification
-          path: artifacts/pixelforge-bridge-qualification.json
+          name: phicade-pixelforge-cartridge-qualification
+          path: artifacts/pixelforge-cartridge-qualification.json
           if-no-files-found: error
