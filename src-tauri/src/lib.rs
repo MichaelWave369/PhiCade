@@ -36,7 +36,7 @@ use std::{
 use tauri::{AppHandle, Manager, State};
 
 mod evidence_bundle;
-mod providers;
+pub mod providers;
 
 use providers::ollama::{
     self, OllamaModel, OllamaModelDetails, OllamaQualificationReceipt, OllamaTurnResult,
