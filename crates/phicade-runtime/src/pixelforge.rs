@@ -20,8 +20,12 @@ pub const PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA: &str =
 pub const PIXELFORGE_ADAPTER_ID: &str = "phicade.pixelforge-jsonl-v1";
 pub const PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA: &str =
     "phicade.pixelforge-bridge-qualification.v1";
+pub const PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA: &str =
+    "phicade.pixelforge-cartridge-qualification.v1";
+pub const PIXELFORGE_PINNED_QUALIFICATION_REVISION: &str =
+    "8fda48073b5d2ea6273df54c47c194bdac8231d6";
 pub const PIXELFORGE_PINNED_REFERENCE_REVISION: &str =
-    "96809c5ef9608e994a14c300bce9032f59041d0a";
+    PIXELFORGE_PINNED_QUALIFICATION_REVISION;
 
 #[derive(Debug)]
 pub enum PixelForgeBridgeError {
@@ -164,6 +168,31 @@ impl PixelForgeJsonlClient {
         seed: i64,
     ) -> Result<Self, PixelForgeBridgeError> {
         Self::spawn_node_reference_with_program(pixelforge_root, seed, "node")
+    }
+
+    pub fn spawn_node_cartridge(
+        pixelforge_root: &Path,
+        cartridge: &str,
+        scene: &str,
+    ) -> Result<Self, PixelForgeBridgeError> {
+        let server = pixelforge_root.join("scripts/serve_cartridge_runtime.mjs");
+        if !server.is_file() {
+            return Err(PixelForgeBridgeError::Process(format!(
+                "PixelForge cartridge server not found: {}",
+                server.display()
+            )));
+        }
+
+        let mut command = Command::new("node");
+        command
+            .arg(&server)
+            .arg("--cartridge")
+            .arg(cartridge)
+            .arg("--scene")
+            .arg(scene)
+            .current_dir(pixelforge_root);
+
+        Self::spawn(command)
     }
 
     pub fn spawn_node_reference_with_program(
@@ -421,6 +450,55 @@ pub fn reference_counter_intent_from_action(
     }
 }
 
+pub fn legend_bouncehome_intent_from_action(
+    action: &ActionEnvelope,
+) -> Result<Value, PixelForgeBridgeError> {
+    let direction = match &action.action {
+        ActionKind::Button { button, pressed } if *pressed => match button.as_str() {
+            "UP" | "DOWN" | "LEFT" | "RIGHT" => button.as_str(),
+            _ => {
+                return Err(PixelForgeBridgeError::Protocol(
+                    "Legend qualification accepts only directional button presses".into(),
+                ))
+            }
+        },
+        _ => {
+            return Err(PixelForgeBridgeError::Protocol(
+                "Legend qualification requires a pressed directional button".into(),
+            ))
+        }
+    };
+
+    Ok(json!({
+        "type": "MOVE",
+        "actorId": "more-bounce",
+        "params": { "direction": direction }
+    }))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PixelForgeCartridgeQualificationReceipt {
+    pub schema: String,
+    pub record_status: String,
+    pub pixelforge_revision: String,
+    pub cartridge_id: String,
+    pub scene_id: String,
+    pub transport_request_schema: String,
+    pub transport_response_schema: String,
+    pub descriptor: PixelForgeBridgeDescriptor,
+    pub capability_manifest: RuntimeCapabilityManifest,
+    pub controller_id: String,
+    pub initial_observation: Value,
+    pub authority_decision: AuthorityDecision,
+    pub source_action: ActionEnvelope,
+    pub submitted_intent: Value,
+    pub direct_events: Vec<Value>,
+    pub semantic_events: Vec<Value>,
+    pub final_observation: Value,
+    pub final_hash: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PixelForgeBridgeQualificationReceipt {
@@ -496,6 +574,32 @@ mod tests {
             "ADD"
         );
         assert!(reference_counter_intent_from_action(&rejected).is_err());
+    }
+
+    #[test]
+    fn legend_mapping_accepts_only_directional_pressed_buttons() {
+        let right = ActionEnvelope {
+            sequence: 0,
+            frame: 0,
+            source: ActionSource::Human { seat: 1 },
+            action: ActionKind::Button {
+                button: "RIGHT".into(),
+                pressed: true,
+            },
+        };
+        let a = ActionEnvelope {
+            action: ActionKind::Button {
+                button: "A".into(),
+                pressed: true,
+            },
+            ..right.clone()
+        };
+
+        let intent = legend_bouncehome_intent_from_action(&right).unwrap();
+        assert_eq!(intent["type"], "MOVE");
+        assert_eq!(intent["actorId"], "more-bounce");
+        assert_eq!(intent["params"]["direction"], "RIGHT");
+        assert!(legend_bouncehome_intent_from_action(&a).is_err());
     }
 
     #[test]
