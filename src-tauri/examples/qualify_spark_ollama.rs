@@ -15,7 +15,7 @@ use std::{
     process::Command,
 };
 
-const RECEIPT_SCHEMA: &str = "phicade.spark-ollama-playtest.v1";
+const RECEIPT_SCHEMA: &str = "phicade.spark-ollama-playtest.v2";
 const DEFAULT_TURNS: u64 = 3;
 const MAX_TURNS: u64 = 8;
 const MAX_MEMORY_BYTES: u32 = 4096;
@@ -54,6 +54,10 @@ struct SparkOllamaPlaytestReceipt {
     agent_id: String,
     requested_turns: u64,
     executed_actions: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    objective: Option<String>,
+    initial_observation: SparkSemanticObservation,
+    final_observation: SparkSemanticObservation,
     initial_runtime_hash: String,
     final_runtime_hash: String,
     semantic_events: Vec<Value>,
@@ -62,7 +66,7 @@ struct SparkOllamaPlaytestReceipt {
 
 fn usage() -> ! {
     eprintln!(
-        "Usage: cargo run --manifest-path src-tauri/Cargo.toml --example qualify_spark_ollama -- --pixelforge-root /path/to/parallax-pixelforge --spark-root /path/to/SparkTheSubstrate --model MODEL [--ollama-base-url http://127.0.0.1:11434] [--turns 3] [--out artifacts/phicade-spark-ollama-playtest.json]"
+        "Usage: cargo run --manifest-path src-tauri/Cargo.toml --example qualify_spark_ollama -- --pixelforge-root /path/to/parallax-pixelforge --spark-root /path/to/SparkTheSubstrate --model MODEL [--ollama-base-url http://127.0.0.1:11434] [--turns 3] [--objective TEXT] [--out artifacts/phicade-spark-ollama-playtest.json]"
     );
     std::process::exit(2);
 }
@@ -74,6 +78,7 @@ struct Args {
     model: String,
     ollama_base_url: String,
     turns: u64,
+    objective: Option<String>,
     out: PathBuf,
 }
 
@@ -84,6 +89,7 @@ fn parse_args() -> Args {
     let mut model = None;
     let mut ollama_base_url = "http://127.0.0.1:11434".to_owned();
     let mut turns = DEFAULT_TURNS;
+    let mut objective = None;
     let mut out = PathBuf::from("artifacts/phicade-spark-ollama-playtest.json");
 
     while let Some(arg) = args.next() {
@@ -100,6 +106,7 @@ fn parse_args() -> Args {
                     .and_then(|value| value.parse::<u64>().ok())
                     .unwrap_or_else(|| usage())
             }
+            "--objective" => objective = args.next(),
             "--out" => out = args.next().map(PathBuf::from).unwrap_or_else(|| usage()),
             _ if arg.starts_with("--pixelforge-root=") => {
                 pixelforge_root = Some(PathBuf::from(&arg["--pixelforge-root=".len()..]))
@@ -117,6 +124,9 @@ fn parse_args() -> Args {
                 turns = arg["--turns=".len()..]
                     .parse::<u64>()
                     .unwrap_or_else(|_| usage())
+            }
+            _ if arg.starts_with("--objective=") => {
+                objective = Some(arg["--objective=".len()..].to_owned())
             }
             _ if arg.starts_with("--out=") => {
                 out = PathBuf::from(&arg["--out=".len()..])
@@ -136,6 +146,9 @@ fn parse_args() -> Args {
         model: model.filter(|value| !value.trim().is_empty()).unwrap_or_else(|| usage()),
         ollama_base_url,
         turns,
+        objective: objective
+            .map(|value| value.trim().to_owned())
+            .filter(|value| !value.is_empty()),
         out,
     }
 }
@@ -221,6 +234,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("SPARK local-model controller registration did not return ok=true".into());
     }
 
+    let initial_raw_observation = client.observe(controller_id)?;
+    let initial_observation = spark_semantic_observation_from_bridge(&initial_raw_observation)?;
     let initial_runtime_hash = client.hash()?;
     let mut memory = String::new();
     let mut memory_sha256 = sha256_text(&memory);
@@ -242,6 +257,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             observation_runtime_hash: observation_runtime_hash.clone(),
             allowed_buttons: allowed_buttons(&grant),
             max_actions: 1,
+            objective: args.objective.clone(),
             memory: memory.clone(),
             memory_sha256: memory_sha256.clone(),
             max_memory_bytes: MAX_MEMORY_BYTES,
@@ -322,6 +338,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    let final_raw_observation = client.observe(controller_id)?;
+    let final_observation = spark_semantic_observation_from_bridge(&final_raw_observation)?;
     let final_runtime_hash = client.hash()?;
     if final_runtime_hash == initial_runtime_hash {
         return Err("SPARK runtime hash did not change during the model playtest".into());
@@ -363,6 +381,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent_id: agent_id.into(),
         requested_turns: args.turns,
         executed_actions,
+        objective: args.objective,
+        initial_observation,
+        final_observation,
         initial_runtime_hash,
         final_runtime_hash,
         semantic_events,
