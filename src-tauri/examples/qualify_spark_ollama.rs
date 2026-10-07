@@ -27,6 +27,9 @@ struct SparkOllamaTurnEvidence {
     turn_id: u64,
     observation: SparkSemanticObservation,
     observation_runtime_hash: String,
+    provider_model: String,
+    provider_total_duration_ns: Option<u64>,
+    provider_eval_count: Option<u64>,
     provider_response: SparkAgentTurnResponse,
     authority_decision: Option<AuthorityDecision>,
     source_action: Option<ActionEnvelope>,
@@ -53,6 +56,7 @@ struct SparkOllamaPlaytestReceipt {
     executed_actions: u64,
     initial_runtime_hash: String,
     final_runtime_hash: String,
+    semantic_events: Vec<Value>,
     turns: Vec<SparkOllamaTurnEvidence>,
 }
 
@@ -210,8 +214,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "kind": "phi-bot",
         "binding": "phicade-ollama-semantic-driver",
         "agentId": agent_id,
-        "model": model_details.name,
-        "modelDigest": model_details.digest
+        "model": model_details.name.clone(),
+        "modelDigest": model_details.digest.clone()
     }))?;
     if registration["ok"].as_bool() != Some(true) {
         return Err("SPARK local-model controller registration did not return ok=true".into());
@@ -250,6 +254,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &args.ollama_base_url,
             &args.model,
         ))?;
+        let provider_model = provider.model.clone();
+        let provider_total_duration_ns = provider.total_duration_ns;
+        let provider_eval_count = provider.eval_count;
         let response = provider.response;
         let compiled = compile_spark_agent_turn(&request, &response, current_tick)?;
 
@@ -295,6 +302,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             turn_id,
             observation,
             observation_runtime_hash,
+            provider_model,
+            provider_total_duration_ns,
+            provider_eval_count,
             provider_response: response,
             authority_decision,
             source_action,
@@ -317,6 +327,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err("SPARK runtime hash did not change during the model playtest".into());
     }
 
+    let semantic_events = client.events(0)?;
+    let direct_event_count: usize = evidence.iter().map(|turn| turn.direct_events.len()).sum();
+    if semantic_events.len() != direct_event_count {
+        return Err(format!(
+            "SPARK semantic event count {} diverged from {} direct event(s)",
+            semantic_events.len(),
+            direct_event_count
+        )
+        .into());
+    }
+
+    let final_model_details = tauri::async_runtime::block_on(inspect_model(
+        &args.ollama_base_url,
+        &args.model,
+    ))?;
+    if final_model_details.digest != model_details.digest {
+        return Err(format!(
+            "Ollama model digest changed during playtest: {} -> {}",
+            model_details.digest, final_model_details.digest
+        )
+        .into());
+    }
+
     let receipt = SparkOllamaPlaytestReceipt {
         schema: RECEIPT_SCHEMA.into(),
         record_status: "PASS".into(),
@@ -332,6 +365,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         executed_actions,
         initial_runtime_hash,
         final_runtime_hash,
+        semantic_events,
         turns: evidence,
     };
 
