@@ -81,12 +81,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "kind": "human",
         "binding": "phicade-action-bus"
     }))?;
-    if registration["ok"] != true {
+    if registration["ok"].as_bool() != Some(true) {
         return Err("PixelForge controller registration did not return ok=true".into());
     }
 
     let initial_observation = client.observe(controller_id)?;
-    if initial_observation["value"] != 0 {
+    if initial_observation["value"].as_i64() != Some(0) {
         return Err(format!(
             "expected reference counter to start at 0, got {}",
             initial_observation["value"]
@@ -119,12 +119,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let submitted_intent = reference_counter_intent_from_action(&source_action)?;
     let queue = client.submit(controller_id, submitted_intent.clone(), 0)?;
-    if queue["queued"] != true || queue["tick"] != 0 {
+    if queue["queued"].as_bool() != Some(true) || queue["tick"].as_u64() != Some(0) {
         return Err(format!("unexpected PixelForge queue receipt: {queue}").into());
     }
 
     let direct_events = client.advance()?;
-    if direct_events.len() != 1 || direct_events[0]["type"] != "ACTION_ACCEPTED" {
+    if direct_events.len() != 1 || direct_events[0]["type"].as_str() != Some("ACTION_ACCEPTED") {
         return Err(format!("unexpected direct event stream: {direct_events:?}").into());
     }
 
@@ -134,7 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let final_observation = client.observe(controller_id)?;
-    if final_observation["value"] != 1 {
+    if final_observation["value"].as_i64() != Some(1) {
         return Err(format!(
             "expected governed A press to move counter 0 -> 1, got {}",
             final_observation["value"]
