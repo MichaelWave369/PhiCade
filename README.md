@@ -260,7 +260,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 48 — Local Ollama SPARK Semantic Driver**
+**Rung 52 — Model Evidence Admissibility**
 
 The current desktop can:
 
@@ -281,7 +281,8 @@ The current desktop can:
 12. qualify the pinned PixelForge v5.33 **The Legend of More Bounce** cartridge by moving its real Bouncehome Grove player through the scene's actual collision-governed runtime;
 13. govern one canonical **SPARK: The Substrate** Threshold MOVE through PixelForge v5.34 and bind the returned SPARK semantic event and runtime hash into PhiCade evidence;
 14. project SPARK into a bounded semantic observation and qualify an explicitly granted Phi-Bot across RIGHT, DASH_RIGHT, and PULSE;
-15. run a real loopback-only Ollama model through that semantic contract with exact model digest, bounded memory, PhiCade authority, and receipt-bound SPARK events.
+15. run a real loopback-only Ollama model through that semantic contract with exact model digest, bounded memory, PhiCade authority, and receipt-bound SPARK events;
+16. classify isolated hosted model evidence into routing admission states without confusing identity drift with gameplay failure.
 
 ## Documentation
 
@@ -297,6 +298,7 @@ Start here:
 - [SPARK through PixelForge](docs/SPARK_PIXELFORGE_CHAIN.md)
 - [SPARK Phi-Bot Semantic Control](docs/SPARK_PHIBOT_SEMANTIC_CONTROL.md)
 - [SPARK Ollama Semantic Driver](docs/SPARK_OLLAMA_SEMANTIC_DRIVER.md)
+- [Model Evidence Admissibility](docs/MODEL_EVIDENCE_ADMISSIBILITY.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)

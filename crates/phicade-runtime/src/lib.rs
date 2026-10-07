@@ -15,6 +15,7 @@ pub mod suite_comparison;
 pub mod core;
 pub mod driver;
 pub mod library;
+pub mod model_admissibility;
 pub mod replay;
 pub mod observation;
 pub mod pixelforge;
@@ -200,4 +201,9 @@ pub use spark_agent::{
     compile_spark_agent_turn, SparkAgentTurnRequest, SparkAgentTurnResponse,
     SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_TURN_REQUEST_SCHEMA,
     SPARK_AGENT_TURN_RESPONSE_SCHEMA,
+};
+
+pub use model_admissibility::{
+    assess_model_evidence, eligible_models, ModelAdmission, ModelEvidenceClassification,
+    ModelRouteDisposition, ModelTrialEvidence, MODEL_ADMISSION_SCHEMA,
 };
