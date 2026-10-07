@@ -180,10 +180,13 @@ pub use observation::{PhiBotObservation, PHIBOT_OBSERVATION_SCHEMA};
 
 pub use pixelforge::{
     legend_bouncehome_intent_from_action, reference_counter_intent_from_action,
-    PixelForgeBridgeDescriptor, PixelForgeBridgeError, PixelForgeBridgeQualificationReceipt,
-    PixelForgeCartridgeQualificationReceipt, PixelForgeJsonlClient, PIXELFORGE_ADAPTER_ID,
+    spark_threshold_move_intent_from_action, PixelForgeBridgeDescriptor, PixelForgeBridgeError,
+    PixelForgeBridgeQualificationReceipt, PixelForgeCartridgeQualificationReceipt,
+    PixelForgeJsonlClient, PixelForgeSparkChainQualificationReceipt, PIXELFORGE_ADAPTER_ID,
     PIXELFORGE_BRIDGE_QUALIFICATION_SCHEMA, PIXELFORGE_CARTRIDGE_QUALIFICATION_SCHEMA,
     PIXELFORGE_PINNED_QUALIFICATION_REVISION, PIXELFORGE_PINNED_REFERENCE_REVISION,
-    PIXELFORGE_RUNTIME_PROTOCOL, PIXELFORGE_RUNTIME_PROTOCOL_VERSION,
+    PIXELFORGE_PINNED_SPARK_RUNTIME_REVISION, PIXELFORGE_RUNTIME_PROTOCOL,
+    PIXELFORGE_RUNTIME_PROTOCOL_VERSION, PIXELFORGE_SPARK_CHAIN_QUALIFICATION_SCHEMA,
     PIXELFORGE_TRANSPORT_REQUEST_SCHEMA, PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA,
+    SPARK_PINNED_BRIDGE_REVISION,
 };
