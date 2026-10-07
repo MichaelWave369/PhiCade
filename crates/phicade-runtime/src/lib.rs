@@ -18,6 +18,7 @@ pub mod library;
 pub mod replay;
 pub mod observation;
 pub mod pixelforge;
+pub mod spark_agent;
 
 pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
@@ -193,4 +194,10 @@ pub use pixelforge::{
     PIXELFORGE_SPARK_PHIBOT_QUALIFICATION_SCHEMA, PIXELFORGE_TRANSPORT_REQUEST_SCHEMA,
     PIXELFORGE_TRANSPORT_RESPONSE_SCHEMA, SPARK_PINNED_BRIDGE_REVISION,
     SPARK_SEMANTIC_OBSERVATION_SCHEMA,
+};
+
+pub use spark_agent::{
+    compile_spark_agent_turn, SparkAgentTurnRequest, SparkAgentTurnResponse,
+    SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_TURN_REQUEST_SCHEMA,
+    SPARK_AGENT_TURN_RESPONSE_SCHEMA,
 };
