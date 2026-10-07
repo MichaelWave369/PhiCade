@@ -20,6 +20,7 @@ pub mod replay;
 pub mod observation;
 pub mod pixelforge;
 pub mod spark_agent;
+pub mod spark_quality;
 
 pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
@@ -206,4 +207,9 @@ pub use spark_agent::{
 pub use model_admissibility::{
     assess_model_evidence, eligible_models, ModelAdmission, ModelEvidenceClassification,
     ModelRouteDisposition, ModelTrialEvidence, MODEL_ADMISSION_SCHEMA,
+};
+
+pub use spark_quality::{
+    score_spark_microtask, SparkMicrotask, SparkTaskQualityEvidence,
+    SPARK_TASK_QUALITY_SCHEMA,
 };
