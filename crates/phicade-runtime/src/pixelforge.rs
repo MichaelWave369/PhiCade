@@ -445,7 +445,7 @@ pub struct PixelForgeBridgeQualificationReceipt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ActionSource, RuntimeExecutionModel};
+    use crate::ActionSource;
 
     fn descriptor() -> PixelForgeBridgeDescriptor {
         PixelForgeBridgeDescriptor {
