@@ -209,3 +209,30 @@ SPARK becomes the next intended large consumer.
 The correct next proof is not to copy SPARK into PhiCade. PixelForge should expose
 one deliberately narrow SPARK incarnation through Runtime Bridge v1, then PhiCade
 should qualify that exact incarnation through the already-proven governed seam.
+
+
+## Rung 46: SPARK consumer
+
+The first large consumer is now canonical **SPARK: The Substrate**.
+
+PhiCade does not import SPARK directly. It launches the pinned PixelForge v5.34
+external-SPARK server, which loads SPARK's own Threshold adapter and existing
+Descent engine.
+
+The first proof remains deliberately narrow:
+
+```text
+PhiCade RIGHT
+   -> AuthorityPolicy
+   -> SPARK MOVE { x: 1, y: 0 }
+   -> PixelForge Runtime Bridge v1
+   -> SPARK action-engine
+   -> SPARK_PLAYER_MOVED
+   -> semantic event + runtime hash
+```
+
+See `docs/SPARK_PIXELFORGE_CHAIN.md`.
+
+This does not widen the previously conservative capability claims. Framebuffer,
+audio, exact replay, restorable snapshots, persistent save authority, and
+full-game agent control remain unqualified.
