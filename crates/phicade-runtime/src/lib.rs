@@ -20,6 +20,7 @@ pub mod replay;
 pub mod observation;
 pub mod pixelforge;
 pub mod spark_agent;
+pub mod spark_quality;
 
 pub use action_bus::{
     live_source_order, ActionBus, ActionEnvelope, ActionKind, ActionSource, SystemCommand,
@@ -199,11 +200,16 @@ pub use pixelforge::{
 
 pub use spark_agent::{
     compile_spark_agent_turn, SparkAgentTurnRequest, SparkAgentTurnResponse,
-    SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_TURN_REQUEST_SCHEMA,
-    SPARK_AGENT_TURN_RESPONSE_SCHEMA,
+    SPARK_AGENT_MEMORY_MAX_BYTES, SPARK_AGENT_OBJECTIVE_MAX_BYTES,
+    SPARK_AGENT_TURN_REQUEST_SCHEMA, SPARK_AGENT_TURN_RESPONSE_SCHEMA,
 };
 
 pub use model_admissibility::{
     assess_model_evidence, eligible_models, ModelAdmission, ModelEvidenceClassification,
     ModelRouteDisposition, ModelTrialEvidence, MODEL_ADMISSION_SCHEMA,
+};
+
+pub use spark_quality::{
+    score_spark_microtask, SparkMicrotask, SparkTaskQualityEvidence,
+    SPARK_TASK_QUALITY_SCHEMA,
 };

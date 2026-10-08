@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 pub const SPARK_AGENT_TURN_REQUEST_SCHEMA: &str = "phicade.spark-agent-turn-request.v1";
 pub const SPARK_AGENT_TURN_RESPONSE_SCHEMA: &str = "phicade.spark-agent-turn-response.v1";
 pub const SPARK_AGENT_MEMORY_MAX_BYTES: u32 = 8_192;
+pub const SPARK_AGENT_OBJECTIVE_MAX_BYTES: usize = 256;
 
 fn is_sha256_hex(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
@@ -24,6 +25,8 @@ pub struct SparkAgentTurnRequest {
     pub observation_runtime_hash: String,
     pub allowed_buttons: Vec<String>,
     pub max_actions: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub objective: Option<String>,
     pub memory: String,
     pub memory_sha256: String,
     pub max_memory_bytes: u32,
@@ -69,6 +72,17 @@ impl SparkAgentTurnRequest {
         }
         if self.max_actions != 1 {
             return Err("SPARK semantic driver currently requires maxActions=1".into());
+        }
+        if let Some(objective) = &self.objective {
+            let objective = objective.trim();
+            if objective.is_empty() {
+                return Err("SPARK objective must be non-empty when provided".into());
+            }
+            if objective.as_bytes().len() > SPARK_AGENT_OBJECTIVE_MAX_BYTES {
+                return Err(format!(
+                    "SPARK objective exceeds {SPARK_AGENT_OBJECTIVE_MAX_BYTES} bytes"
+                ));
+            }
         }
         if !(1..=SPARK_AGENT_MEMORY_MAX_BYTES).contains(&self.max_memory_bytes) {
             return Err(format!(
@@ -258,6 +272,7 @@ mod tests {
                 "PULSE".into(),
             ],
             max_actions: 1,
+            objective: None,
             memory: "entered threshold".into(),
             memory_sha256: "b".repeat(64),
             max_memory_bytes: 4096,
@@ -297,6 +312,19 @@ mod tests {
             ActionSource::PhiBot { agent_id, seat }
                 if agent_id == "phi-spark" && *seat == 1
         ));
+    }
+
+    #[test]
+    fn validates_bounded_explicit_objective() {
+        let mut request = request();
+        request.objective = Some("Move east while staying within the granted controls.".into());
+        assert!(request.validate().is_ok());
+
+        request.objective = Some(" ".into());
+        assert!(request.validate().is_err());
+
+        request.objective = Some("x".repeat(SPARK_AGENT_OBJECTIVE_MAX_BYTES + 1));
+        assert!(request.validate().is_err());
     }
 
     #[test]
