@@ -57,9 +57,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install core-build dependencies
+        timeout-minutes: 8
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo timeout 180s apt-get update \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=20 \
+            -o Acquire::https::Timeout=20
+          sudo timeout 240s apt-get install -y \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=20 \
+            -o Acquire::https::Timeout=20 \
             build-essential \
             bison \
             flex \
