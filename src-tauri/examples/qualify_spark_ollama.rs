@@ -1,6 +1,7 @@
 use phicade_lib::providers::ollama::{complete_spark_semantic_turn, inspect_model};
 use phicade_runtime::{
-    compile_spark_agent_turn, spark_semantic_observation_from_bridge,
+    compile_spark_agent_turn, spark_currently_available_buttons,
+    spark_semantic_observation_from_bridge,
     spark_threshold_intent_from_action, ActionEnvelope, AgentGrant, AuthorityDecision,
     AuthorityPolicy, ControlMode, PixelForgeJsonlClient, SparkAgentTurnRequest,
     SparkAgentTurnResponse, SparkSemanticObservation, PIXELFORGE_PINNED_SPARK_RUNTIME_REVISION,
@@ -27,6 +28,7 @@ struct SparkOllamaTurnEvidence {
     turn_id: u64,
     observation: SparkSemanticObservation,
     observation_runtime_hash: String,
+    available_buttons: Vec<String>,
     provider_model: String,
     provider_total_duration_ns: Option<u64>,
     provider_eval_count: Option<u64>,
@@ -178,10 +180,6 @@ fn sha256_text(value: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
-fn allowed_buttons(grant: &AgentGrant) -> Vec<String> {
-    grant.allowed_buttons.iter().cloned().collect()
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = parse_args();
 
@@ -247,6 +245,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let observation = spark_semantic_observation_from_bridge(&raw_observation)?;
         let observation_runtime_hash = client.hash()?;
         let current_tick = observation.tick;
+        let available_buttons =
+            spark_currently_available_buttons(&grant.allowed_buttons, &observation)?;
 
         let request = SparkAgentTurnRequest {
             schema: SPARK_AGENT_TURN_REQUEST_SCHEMA.into(),
@@ -255,7 +255,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             seat: 1,
             observation: observation.clone(),
             observation_runtime_hash: observation_runtime_hash.clone(),
-            allowed_buttons: allowed_buttons(&grant),
+            allowed_buttons: available_buttons.clone(),
             max_actions: 1,
             objective: args.objective.clone(),
             memory: memory.clone(),
@@ -318,6 +318,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             turn_id,
             observation,
             observation_runtime_hash,
+            available_buttons,
             provider_model,
             provider_total_duration_ns,
             provider_eval_count,
