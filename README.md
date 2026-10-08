@@ -260,7 +260,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 56 — Cooldown-Aware SPARK Controls**
+**Rung 58 — SPARK Semantic Action Affordances**
 
 The current desktop can:
 
@@ -285,6 +285,7 @@ The current desktop can:
 16. classify isolated hosted model evidence into routing admission states without confusing identity drift with gameplay failure;
 17. bind explicit bounded SPARK objectives to admitted models and score task quality from canonical SPARK state rather than model self-report.
 18. restrict per-turn semantic model proposals to currently ready SPARK controls without changing the static AgentGrant or the runtime's authority.
+19. explain the meanings of only the currently offered SPARK buttons to local models without changing the action grant or selecting a move for them.
 
 ## Documentation
 
@@ -303,6 +304,7 @@ Start here:
 - [Model Evidence Admissibility](docs/MODEL_EVIDENCE_ADMISSIBILITY.md)
 - [SPARK Task-Quality Evidence](docs/SPARK_TASK_QUALITY_EVIDENCE.md)
 - [Cooldown-Aware SPARK Controls](docs/SPARK_COOLDOWN_AWARE_CONTROLS.md)
+- [SPARK Semantic Action Affordances](docs/SPARK_SEMANTIC_ACTION_AFFORDANCES.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)
