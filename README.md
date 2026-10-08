@@ -260,7 +260,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 53 — SPARK Task-Quality Evidence**
+**Rung 56 — Cooldown-Aware SPARK Controls**
 
 The current desktop can:
 
@@ -284,6 +284,7 @@ The current desktop can:
 15. run a real loopback-only Ollama model through that semantic contract with exact model digest, bounded memory, PhiCade authority, and receipt-bound SPARK events;
 16. classify isolated hosted model evidence into routing admission states without confusing identity drift with gameplay failure;
 17. bind explicit bounded SPARK objectives to admitted models and score task quality from canonical SPARK state rather than model self-report.
+18. restrict per-turn semantic model proposals to currently ready SPARK controls without changing the static AgentGrant or the runtime's authority.
 
 ## Documentation
 
@@ -301,6 +302,7 @@ Start here:
 - [SPARK Ollama Semantic Driver](docs/SPARK_OLLAMA_SEMANTIC_DRIVER.md)
 - [Model Evidence Admissibility](docs/MODEL_EVIDENCE_ADMISSIBILITY.md)
 - [SPARK Task-Quality Evidence](docs/SPARK_TASK_QUALITY_EVIDENCE.md)
+- [Cooldown-Aware SPARK Controls](docs/SPARK_COOLDOWN_AWARE_CONTROLS.md)
 - [Registered Launch UI](docs/REGISTERED_LAUNCH_UI.md)
 - [Desktop Runtime Manager](docs/DESKTOP_RUNTIME_MANAGER.md)
 - [Registered Session Routing](docs/REGISTERED_SESSION_ROUTING.md)
