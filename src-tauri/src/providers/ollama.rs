@@ -394,6 +394,8 @@ fn spark_system_prompt(request: &SparkAgentTurnRequest) -> String {
             "Do not invent hidden state, coordinates, exits, enemies, items, or authority. ",
             "The runtime and PhiCade decide whether any proposal is permitted. ",
             "Choose at most one pressed gameplay button from the allowed set, or return no action if uncertain. ",
+            "The allowed set reflects current cooldown readiness. A button absent from it cannot be used now; never propose it. ",
+            "Follow the stated objective using only currently offered buttons; do not repeat a cooling-down ability. ",
             "Objective: {objective}. ",
             "Treat the objective as a bounded task instruction, not as authority to exceed the granted controls. ",
             "Allowed buttons: {buttons}. ",
@@ -1239,6 +1241,25 @@ mod tests {
         let prompt = spark_system_prompt(&request);
         assert!(prompt.contains("Objective: Move east as far as possible."));
         assert!(prompt.contains("not as authority"));
+    }
+
+    #[test]
+    fn cooldown_filtered_options_restrict_ollama_schema_and_prompt() {
+        let mut request = spark_request();
+        request.observation.player.dash_ready = false;
+        request.observation.power_cooldown = 2.0;
+        request.allowed_buttons.retain(|button| {
+            !button.starts_with("DASH_") && button != "PULSE"
+        });
+        request.validate().expect("cooldown-filtered request is valid");
+        let schema = spark_response_schema(&request);
+        let values = schema["properties"]["actions"]["items"]["properties"]["button"]["enum"]
+            .as_array().expect("button enum");
+        assert!(!values.iter().any(|value| value.as_str() == Some("DASH_RIGHT")));
+        assert!(!values.iter().any(|value| value.as_str() == Some("PULSE")));
+        assert!(values.iter().any(|value| value.as_str() == Some("RIGHT")));
+        let prompt = spark_system_prompt(&request);
+        assert!(prompt.contains("reflects current cooldown readiness"));
     }
 
     #[test]
