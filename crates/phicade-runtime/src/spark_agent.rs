@@ -10,6 +10,46 @@ pub const SPARK_AGENT_TURN_RESPONSE_SCHEMA: &str = "phicade.spark-agent-turn-res
 pub const SPARK_AGENT_MEMORY_MAX_BYTES: u32 = 8_192;
 pub const SPARK_AGENT_OBJECTIVE_MAX_BYTES: usize = 256;
 
+/// Build a single-tick proposal menu from the static PhiCade grant and the
+/// canonical SPARK semantic observation. This is only a restriction layer:
+/// AuthorityPolicy and the SPARK engine still make final decisions.
+pub fn spark_currently_available_buttons(
+    granted: &BTreeSet<String>,
+    observation: &SparkSemanticObservation,
+) -> Result<Vec<String>, String> {
+    if observation.schema != SPARK_SEMANTIC_OBSERVATION_SCHEMA {
+        return Err("cannot derive SPARK control menu from unsupported observation schema".into());
+    }
+    if observation.phase != "playing" || !observation.player.hp.is_finite()
+        || observation.player.hp <= 0.0
+    {
+        return Err("SPARK controls cannot be offered outside an active living turn".into());
+    }
+    if !observation.power_cooldown.is_finite() || observation.power_cooldown < 0.0 {
+        return Err("SPARK power cooldown must be finite and nonnegative".into());
+    }
+
+    let allows = |kind: &str| observation.allowed_actions.iter().any(|item| item == kind);
+    let mut available = Vec::new();
+    for button in granted {
+        let permitted_now = match button.as_str() {
+            "UP" | "DOWN" | "LEFT" | "RIGHT" => allows("MOVE"),
+            "DASH_UP" | "DASH_DOWN" | "DASH_LEFT" | "DASH_RIGHT" => {
+                allows("DASH") && observation.player.dash_ready
+            }
+            "PULSE" => allows("PULSE") && observation.power_cooldown == 0.0,
+            _ => false,
+        };
+        if permitted_now {
+            available.push(button.clone());
+        }
+    }
+    if available.is_empty() {
+        return Err("SPARK has no currently available, granted gameplay controls".into());
+    }
+    Ok(available)
+}
+
 fn is_sha256_hex(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
@@ -72,6 +112,11 @@ impl SparkAgentTurnRequest {
         }
         if self.max_actions != 1 {
             return Err("SPARK semantic driver currently requires maxActions=1".into());
+        }
+        let proposed: BTreeSet<String> = self.allowed_buttons.iter().cloned().collect();
+        let usable = spark_currently_available_buttons(&proposed, &self.observation)?;
+        if usable.len() != self.allowed_buttons.len() {
+            return Err("SPARK request contains a control unavailable in this observation".into());
         }
         if let Some(objective) = &self.objective {
             let objective = objective.trim();
@@ -298,6 +343,63 @@ mod tests {
                 },
             }],
         }
+    }
+
+    #[test]
+    fn cooldown_hides_dash_but_preserves_normal_motion_and_ready_pulse() {
+        let mut observation = observation();
+        observation.player.dash_ready = false;
+        let granted: BTreeSet<String> = [
+            "UP", "DOWN", "LEFT", "RIGHT", "DASH_RIGHT", "PULSE",
+        ].into_iter().map(str::to_owned).collect();
+        let offered = spark_currently_available_buttons(&granted, &observation).unwrap();
+        assert!(!offered.contains(&"DASH_RIGHT".to_owned()));
+        assert!(offered.contains(&"RIGHT".to_owned()));
+        assert!(offered.contains(&"PULSE".to_owned()));
+
+        observation.power_cooldown = 3.8;
+        let cooldown = spark_currently_available_buttons(&granted, &observation).unwrap();
+        assert!(!cooldown.contains(&"PULSE".to_owned()));
+        assert!(cooldown.contains(&"RIGHT".to_owned()));
+
+        observation.player.dash_ready = true;
+        observation.power_cooldown = 0.0;
+        let ready = spark_currently_available_buttons(&granted, &observation).unwrap();
+        assert!(ready.contains(&"DASH_RIGHT".to_owned()));
+        assert!(ready.contains(&"PULSE".to_owned()));
+    }
+
+    #[test]
+    fn cooldown_menu_is_a_subset_of_grant_and_bridge_capabilities() {
+        let granted: BTreeSet<String> = [
+            "RIGHT", "PULSE", "DASH_RIGHT", "START", "SAVE",
+        ].into_iter().map(str::to_owned).collect();
+        let mut obs = observation();
+        obs.allowed_actions = vec!["MOVE".into()];
+        let offered = spark_currently_available_buttons(&granted, &obs).unwrap();
+        assert_eq!(offered, vec!["RIGHT".to_owned()]);
+        obs.phase = "dead".into();
+        assert!(spark_currently_available_buttons(&granted, &obs).is_err());
+    }
+
+    #[test]
+    fn response_cannot_use_cooling_down_action_even_if_request_claims_it() {
+        let mut request = request();
+        request.observation.player.dash_ready = false;
+        assert!(request.validate().is_err());
+        request.allowed_buttons.retain(|button| !button.starts_with("DASH_"));
+        assert!(request.validate().is_ok());
+        assert!(response("DASH_RIGHT").validate_against(&request, 3).is_err());
+    }
+
+    #[test]
+    fn unavailable_or_invalid_cooldown_fails_closed() {
+        let granted = ["PULSE".to_owned()].into_iter().collect();
+        let mut obs = observation();
+        obs.power_cooldown = 1.5;
+        assert!(spark_currently_available_buttons(&granted, &obs).is_err());
+        obs.power_cooldown = f64::NAN;
+        assert!(spark_currently_available_buttons(&granted, &obs).is_err());
     }
 
     #[test]
