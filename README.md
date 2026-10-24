@@ -11,8 +11,15 @@ PhiCade keeps runtime capabilities, model identity, benchmark conditions, and
 available replay evidence explicit instead of assuming every controller or core
 deserves the same powers.
 
+**Xbox browser preview (Rung 59):** The [PhiCade Xbox Edition](docs/XBOX_EDITION.md)
+is a separate controller-oriented, static web launcher in `xbox/`.
+It exposes curated portal links only. Xbox hardware/controller qualification,
+native emulator execution, remote streaming, and PhiOS runtime access are
+**not** part of this preview.
+
 ## What you can do
 
+- **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.
 - **Play GB/GBC games** through a pinned, qualified SameBoy 1.0.3 path.
 - **Register user-supplied libretro cores** by exact binary SHA-256.
 - **Launch registered runtimes from the desktop** with explicit session approval.
@@ -260,7 +267,7 @@ See [docs/EVIDENCE.md](docs/EVIDENCE.md).
 
 ## Current status
 
-**Rung 58 — SPARK Semantic Action Affordances**
+**Desktop Rung 58 — SPARK Semantic Action Affordances / Browser Rung 59 — Xbox gateway preview**
 
 The current desktop can:
 

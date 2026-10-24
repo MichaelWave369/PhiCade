@@ -1,0 +1,71 @@
+name: PhiCade Xbox Browser
+
+on:
+  pull_request:
+    paths:
+      - "xbox/**"
+      - ".github/workflows/xbox-pages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "xbox/**"
+      - ".github/workflows/xbox-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: xbox / syntax + navigation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check xbox/app.mjs
+          node --check xbox/navigation.mjs
+      - name: Test selection and gamepad mapping
+        run: node --test xbox/tests/*.test.mjs
+      - name: Verify static entry and curated HTTPS navigation
+        shell: bash
+        run: |
+          test -f xbox/index.html
+          test -f xbox/styles.css
+          test -f xbox/app.mjs
+          grep -q 'id="launch-grid"' xbox/index.html
+          if grep -E 'href="http:' xbox/index.html; then
+            echo "Only HTTPS external destinations are allowed"
+            exit 1
+          fi
+
+  deploy:
+    name: xbox / GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare public site (no tests or runtime assets)
+        run: |
+          mkdir -p _xbox_site
+          cp xbox/index.html xbox/styles.css xbox/app.mjs xbox/navigation.mjs _xbox_site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_xbox_site
+      - id: deployment
+        uses: actions/deploy-pages@v4
