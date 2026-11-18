@@ -7,8 +7,17 @@ export interface AppSettings {
   autoScan: boolean;
   controllerDeadzone: number;
   sameboyCorePath: string | null;
+  retroarchPath: string | null;
+  n64CorePath: string | null;
   ollamaBaseUrl: string;
   ollamaModel: string | null;
+}
+
+export interface N64LaunchReceipt {
+  pid: number;
+  coreSha256: string;
+  romSha256: string;
+  externalWindow: boolean;
 }
 
 export interface RomEntry {
@@ -830,6 +839,8 @@ export const defaultSettings: AppSettings = {
   autoScan: false,
   controllerDeadzone: 0.18,
   sameboyCorePath: null,
+  retroarchPath: null,
+  n64CorePath: null,
   ollamaBaseUrl: "http://127.0.0.1:11434",
   ollamaModel: null,
 };
@@ -876,6 +887,28 @@ export async function selectLibretroCoreDirectory(): Promise<string | null> {
     directory: true,
     multiple: false,
     title: "Select folder of extracted Libretro cores",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function selectRetroArchExe(): Promise<string | null> {
+  if (!isNativeShell()) return null;
+  const selected = await open({
+    multiple: false,
+    directory: false,
+    title: "Select official RetroArch executable (retroarch.exe)",
+    filters: [{ name: "Windows executable", extensions: ["exe"] }],
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function selectN64LibretroCore(): Promise<string | null> {
+  if (!isNativeShell()) return null;
+  const selected = await open({
+    multiple: false,
+    directory: false,
+    title: "Select a Mupen64Plus-Next N64 core DLL",
+    filters: [{ name: "N64 Libretro core", extensions: ["dll"] }],
   });
   return typeof selected === "string" ? selected : null;
 }
@@ -929,6 +962,10 @@ export async function startEmulation(
   gamePath: string,
 ): Promise<SessionInfo> {
   return invoke<SessionInfo>("start_emulation", { corePath, gamePath });
+}
+
+export async function launchN64Bridge(retroarchPath: string, corePath: string, gamePath: string): Promise<N64LaunchReceipt> {
+  return invoke<N64LaunchReceipt>("launch_n64_bridge", { retroarchPath, corePath, gamePath });
 }
 
 export async function startRegisteredEmulation(
