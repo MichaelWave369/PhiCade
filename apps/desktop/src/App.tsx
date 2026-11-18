@@ -1706,11 +1706,13 @@ export function App() {
     const observer = new ResizeObserver(sync);
     observer.observe(crtRef.current);
     window.addEventListener("resize", sync);
+    window.addEventListener("focus", sync);
     window.addEventListener("scroll", sync, true);
     sync();
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", sync);
+      window.removeEventListener("focus", sync);
       window.removeEventListener("scroll", sync, true);
       window.cancelAnimationFrame(animation);
     };
