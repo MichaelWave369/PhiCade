@@ -120,6 +120,12 @@ codec.
   using the normal external N64 window. Closing/reopening PhiCade also
   restores the game to an independent window when possible.
 
+**First test tip:** Start RetroArch in its normal **windowed** mode, not
+exclusive fullscreen, before launching from PhiCade. Windows needs to resize
+the RetroArch client window to the CRT's rectangle. If the window remains
+fullscreen or Vulkan refuses resizing, use **UNDOCK N64** and continue playing
+externally.
+
 **Known limitations:**
 1. Windows 11 only for now. Win32 SetParent can affect DPI-awareness
    compatibility between the two processes, especially when display
