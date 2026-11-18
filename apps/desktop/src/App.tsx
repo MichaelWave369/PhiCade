@@ -1708,8 +1708,17 @@ export function App() {
     window.addEventListener("resize", sync);
     window.addEventListener("focus", sync);
     window.addEventListener("scroll", sync, true);
+    // Moving a native window does not necessarily emit browser resize/scroll.
+    let mounted = true;
+    let unlistenMoved: (() => void) | null = null;
+    void getCurrentWindow().onMoved(() => sync()).then((unlisten) => {
+      if (mounted) unlistenMoved = unlisten;
+      else unlisten();
+    }).catch(() => undefined);
     sync();
     return () => {
+      mounted = false;
+      unlistenMoved?.();
       observer.disconnect();
       window.removeEventListener("resize", sync);
       window.removeEventListener("focus", sync);
@@ -2110,7 +2119,7 @@ export function App() {
             <button className="play-game" onClick={() => void launchGame()} disabled={running || n64LaunchPid !== null || launchBusy || registeredLaunchBusy || !native || !selectedGame}>{launchBusy ? "STARTING..." : "PLAY GAME"}</button>
             <button onClick={n64LaunchPid !== null && !running ? () => { void closeN64Now(); } : stopGame} disabled={n64LaunchPid !== null ? launchBusy : !running || replayRecording || autodrive?.active}>{n64LaunchPid !== null && !running ? "CLOSE N64" : "EJECT"}</button>
             {n64LaunchPid !== null && !n64Docked && <button onClick={() => void dockN64Now()} disabled={n64AutoDock}>DOCK N64 TO CRT</button>}
-            {n64Docked && <button onClick={() => void undockN64Now()}>UNDOCK N64</button>}
+            {n64Docked && <button className="n64-recovery-control" onClick={() => void undockN64Now()}>UNDOCK N64</button>}
             <button className="fullscreen-toggle" onClick={() => void toggleArcadeMode()} disabled={(!running && !n64Docked) || !native}>{arcadeMode ? "EXIT FULLSCREEN (F11)" : "FULLSCREEN (F11)"}</button>
             <span>{n64Docked ? "N64 // RETROARCH VULKAN DOCKED" : n64LaunchPid !== null ? "N64 // EXTERNAL RETROARCH GAME" : session ? `${session.core.libraryName} ${session.core.libraryVersion}` : selectedGame ? `${selectedGame.system} / ${selectedGame.displayName}` : "SELECT GAME TO PLAY"}</span>
           </div>
