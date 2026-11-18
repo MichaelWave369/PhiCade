@@ -1291,6 +1291,9 @@ fn stop_n64_bridge(state: State<'_, N64BridgeState>) -> Result<(), String> {
             n64_dock::request_graceful_close(child.id())?;
             #[cfg(not(target_os = "windows"))]
             return Err("Close RetroArch manually on this platform".into());
+            // Keep ownership until the process really exits. This prevents
+            // accidentally starting another copy while RetroArch flushes saves.
+            return Ok(());
         }
     }
     *process = None;
