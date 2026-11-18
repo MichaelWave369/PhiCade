@@ -199,6 +199,20 @@ from verified evidence instead of a manually copied leaderboard.
 See [docs/PUBLIC_RESULTS.md](docs/PUBLIC_RESULTS.md) and
 [docs/PORTABLE_EVIDENCE_BUNDLE.md](docs/PORTABLE_EVIDENCE_BUNDLE.md).
 
+## Arcade Play (desktop)
+
+Once an appropriate local libretro core is registered, select a ROM and press
+**PLAY GAME** (or double-click its row). PhiCade routes by the core's advertised
+content extensions while retaining its native core identity/hash verification
+and explicit per-session operator approval.
+
+Press **F11** or **Alt+Enter** during gameplay to toggle the 4:3 arcade
+fullscreen theater. Press **Esc** to exit.
+
+See [Arcade Quickstart: cores, BIOS, and one-click Play](docs/ARCADE_QUICKSTART.md)
+for official core downloads, per-console firmware requirements, and current
+library/adapter limitations.
+
 ## Quickstart
 
 ### 1. Clone

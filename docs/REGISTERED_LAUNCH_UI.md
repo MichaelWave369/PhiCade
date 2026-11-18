@@ -95,3 +95,25 @@ Rung 39 does not:
 - add directory or runtime-native launch-target routing to libretro.
 
 Those remain separate capability/evidence decisions.
+
+
+## Arcade Play (desktop, user-approved per session)
+
+The game list now has a direct **PLAY GAME** button, or the operator can
+double-click a game row. This explicit operator gesture selects a registered
+libretro core whose live-advertised `validExtensions` contains the game's file
+extension, using a stable preference order for familiar consoles and honoring
+an already-selected matching runtime. A GB/GBC game can alternatively use the
+existing legacy SameBoy path when no matching runtime is registered.
+
+The operator's PLAY gesture approves only that one selected game's session.
+It does not grant durable registration authority, skip native SHA-256 / identity
+verification, install a core, download content, or grant an agent authority.
+A failed or missing runtime produces an actionable notice.
+
+`F11` or `Alt+Enter` toggles native-window arcade fullscreen while a game
+is running. The dashboard is hidden, video stays at 4:3, and F11, Alt+Enter,
+Escape, or the small exit button returns to the dashboard.
+
+Arcade Play does not guarantee every Libretro core works: advertised extensions
+are routing hints and native loading/capability checks remain authoritative.
