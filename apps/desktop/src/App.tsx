@@ -93,6 +93,8 @@ import {
 } from "./native";
 
 const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
+const AUDIO_START_LEAD_SECONDS = 0.03;
+const MAX_AUDIO_QUEUE_SECONDS = 0.14;
 const PHIBOT_AGENT_ID = "phi-local";
 
 const milestones = [
@@ -240,16 +242,22 @@ export function App() {
     const bytes = decodeBase64(packet.rgbaBase64);
     const expected = packet.width * packet.height * 4;
     if (bytes.length !== expected) return;
-    canvas.width = packet.width;
-    canvas.height = packet.height;
+    if (canvas.width !== packet.width) canvas.width = packet.width;
+    if (canvas.height !== packet.height) canvas.height = packet.height;
     context.putImageData(new ImageData(new Uint8ClampedArray(bytes), packet.width, packet.height), 0, 0);
   };
 
   const playAudio = (packet: FramePacket) => {
-    if (packet.fastForward > 1) return;
-    if (!packet.audioBase64 || packet.sampleRateHz <= 0) return;
     const context = audioContextRef.current;
     if (!context) return;
+    if (packet.fastForward > 1) {
+      nextAudioTimeRef.current = context.currentTime;
+      return;
+    }
+    if (!packet.audioBase64 || packet.sampleRateHz <= 0) return;
+    // Never let stale sound accumulate when frames arrive faster than playback.
+    // Dropping one overfull packet is preferable to seconds of audio latency.
+    if (nextAudioTimeRef.current - context.currentTime > MAX_AUDIO_QUEUE_SECONDS) return;
     const bytes = decodeBase64(packet.audioBase64);
     if (bytes.length < 4) return;
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -264,7 +272,7 @@ export function App() {
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);
-    const startAt = Math.max(context.currentTime + 0.005, nextAudioTimeRef.current);
+    const startAt = Math.max(context.currentTime + AUDIO_START_LEAD_SECONDS, nextAudioTimeRef.current);
     source.start(startAt);
     nextAudioTimeRef.current = startAt + buffer.duration;
   };
@@ -274,10 +282,20 @@ export function App() {
     let cancelled = false;
     let inFlight = false;
     let animation = 0;
+    // The emulator should advance at its core's nominal FPS, not the monitor's
+    // 120/144/240 Hz refresh rate. Fast-forward is applied inside stepEmulation.
+    const coreFps = session?.core.fps && Number.isFinite(session.core.fps)
+      ? Math.max(1, session.core.fps)
+      : 60;
+    const frameIntervalMs = 1000 / coreFps;
+    let nextFrameAtMs = performance.now();
 
     const tick = async () => {
       animation = window.requestAnimationFrame(tick);
       if (cancelled || inFlight || !runningRef.current || providerBusyRef.current) return;
+      const nowMs = performance.now();
+      if (nowMs + 0.5 < nextFrameAtMs) return;
+      nextFrameAtMs = Math.max(nextFrameAtMs + frameIntervalMs, nowMs);
       inFlight = true;
       try {
         const controllerIndex = controllers[0]?.index ?? 0;
@@ -324,7 +342,7 @@ export function App() {
       cancelled = true;
       window.cancelAnimationFrame(animation);
     };
-  }, [running, controllers, settings.controllerDeadzone, bus]);
+  }, [running, controllers, settings.controllerDeadzone, bus, session?.core.fps]);
 
   useEffect(() => () => {
     if (native) void stopEmulation();
