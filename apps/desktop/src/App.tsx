@@ -41,6 +41,7 @@ import {
   listOllamaModels,
   listRuntimeRegistrations,
   importRuntimeCoreFolder,
+  launchN64Bridge,
   qualifyOllamaModel,
   registerRuntimeCore,
   loadSettings,
@@ -59,6 +60,8 @@ import {
   selectSameBoyCore,
   selectLibretroCore,
   selectLibretroCoreDirectory,
+  selectRetroArchExe,
+  selectN64LibretroCore,
   selectRuntimeContent,
   setGameProfile,
   startEmulation,
@@ -96,7 +99,7 @@ import {
   type SessionInfo,
 } from "./native";
 
-const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "PS1"] as const;
+const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "N64", "PS1"] as const;
 const AUDIO_START_LEAD_SECONDS = 0.03;
 const MAX_AUDIO_QUEUE_SECONDS = 0.14;
 const PHIBOT_AGENT_ID = "phi-local";
@@ -110,6 +113,7 @@ const CORE_PREFERENCES: Record<string, string[]> = {
   GBC: ["sameboy", "gambatte", "mgba"],
   GBA: ["mgba", "vba"],
   GENESIS: ["genesis plus gx", "picodrive"],
+  N64: ["mupen64plus", "parallel"],
   PS1: ["beetle psx", "pcsx rearmed"],
 };
 
@@ -220,6 +224,7 @@ export function App() {
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
   const [coreFolderReport, setCoreFolderReport] = useState<CoreFolderImportReport | null>(null);
+  const [n64LaunchPid, setN64LaunchPid] = useState<number | null>(null);
   const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
   const [registeredLaunchApproved, setRegisteredLaunchApproved] = useState(false);
   const [registeredLaunchBusy, setRegisteredLaunchBusy] = useState(false);
@@ -458,6 +463,34 @@ export function App() {
       setNotice(`RUNTIME REGISTRY ERROR // ${String(error)}`);
     } finally {
       setRuntimeRegistryBusy(false);
+    }
+  };
+
+  const configureRetroArch = async () => {
+    if (!native) return;
+    try {
+      const path = await selectRetroArchExe();
+      if (!path) return;
+      const next = { ...settings, retroarchPath: path };
+      await saveSettings(next);
+      setSettings(next);
+      setNotice("N64 BRIDGE // RETROARCH EXECUTABLE SAVED");
+    } catch (error) {
+      setNotice(`N64 BRIDGE SETUP ERROR // ${String(error)}`);
+    }
+  };
+
+  const configureN64Core = async () => {
+    if (!native) return;
+    try {
+      const path = await selectN64LibretroCore();
+      if (!path) return;
+      const next = { ...settings, n64CorePath: path };
+      await saveSettings(next);
+      setSettings(next);
+      setNotice("N64 BRIDGE // N64 CORE PATH SAVED");
+    } catch (error) {
+      setNotice(`N64 BRIDGE SETUP ERROR // ${String(error)}`);
     }
   };
 
@@ -1460,6 +1493,45 @@ export function App() {
     }
     if (running || registeredLaunchBusy || launchBusyRef.current) return;
 
+    // N64 cores generally need a 3D GPU context not implemented by PhiCade's
+    // native software-frame Libretro host. Use an explicit external RetroArch
+    // bridge for N64 until native hardware rendering is implemented.
+    if (game.system === "N64") {
+      launchBusyRef.current = true;
+      setLaunchBusy(true);
+      setSelectedGame(game);
+      try {
+        let retroarchPath = settings.retroarchPath;
+        if (!retroarchPath) {
+          retroarchPath = await selectRetroArchExe();
+          if (!retroarchPath) {
+            setNotice("N64 SETUP CANCELLED // SELECT RETROARCH.EXE TO PLAY");
+            return;
+          }
+        }
+        let corePath = settings.n64CorePath;
+        if (!corePath) {
+          corePath = await selectN64LibretroCore();
+          if (!corePath) {
+            setNotice("N64 SETUP CANCELLED // SELECT MUPEN64PLUS-NEXT CORE DLL TO PLAY");
+            return;
+          }
+        }
+        const nextSettings = { ...settings, retroarchPath, n64CorePath: corePath };
+        await saveSettings(nextSettings);
+        setSettings(nextSettings);
+        const result = await launchN64Bridge(retroarchPath, corePath, game.path);
+        setN64LaunchPid(result.pid);
+        setNotice(`N64 EXTERNAL WINDOW LAUNCHED // ${game.displayName} // PID ${result.pid} // GAMEPAD & FULLSCREEN IN RETROARCH`);
+      } catch (error) {
+        setNotice(`N64 LAUNCH ERROR // ${String(error)}`);
+      } finally {
+        launchBusyRef.current = false;
+        setLaunchBusy(false);
+      }
+      return;
+    }
+
     const matches = matchingCores(game, runtimeRegistrations);
     const preferred = matches.find((entry) => entry.coreSha256 === selectedRuntimeSha) ?? matches[0] ?? null;
     const useLegacySameBoy = !preferred && ["GB", "GBC"].includes(game.system);
@@ -1728,6 +1800,19 @@ export function App() {
           <button className="utility-button" onClick={chooseCore} disabled={!native}>LEGACY SAMEBOY CORE: {settings.sameboyCorePath ? "SET" : "SELECT"}</button>
           <button className="utility-button" onClick={toggleAutoScan} disabled={!native}>AUTO-SCAN: {settings.autoScan ? "ON" : "OFF"}</button>
           <p className="microcopy path-copy">{settings.romDirectory ?? "NO DIRECTORY SAVED"}</p>
+
+          <div className="rule" />
+          <div className="n64-bridge-setup">
+            <div className="panel-title">N64 // 3D EXTERNAL BRIDGE</div>
+            <p className="microcopy">Run N64 games from PhiCade using a local RetroArch window and a Mupen64Plus-Next core. Configure once, then PLAY GAME.</p>
+            <button className="utility-button" onClick={() => void configureRetroArch()} disabled={!native || running || launchBusy}>
+              RETROARCH.EXE: {settings.retroarchPath ? "SET / CHANGE" : "SELECT"}
+            </button>
+            <button className="utility-button" onClick={() => void configureN64Core()} disabled={!native || running || launchBusy}>
+              N64 CORE DLL: {settings.n64CorePath ? "SET / CHANGE" : "SELECT"}
+            </button>
+            {n64LaunchPid !== null && <p className="microcopy">LAST EXTERNAL N64 LAUNCH // PID {n64LaunchPid}</p>}
+          </div>
 
           <div className="rule" />
           <div className="runtime-manager">

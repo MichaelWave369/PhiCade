@@ -1268,3 +1268,10 @@ button:focus-visible, select:focus-visible {
 }
 .core-folder-report strong { color: var(--green); }
 .core-folder-report p { margin: 6px 0 0; }
+
+
+/* N64 external GPU bridge setup keeps one-time configuration clearly separate. */
+.n64-bridge-setup { margin-top: 8px; }
+.n64-bridge-setup .panel-title { color: var(--green); margin-bottom: 8px; }
+.n64-bridge-setup .microcopy { letter-spacing: normal; line-height: 1.55; }
+.n64-bridge-setup button { font-size: 10px; }
