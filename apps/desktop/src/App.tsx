@@ -1629,7 +1629,7 @@ export function App() {
       setN64AutoDock(false);
       await stopN64Bridge();
       setN64Docked(false);
-      setN64LaunchPid(null);
+      // Wait for process-exit polling before permitting another N64 launch.
       if (arcadeMode) {
         await getCurrentWindow().setFullscreen(false);
         setArcadeMode(false);
