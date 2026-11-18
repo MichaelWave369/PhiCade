@@ -31,6 +31,7 @@ use std::{
     fs,
     io::BufWriter,
     path::{Path, PathBuf},
+    process::{Child, Command},
     sync::Mutex,
 };
 use tauri::{AppHandle, Manager, State};
@@ -58,6 +59,23 @@ const PUBLIC_SUITE_RESULT_SCHEMA: &str = "phicade.public-suite-result.v1";
 #[derive(Default)]
 struct EmulatorState {
     session: Mutex<Option<EmulatorSession>>,
+}
+
+// Native N64 3D cores need GL/Vulkan rendering not yet provided by our
+// in-process software-frame Libretro host. This explicit, external bridge
+// launches a user-installed RetroArch window without a shell.
+#[derive(Default)]
+struct N64BridgeState {
+    process: Mutex<Option<Child>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct N64LaunchReceipt {
+    pid: u32,
+    core_sha256: String,
+    rom_sha256: String,
+    external_window: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -626,6 +644,8 @@ struct AppSettings {
     auto_scan: bool,
     controller_deadzone: f32,
     sameboy_core_path: Option<String>,
+    retroarch_path: Option<String>,
+    n64_core_path: Option<String>,
     ollama_base_url: String,
     ollama_model: Option<String>,
 }
@@ -637,6 +657,8 @@ impl Default for AppSettings {
             auto_scan: false,
             controller_deadzone: 0.18,
             sameboy_core_path: None,
+            retroarch_path: None,
+            n64_core_path: None,
             ollama_base_url: "http://127.0.0.1:11434".to_owned(),
             ollama_model: None,
         }
@@ -1067,8 +1089,94 @@ fn classify_extension(extension: &str) -> Option<&'static str> {
         "gba" => Some("GBA"),
         "md" | "gen" | "32x" => Some("GENESIS"),
         "cue" | "chd" | "pbp" => Some("PS1"),
+        "n64" | "z64" | "v64" => Some("N64"),
         _ => None,
     }
+}
+
+// The bridge is intentionally limited to a named emulator, N64 ROM formats,
+// and known N64 Libretro cores. Paths are separate argv elements, never shell
+// commands. The user must select the paths explicitly in the desktop UI.
+fn is_retroarch_executable(path: &Path) -> bool {
+    path.file_name().and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case("retroarch.exe"))
+}
+
+fn is_n64_libretro_core(path: &Path) -> bool {
+    path.file_name().and_then(|name| name.to_str())
+        .is_some_and(|name| {
+            matches!(
+                name.to_ascii_lowercase().as_str(),
+                "mupen64plus_next_libretro.dll"
+                    | "mupen64plus_next_develop_libretro.dll"
+                    | "parallel_n64_libretro.dll"
+            )
+        })
+}
+
+fn is_n64_rom(path: &Path) -> bool {
+    path.extension().and_then(|extension| extension.to_str())
+        .is_some_and(|extension| matches!(extension.to_ascii_lowercase().as_str(), "n64" | "z64" | "v64"))
+}
+
+#[tauri::command]
+fn launch_n64_bridge(
+    state: State<'_, N64BridgeState>,
+    retroarch_path: String,
+    core_path: String,
+    game_path: String,
+) -> Result<N64LaunchReceipt, String> {
+    let retroarch = PathBuf::from(retroarch_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot find RetroArch executable: {error}"))?;
+    let core = PathBuf::from(core_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot find N64 Libretro core: {error}"))?;
+    let rom = PathBuf::from(game_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot find N64 ROM: {error}"))?;
+    if !retroarch.is_file() || !is_retroarch_executable(&retroarch) {
+        return Err("Select the official RetroArch retroarch.exe executable".into());
+    }
+    if !core.is_file() || !is_n64_libretro_core(&core) {
+        return Err("Select a Mupen64Plus-Next or ParaLLEl-N64 Windows libretro DLL".into());
+    }
+    if !rom.is_file() || !is_n64_rom(&rom) {
+        return Err("N64 bridge accepts only .n64, .z64 and .v64 game files".into());
+    }
+
+    let mut process = state.process.lock()
+        .map_err(|_| "N64 bridge process lock poisoned".to_owned())?;
+    if let Some(child) = process.as_mut() {
+        if child.try_wait()
+            .map_err(|error| format!("cannot inspect existing N64 session: {error}"))?
+            .is_none()
+        {
+            return Err("N64 is already running in RetroArch; close it before launching another game".into());
+        }
+    }
+    *process = None;
+
+    let core_sha256 = sha256_file(&core)?;
+    let rom_sha256 = sha256_file(&rom)?;
+    let working_dir = retroarch.parent()
+        .ok_or_else(|| "RetroArch executable has no parent folder".to_owned())?;
+
+    let child = Command::new(&retroarch)
+        .current_dir(working_dir)
+        .arg("-L")
+        .arg(&core)
+        .arg(&rom)
+        .spawn()
+        .map_err(|error| format!("could not start RetroArch: {error}"))?;
+    let pid = child.id();
+    *process = Some(child);
+    Ok(N64LaunchReceipt {
+        pid,
+        core_sha256,
+        rom_sha256,
+        external_window: true,
+    })
 }
 
 fn system_id_from_extension(extension: &str) -> Option<SystemId> {
@@ -5864,12 +5972,14 @@ fn running_game(state: State<'_, EmulatorState>) -> Result<Option<String>, Strin
 pub fn run() {
     tauri::Builder::default()
         .manage(EmulatorState::default())
+        .manage(N64BridgeState::default())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
             register_runtime_core,
             import_runtime_core_folder,
+            launch_n64_bridge,
             list_runtime_registrations,
             start_registered_emulation,
             scan_rom_directory,
@@ -6105,6 +6215,20 @@ mod tests {
         assert!(!is_libretro_core_file(Path::new("random.dll")));
         assert!(!is_libretro_core_file(Path::new("core_libretro.dll.zip")));
         assert!(!is_libretro_core_file(Path::new("readme.txt")));
+    }
+
+    #[test]
+    fn n64_bridge_path_filters_are_restrictive() {
+        assert!(is_n64_rom(Path::new("Star Fox 64.z64")));
+        assert!(is_n64_rom(Path::new("Star Fox 64.N64")));
+        assert!(is_n64_rom(Path::new("Star Fox 64.v64")));
+        assert!(!is_n64_rom(Path::new("starfox.exe")));
+        assert!(!is_n64_rom(Path::new("starfox.zip")));
+        assert!(is_retroarch_executable(Path::new("C:/RetroArch/retroarch.exe")));
+        assert!(!is_retroarch_executable(Path::new("C:/RetroArch/powershell.exe")));
+        assert!(is_n64_libretro_core(Path::new("mupen64plus_next_libretro.dll")));
+        assert!(is_n64_libretro_core(Path::new("parallel_n64_libretro.dll")));
+        assert!(!is_n64_libretro_core(Path::new("fceumm_libretro.dll")));
     }
 
     #[test]
