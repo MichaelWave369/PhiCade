@@ -20,6 +20,18 @@ export interface N64LaunchReceipt {
   externalWindow: boolean;
 }
 
+export interface N64BridgeStatus {
+  running: boolean;
+  docked: boolean;
+}
+
+export interface N64DockRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface RomEntry {
   path: string;
   displayName: string;
@@ -966,6 +978,26 @@ export async function startEmulation(
 
 export async function launchN64Bridge(retroarchPath: string, corePath: string, gamePath: string): Promise<N64LaunchReceipt> {
   return invoke<N64LaunchReceipt>("launch_n64_bridge", { retroarchPath, corePath, gamePath });
+}
+
+export async function getN64BridgeStatus(): Promise<N64BridgeStatus> {
+  return invoke<N64BridgeStatus>("n64_bridge_status");
+}
+
+export async function dockN64Bridge(rect: N64DockRect): Promise<boolean> {
+  return invoke<boolean>("dock_n64_bridge", rect);
+}
+
+export async function resizeN64Dock(rect: N64DockRect): Promise<void> {
+  return invoke("resize_n64_dock", rect);
+}
+
+export async function undockN64Bridge(): Promise<void> {
+  return invoke("undock_n64_bridge");
+}
+
+export async function stopN64Bridge(): Promise<void> {
+  return invoke("stop_n64_bridge");
 }
 
 export async function startRegisteredEmulation(
