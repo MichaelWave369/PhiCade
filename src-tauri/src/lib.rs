@@ -646,6 +646,7 @@ impl Drop for EmulatorSession {
 struct AppSettings {
     rom_directory: Option<String>,
     auto_scan: bool,
+    allow_unverified_snes: bool,
     controller_deadzone: f32,
     sameboy_core_path: Option<String>,
     retroarch_path: Option<String>,
@@ -659,6 +660,7 @@ impl Default for AppSettings {
         Self {
             rom_directory: None,
             auto_scan: false,
+            allow_unverified_snes: false,
             controller_deadzone: 0.18,
             sameboy_core_path: None,
             retroarch_path: None,
