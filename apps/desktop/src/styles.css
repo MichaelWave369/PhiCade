@@ -1015,3 +1015,155 @@ footer {
     grid-column: 1 / -1;
   }
 }
+
+
+/* Desktop usability: give the Tauri webview one explicit vertical scrolling surface. */
+html, body { height: 100%; }
+body { overflow: hidden; }
+#root {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+.shell { max-width: 1800px; width: 100%; padding: 18px; }
+.masthead { align-items: center; }
+.status-cluster {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  width: min(100%, 570px);
+  text-align: left;
+}
+.status-cluster > span { white-space: nowrap; font-size: 10px; }
+.console-grid {
+  grid-template-columns: minmax(250px, .92fr) minmax(0, 2.15fr) minmax(245px, .9fr);
+  align-items: start;
+}
+.console-grid > * { min-width: 0; }
+.panel { min-height: 0; padding: 12px; }
+.screen-panel { min-width: 0; padding: 12px; }
+.bezel { padding: clamp(12px, 2.5vw, 30px); }
+.game-list {
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  border-top: 1px dotted var(--line);
+}
+.game-row { min-height: 34px; }
+.library-search {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+.library-search label {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+.library-search input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #34503c;
+  background: #050906;
+  color: var(--ink);
+  padding: 10px;
+  font: inherit;
+  font-size: 12px;
+  border-radius: 3px;
+}
+.library-search input:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+.library-search small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.load-more-games {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 10px 8px;
+  border: 1px solid #34503c;
+  color: var(--green);
+  background: #0a130d;
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+}
+.load-more-games:hover { background: #122418; }
+button:focus-visible, select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.runtime-launch-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.runtime-launch-actions button { min-width: 0; }
+.runtime-row-main { flex-wrap: wrap; }
+
+/* Controls are tool groups, not nine compulsory columns in a tiny cockpit. */
+.provider-strip,
+.comparison-strip,
+.suite-strip,
+.public-result-strip {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-items: stretch;
+  gap: 7px;
+}
+.provider-strip > span,
+.comparison-strip > span,
+.suite-strip > span,
+.public-result-strip > span,
+.provider-strip > small,
+.comparison-strip > small,
+.suite-strip > small,
+.public-result-strip > small {
+  grid-column: 1 / -1;
+  margin-left: 0;
+}
+.provider-strip select,
+.comparison-strip select,
+.suite-strip select,
+.public-result-strip select,
+.provider-strip button,
+.comparison-strip button,
+.suite-strip button,
+.public-result-strip button {
+  min-width: 0;
+  width: 100%;
+  font-size: 10px;
+}
+.agent-strip > small,
+.replay-strip > small {
+  width: 100%;
+  margin-left: 0;
+  overflow-wrap: anywhere;
+}
+.runtime-approval { font-size: 10px; }
+.runtime-row small, .runtime-launch-heading small, .runtime-launch > small { font-size: 9px; }
+
+@media (max-width: 1260px) {
+  .console-grid {
+    grid-template-columns: minmax(255px, .8fr) minmax(0, 2fr);
+  }
+  .telemetry-panel { grid-column: 1 / -1; }
+  .status-cluster { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(100%, 430px); }
+}
+@media (max-width: 850px) {
+  .console-grid { grid-template-columns: minmax(0, 1fr); }
+  .telemetry-panel { grid-column: auto; }
+  .masthead { align-items: flex-start; flex-direction: column; }
+  .status-cluster { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-list { max-height: 330px; }
+  .provider-strip, .comparison-strip, .suite-strip, .public-result-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .shell { padding: 12px; }
+  .status-cluster > span { font-size: 9px; }
+  .provider-strip, .comparison-strip, .suite-strip, .public-result-strip {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

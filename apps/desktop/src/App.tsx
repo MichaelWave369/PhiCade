@@ -122,6 +122,8 @@ export function App() {
   const providerBusyRef = useRef(false);
 
   const [activeSystem, setActiveSystem] = useState<(typeof systems)[number]>("ALL");
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryVisibleCount, setLibraryVisibleCount] = useState(48);
   const [lastInput, setLastInput] = useState("NO INPUT");
   const [notice, setNotice] = useState(native ? "NATIVE SHELL ONLINE" : "WEB PREVIEW // NATIVE FEATURES OFFLINE");
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
@@ -329,7 +331,14 @@ export function App() {
     void audioContextRef.current?.close();
   }, [native]);
 
-  const visibleGames = games.filter((game) => activeSystem === "ALL" || game.system === activeSystem);
+  const visibleGames = useMemo(() => {
+    const query = libraryQuery.trim().toLowerCase();
+    return games.filter((game) =>
+      (activeSystem === "ALL" || game.system === activeSystem)
+      && (!query || game.displayName.toLowerCase().includes(query) || game.system.toLowerCase().includes(query))
+    );
+  }, [games, activeSystem, libraryQuery]);
+  const shownGames = visibleGames.slice(0, libraryVisibleCount);
 
   const chooseDirectory = async () => {
     if (!native) {
@@ -1517,7 +1526,7 @@ export function App() {
 
       <nav className="system-tabs" aria-label="systems">
         {systems.map((system) => (
-          <button key={system} className={activeSystem === system ? "active" : ""} onClick={() => setActiveSystem(system)}>
+          <button key={system} className={activeSystem === system ? "active" : ""} onClick={() => { setActiveSystem(system); setLibraryVisibleCount(48); }}>
             {system}
           </button>
         ))}
@@ -1526,6 +1535,19 @@ export function App() {
       <section className="console-grid">
         <aside className="panel library-panel">
           <div className="panel-title">LIBRARY // {activeSystem}</div>
+
+          <div className="library-search">
+            <label htmlFor="phicade-library-search">SEARCH GAME LIBRARY</label>
+            <input
+              id="phicade-library-search"
+              type="search"
+              value={libraryQuery}
+              onChange={(event) => { setLibraryQuery(event.target.value); setLibraryVisibleCount(48); }}
+              placeholder="Search by game or system..."
+              aria-label="Search ROM library"
+            />
+            <small>{visibleGames.length} MATCHES / {games.length} INDEXED</small>
+          </div>
 
           {games.length === 0 ? (
             <div className="empty-state">
@@ -1536,7 +1558,7 @@ export function App() {
             </div>
           ) : (
             <div className="game-list">
-              {visibleGames.slice(0, 24).map((game) => (
+              {shownGames.map((game) => (
                 <button
                   className={`game-row ${selectedGame?.path === game.path ? "selected" : ""}`}
                   key={game.path}
@@ -1548,7 +1570,15 @@ export function App() {
                   <small>.{game.extension}</small>
                 </button>
               ))}
-              {visibleGames.length > 24 && <p className="microcopy">+ {visibleGames.length - 24} MORE</p>}
+              {visibleGames.length === 0 && <p className="microcopy">NO MATCHES. TRY A DIFFERENT SEARCH.</p>}
+              {visibleGames.length > libraryVisibleCount && (
+                <button
+                  className="load-more-games"
+                  onClick={() => setLibraryVisibleCount((count) => count + 48)}
+                >
+                  SHOW 48 MORE / {visibleGames.length - libraryVisibleCount} REMAINING
+                </button>
+              )}
             </div>
           )}
 
