@@ -5,6 +5,7 @@ import type { ActionEnvelope, GameAction } from "./actionBus";
 export interface AppSettings {
   romDirectory: string | null;
   autoScan: boolean;
+  allowUnverifiedSnes: boolean;
   controllerDeadzone: number;
   sameboyCorePath: string | null;
   retroarchPath: string | null;
@@ -849,6 +850,7 @@ export interface FramePacket {
 export const defaultSettings: AppSettings = {
   romDirectory: null,
   autoScan: false,
+  allowUnverifiedSnes: false,
   controllerDeadzone: 0.18,
   sameboyCorePath: null,
   retroarchPath: null,
@@ -948,8 +950,8 @@ export async function listRuntimeRegistrations(): Promise<RuntimeRegistrationRec
   return invoke<RuntimeRegistrationReceipt[]>("list_runtime_registrations");
 }
 
-export async function scanRomDirectory(path: string): Promise<RomEntry[]> {
-  return invoke<RomEntry[]>("scan_rom_directory", { path });
+export async function scanRomDirectory(path: string, allowUnverifiedSnes = false): Promise<RomEntry[]> {
+  return invoke<RomEntry[]>("scan_rom_directory", { path, allowUnverifiedSnes });
 }
 
 export async function loadSettings(): Promise<AppSettings> {
