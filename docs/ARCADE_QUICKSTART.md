@@ -7,9 +7,10 @@ PhiCade does not distribute game ROMs, console firmware, keys or third-party emu
 1. Open the native Tauri PhiCade desktop application.
 2. Select your ROM folder using **SELECT ROM DIRECTORY** (currently indexes the chosen folder, not recursive folders).
 3. For each console family, download a suitable Windows x64 libretro core from the **official** buildbot, extract its `.dll`, and select **REGISTER LIBRETRO CORE** one time for each binary.
-4. Select a game in the list and press **PLAY GAME**. Or double-click the game row.
-5. PhiCade chooses a registered core advertising that game's file extension, honors a manually selected matching core, and starts a single operator-approved session. The native backend verifies the core's SHA-256 and identity at every launch.
-6. Press **F11** or **Alt+Enter** during gameplay for fullscreen arcade mode; press either again or **Esc** to return.
+4. Or unzip several official Libretro core DLLs into a single folder and click **IMPORT ALL CORES FROM FOLDER**. This explicitly selected, nonrecursive import accepts at most 64 files named `*_libretro.dll` (and equivalent shared-library extensions), verifies each core independently and reports failures. No automatic downloads or permanently granted runtime authority.
+5. Select a game in the list and press **PLAY GAME**. Or double-click the game row.
+6. PhiCade chooses a registered core advertising that game's file extension, honors a manually selected matching core, and starts a single operator-approved session. The native backend verifies the core's SHA-256 and identity at every launch.
+7. Press **F11** or **Alt+Enter** during gameplay for fullscreen arcade mode; press either again or **Esc** to return.
 
 **If a matching core isn't registered**, the Play button shows a notice. GB/GBC can use the legacy SameBoy picker if no compatible registered core exists. The Play action does not download, install or authorize a core for future sessions.
 
