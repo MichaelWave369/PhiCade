@@ -1252,3 +1252,19 @@ button:focus-visible, select:focus-visible {
 .arcade-mode .session-strip:focus-within { opacity: 1; }
 .arcade-mode .session-strip > :not(.fullscreen-toggle) { display: none; }
 .arcade-mode .session-strip .fullscreen-toggle { background: #0b130d; color: #d7f9df; }
+
+/* Batch core import keeps the operator's runtime actions together. */
+.core-folder-import { color: var(--green); border-color: #42674c; font-weight: 600; }
+.core-folder-hint { margin-top: 7px; line-height: 1.5; letter-spacing: normal; }
+.core-folder-report {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  max-height: 140px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+.core-folder-report strong { color: var(--green); }
+.core-folder-report p { margin: 6px 0 0; }
