@@ -37,6 +37,8 @@ use std::{
 use tauri::{AppHandle, Manager, State};
 
 mod evidence_bundle;
+#[cfg(target_os = "windows")]
+mod n64_dock;
 pub mod providers;
 
 use providers::ollama::{
@@ -67,6 +69,8 @@ struct EmulatorState {
 #[derive(Default)]
 struct N64BridgeState {
     process: Mutex<Option<Child>>,
+    #[cfg(target_os = "windows")]
+    dock: Mutex<Option<n64_dock::DockedWindow>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1156,6 +1160,11 @@ fn launch_n64_bridge(
         }
     }
     *process = None;
+    #[cfg(target_os = "windows")]
+    {
+        let mut dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if let Some(window) = dock.take() { window.detach(); }
+    }
 
     let core_sha256 = sha256_file(&core)?;
     let rom_sha256 = sha256_file(&rom)?;
@@ -1177,6 +1186,118 @@ fn launch_n64_bridge(
         rom_sha256,
         external_window: true,
     })
+}
+
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct N64BridgeStatus {
+    running: bool,
+    docked: bool,
+}
+
+#[tauri::command]
+fn n64_bridge_status(state: State<'_, N64BridgeState>) -> Result<N64BridgeStatus, String> {
+    let mut process = state.process.lock().map_err(|_| "N64 process lock poisoned".to_owned())?;
+    let running = match process.as_mut() {
+        Some(child) => child.try_wait().map_err(|err| format!("cannot inspect N64 process: {err}"))?.is_none(),
+        None => false,
+    };
+    if !running {
+        *process = None;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let mut dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if !running || dock.as_ref().is_some_and(|window| !window.is_alive()) {
+            *dock = None;
+        }
+        Ok(N64BridgeStatus { running, docked: dock.is_some() })
+    }
+    #[cfg(not(target_os = "windows"))]
+    { Ok(N64BridgeStatus { running, docked: false }) }
+}
+
+#[tauri::command]
+fn dock_n64_bridge(
+    app: AppHandle,
+    state: State<'_, N64BridgeState>,
+    x: i32, y: i32, width: i32, height: i32,
+) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let rect = n64_dock::DockRect { x, y, width, height }.validate()?;
+        let process = state.process.lock().map_err(|_| "N64 process lock poisoned".to_owned())?;
+        let child = process.as_ref().ok_or_else(|| "Start an N64 game before docking".to_owned())?;
+        let window = app.get_webview_window("main")
+            .ok_or_else(|| "PhiCade main window not found".to_owned())?;
+        let parent = window.hwnd()
+            .map_err(|error| format!("cannot access native PhiCade window: {error}"))?.0 as isize;
+        let mut dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if let Some(existing) = dock.as_ref() {
+            existing.resize(rect)?;
+            return Ok(true);
+        }
+        *dock = Some(n64_dock::DockedWindow::attach(parent, child.id(), rect)?);
+        Ok(true)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (app, state, x, y, width, height);
+        Err("N64 native docking is currently Windows-only".into())
+    }
+}
+
+#[tauri::command]
+fn resize_n64_dock(state: State<'_, N64BridgeState>, x: i32, y: i32, width: i32, height: i32) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if let Some(window) = dock.as_ref() {
+            window.resize(n64_dock::DockRect { x, y, width, height })?;
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (state, x, y, width, height);
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn undock_n64_bridge(state: State<'_, N64BridgeState>) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if let Some(window) = dock.take() { window.detach(); }
+    }
+    #[cfg(not(target_os = "windows"))]
+    { let _ = state; }
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_n64_bridge(state: State<'_, N64BridgeState>) -> Result<(), String> {
+    let mut process = state.process.lock().map_err(|_| "N64 process lock poisoned".to_owned())?;
+    #[cfg(target_os = "windows")]
+    {
+        let mut dock = state.dock.lock().map_err(|_| "N64 dock lock poisoned".to_owned())?;
+        if let Some(window) = dock.take() { window.detach(); }
+    }
+    if let Some(child) = process.as_mut() {
+        if child.try_wait().map_err(|error| format!("cannot inspect N64 process: {error}"))?.is_none() {
+            #[cfg(target_os = "windows")]
+            n64_dock::request_graceful_close(child.id())?;
+            #[cfg(not(target_os = "windows"))]
+            return Err("Close RetroArch manually on this platform".into());
+            // Keep ownership until the process really exits. This prevents
+            // accidentally starting another copy while RetroArch flushes saves.
+            return Ok(());
+        }
+    }
+    *process = None;
+    Ok(())
 }
 
 fn system_id_from_extension(extension: &str) -> Option<SystemId> {
@@ -5974,12 +6095,28 @@ pub fn run() {
         .manage(EmulatorState::default())
         .manage(N64BridgeState::default())
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
+                #[cfg(target_os = "windows")]
+                {
+                    let state = window.app_handle().state::<N64BridgeState>();
+                    if let Ok(mut dock) = state.dock.lock() {
+                        if let Some(child_window) = dock.take() { child_window.detach(); }
+                    };
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             load_settings,
             save_settings,
             register_runtime_core,
             import_runtime_core_folder,
             launch_n64_bridge,
+            n64_bridge_status,
+            dock_n64_bridge,
+            resize_n64_dock,
+            undock_n64_bridge,
+            stop_n64_bridge,
             list_runtime_registrations,
             start_registered_emulation,
             scan_rom_directory,
