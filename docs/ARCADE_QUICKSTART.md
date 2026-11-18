@@ -96,3 +96,42 @@ official documentation: https://docs.libretro.com/guides/input-joypad-drivers/
 **Next engineering milestone:** Real in-PhiCade 3D rendering would require a
 supported GL/Vulkan context and N64-specific controls plus a rendering test
 suite; this launch bridge is a usable incremental step.
+
+
+## Experimental N64 docking inside PhiCade (Windows)
+
+**New feature:** After the N64 external bridge launches an N64 ROM, PhiCade
+attempts to dock that *existing* RetroArch game window over its CRT panel.
+RetroArch still does the Vulkan/OpenGL drawing, audio, saves and controller
+handling; PhiCade supplies the launcher, frame, library and surrounding UI.
+This is **Win32 window reparenting**, not a new N64 renderer or a streaming
+codec.
+
+- Start Star Fox 64 using the same N64 **PLAY GAME** button. PhiCade
+  automatically tries to find the RetroArch game window and attach it.
+- If successful, the game appears in the CRT area. Resizing the app,
+  scrolling, and clicking PhiCade's **FULLSCREEN (F11)** button resize the
+  docked game area (4:3 layout).
+- **UNDOCK N64** restores the external RetroArch window without stopping it.
+  **DOCK N64 TO CRT** re-attaches it if you want to try again.
+- **CLOSE N64** sends RetroArch a normal Win32 WM_CLOSE message rather than
+  forcibly killing it, allowing ordinary save shutdown.
+- If Windows denies reparenting or GPU rendering fails, **undock** and keep
+  using the normal external N64 window. Closing/reopening PhiCade also
+  restores the game to an independent window when possible.
+
+**Known limitations:**
+1. Windows 11 only for now. Win32 SetParent can affect DPI-awareness
+   compatibility between the two processes, especially when display
+   scaling differs; consult
+   https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setparent
+2. Some Vulkan/GL swapchains do not react well to reparenting. This is a
+   prototype that requires hands-on Star Fox 64 testing on the target PC.
+3. When RetroArch has keyboard focus, PhiCade's JavaScript F11 shortcut may
+   not receive key events. Use the visible **FULLSCREEN (F11)** button in the
+   PhiCade UI (click outside the game first), or undock and use RetroArch's
+   own fullscreen controls. Gamepad input remains owned by RetroArch.
+4. HTML scanlines and other overlays cannot render on top of the native child
+   window; the CRT surface itself can still be framed by HTML/CSS.
+5. N64 rendering and video/audio are **not** available through PhiCade's
+   internal FramePacket or agent observation APIs with this bridge.
