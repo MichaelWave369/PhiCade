@@ -51,6 +51,33 @@ PhiCade currently indexes `.nes`, `.sfc`, `.smc`, `.gb`, `.gbc`, `.gba`, `.md`, 
 For PS1 cue/bin images, keep all referenced track files together; launch the `.cue` file (rather than a raw track `.bin`). For huge libraries, the current scan is limited to the chosen folder and up to 4096 entries.
 
 
+## Old SNES collections without file extensions
+
+Some classic SNES ROM collections (including old Snes9x libraries) store
+cartridges as files named `Secret of Mana`, `Samurai Shodown` or `Super
+Metroid` with **no extension**. Windows Explorer calls them simply **File**.
+PhiCade now examines standard SNES internal cartridge headers (LoROM, HiROM,
+including old 512-byte copier headers) to recognize these without renaming them.
+
+- Select the directory containing the original SNES files, then click
+  **RESCAN GAME LIBRARY**.
+- Choose the **SNES** system tab to browse the detected cartridge titles.
+- If nonstandard or hacked extensionless dumps are still missing, switch
+  **SNES NO-EXT FILES** from **AUTO-DETECT** to **INCLUDE LEGACY DUMPS**.
+  This explicit fallback includes files with plausible SNES cartridge
+  sizes even if the SNES internal header cannot be verified.
+- PhiCade never edits or renames these games. A detected legacy ROM gets an
+  internal `.sfc` *routing hint* so the registered Snes9x Libretro core can
+  be automatically selected; the core receives the actual original path.
+- Files with other extensions are **not** treated as ROMs merely because they
+  appear in this folder. `.srm` saves, `.txt` lists, and unrelated files
+  stay outside the library. The fallback is disabled by default, and should
+  only be used when scanning an SNES ROM directory.
+
+This is a content-based best-effort scanner, not a ROM identity database.
+Some badly corrupted images may still fail to start; the source bytes are
+preserved for troubleshooting.
+
 ## Nintendo 64: Star Fox 64 and other 3D games
 
 **Current status:** The PhiCade native Libretro host does not implement the

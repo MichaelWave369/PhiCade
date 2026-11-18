@@ -271,7 +271,7 @@ export function App() {
           if (!cancelled) setRuntimeRegistrations(registrations);
         }
         if (native && merged.autoScan && merged.romDirectory) {
-          const found = await scanRomDirectory(merged.romDirectory);
+          const found = await scanRomDirectory(merged.romDirectory, merged.allowUnverifiedSnes);
           if (!cancelled) {
             setGames(found);
             setNotice(`AUTO-SCAN // ${found.length} IMAGES INDEXED`);
@@ -434,7 +434,7 @@ export function App() {
         return;
       }
       const nextSettings = { ...settings, romDirectory: selected };
-      const found = await scanRomDirectory(selected);
+      const found = await scanRomDirectory(selected, settings.allowUnverifiedSnes);
       await saveSettings(nextSettings);
       setSettings(nextSettings);
       setGames(found);
@@ -444,6 +444,40 @@ export function App() {
       setNotice(`SCAN ERROR // ${String(error)}`);
     } finally {
       setScanning(false);
+    }
+  };
+
+  const rescanLibrary = async (allowUnverifiedSnes = settings.allowUnverifiedSnes) => {
+    if (!native || !settings.romDirectory || scanning) return;
+    setScanning(true);
+    try {
+      const found = await scanRomDirectory(settings.romDirectory, allowUnverifiedSnes);
+      setGames(found);
+      setSelectedGame(null);
+      setLibraryVisibleCount(48);
+      const detected = found.filter((game) => game.system === "SNES").length;
+      setNotice(`LIBRARY RESCANNED // ${found.length} GAMES / ${detected} SNES // EXTENSIONLESS SNES DETECTION ${allowUnverifiedSnes ? "LEGACY" : "AUTO"}`);
+    } catch (error) {
+      setNotice(`SNES SCAN ERROR // ${String(error)}`);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const toggleLegacySnesScan = async () => {
+    if (!native || scanning) return;
+    const next = !settings.allowUnverifiedSnes;
+    const changed = { ...settings, allowUnverifiedSnes: next };
+    try {
+      await saveSettings(changed);
+      setSettings(changed);
+      if (settings.romDirectory) {
+        await rescanLibrary(next);
+      } else {
+        setNotice(`LEGACY SNES EXTENSIONLESS FALLBACK // ${next ? "ENABLED" : "DISABLED"}`);
+      }
+    } catch (error) {
+      setNotice(`SNES SCAN SETTING ERROR // ${String(error)}`);
     }
   };
 
@@ -1978,6 +2012,13 @@ export function App() {
           <button className="utility-button" onClick={chooseDirectory} disabled={scanning}>CHANGE DIRECTORY</button>
           <button className="utility-button" onClick={chooseCore} disabled={!native}>LEGACY SAMEBOY CORE: {settings.sameboyCorePath ? "SET" : "SELECT"}</button>
           <button className="utility-button" onClick={toggleAutoScan} disabled={!native}>AUTO-SCAN: {settings.autoScan ? "ON" : "OFF"}</button>
+          <button className="utility-button" onClick={() => void rescanLibrary()} disabled={!native || scanning || !settings.romDirectory}>
+            {scanning ? "SCANNING..." : "RESCAN GAME LIBRARY"}
+          </button>
+          <button className="utility-button" onClick={() => void toggleLegacySnesScan()} disabled={!native || scanning || running}>
+            SNES NO-EXT FILES: {settings.allowUnverifiedSnes ? "INCLUDE LEGACY DUMPS" : "AUTO-DETECT"}
+          </button>
+          <p className="microcopy">Old SNES ROMs without .sfc/.smc are detected from their internal cartridge header. Turn on legacy inclusion only if some games are still missing. Files stay unchanged.</p>
           <p className="microcopy path-copy">{settings.romDirectory ?? "NO DIRECTORY SAVED"}</p>
 
           <div className="rule" />
