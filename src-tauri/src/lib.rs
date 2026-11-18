@@ -1168,12 +1168,11 @@ fn runtime_registration_receipt(
     }
 }
 
-#[tauri::command]
-fn register_runtime_core(
-    app: AppHandle,
-    core_path: String,
+fn register_runtime_core_from_path(
+    app: &AppHandle,
+    core_path: &Path,
 ) -> Result<RuntimeRegistrationReceipt, String> {
-    let core_file = PathBuf::from(&core_path)
+    let core_file = core_path
         .canonicalize()
         .map_err(|error| format!("cannot resolve selected core: {error}"))?;
     if !core_file.is_file() {
@@ -1181,7 +1180,7 @@ fn register_runtime_core(
     }
 
     let core_sha256 = sha256_file(&core_file)?;
-    let (_, system_dir, save_dir) = app_runtime_dirs(&app)?;
+    let (_, system_dir, save_dir) = app_runtime_dirs(app)?;
     let core = LibretroCore::open(&core_file, &system_dir, &save_dir)
         .map_err(|error| format!("cannot inspect libretro core: {error:?}"))?;
     let identity = core.identity().clone();
@@ -1195,13 +1194,110 @@ fn register_runtime_core(
         capability_manifest,
     );
 
-    let registry = runtime_registry_dir(&app)?;
+    let registry = runtime_registry_dir(app)?;
     let path = registry.join(format!("{core_sha256}.json"));
     let json = serde_json::to_vec_pretty(&receipt)
         .map_err(|error| format!("cannot serialize runtime registration: {error}"))?;
     write_atomic(&path, &json)?;
 
     Ok(receipt)
+}
+
+
+#[tauri::command]
+fn register_runtime_core(
+    app: AppHandle,
+    core_path: String,
+) -> Result<RuntimeRegistrationReceipt, String> {
+    register_runtime_core_from_path(&app, Path::new(&core_path))
+}
+
+const MAX_CORE_FOLDER_ENTRIES: usize = 512;
+const MAX_CORE_FOLDER_IMPORTS: usize = 64;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CoreFolderImportReport {
+    examined: usize,
+    candidates: usize,
+    registered: Vec<RuntimeRegistrationReceipt>,
+    skipped: Vec<String>,
+}
+
+fn is_libretro_core_file(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    let lowered = name.to_ascii_lowercase();
+    lowered.ends_with("_libretro.dll")
+        || lowered.ends_with("_libretro.so")
+        || lowered.ends_with("_libretro.dylib")
+}
+
+/// Opt-in batch import of already-extracted, user-provided Libretro libraries.
+/// No network access, recursive traversal, ZIP unpacking, or global authority.
+/// Each candidate receives the same integrity/provenance treatment as the single-file path.
+#[tauri::command]
+fn import_runtime_core_folder(
+    app: AppHandle,
+    folder_path: String,
+) -> Result<CoreFolderImportReport, String> {
+    let root = PathBuf::from(folder_path)
+        .canonicalize()
+        .map_err(|error| format!("cannot resolve core folder: {error}"))?;
+    if !root.is_dir() {
+        return Err("selected core folder is not a directory".into());
+    }
+
+    let mut examined = 0usize;
+    let mut candidates = Vec::new();
+    let entries = fs::read_dir(&root)
+        .map_err(|error| format!("cannot read selected core folder: {error}"))?;
+    for entry in entries {
+        examined += 1;
+        if examined > MAX_CORE_FOLDER_ENTRIES {
+            return Err(format!(
+                "core folder contains more than {MAX_CORE_FOLDER_ENTRIES} entries; select a smaller folder"
+            ));
+        }
+        let entry = entry.map_err(|error| format!("cannot inspect core folder entry: {error}"))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("cannot inspect core file type: {error}"))?;
+        if !file_type.is_file() {
+            continue; // do not follow directory links, symlinks or nested folders
+        }
+        let candidate = entry.path();
+        if is_libretro_core_file(&candidate) {
+            candidates.push(candidate);
+        }
+    }
+    if candidates.len() > MAX_CORE_FOLDER_IMPORTS {
+        return Err(format!(
+            "core folder contains more than {MAX_CORE_FOLDER_IMPORTS} libretro libraries; select a smaller folder"
+        ));
+    }
+    candidates.sort();
+    let candidate_count = candidates.len();
+    let mut report = CoreFolderImportReport {
+        examined,
+        candidates: candidate_count,
+        registered: Vec::new(),
+        skipped: Vec::new(),
+    };
+    for candidate in candidates {
+        match register_runtime_core_from_path(&app, &candidate) {
+            Ok(receipt) => report.registered.push(receipt),
+            Err(error) => {
+                let filename = candidate
+                    .file_name()
+                    .map(|name| name.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "unknown core".to_owned());
+                report.skipped.push(format!("{filename}: {error}"));
+            }
+        }
+    }
+    Ok(report)
 }
 
 #[tauri::command]
@@ -5773,6 +5869,7 @@ pub fn run() {
             load_settings,
             save_settings,
             register_runtime_core,
+            import_runtime_core_folder,
             list_runtime_registrations,
             start_registered_emulation,
             scan_rom_directory,
@@ -5998,6 +6095,16 @@ mod tests {
         let first = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
         let second = render_public_suite_result_markdown(&receipt, &"6".repeat(64));
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn bulk_core_import_filters_only_named_libretro_libraries() {
+        assert!(is_libretro_core_file(Path::new("fceumm_libretro.dll")));
+        assert!(is_libretro_core_file(Path::new("Snes9x_Libretro.DLL")));
+        assert!(is_libretro_core_file(Path::new("mgba_libretro.so")));
+        assert!(!is_libretro_core_file(Path::new("random.dll")));
+        assert!(!is_libretro_core_file(Path::new("core_libretro.dll.zip")));
+        assert!(!is_libretro_core_file(Path::new("readme.txt")));
     }
 
     #[test]
