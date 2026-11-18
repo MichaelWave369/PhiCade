@@ -51,6 +51,15 @@ jobs:
       - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
       - run: cargo test --manifest-path src-tauri/Cargo.toml --lib
 
+  windows-n64-dock:
+    name: windows / N64 native docking compile + tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --lib n64_dock
+
   sameboy:
     name: core / SameBoy + Replay + Phi-Bot + Driver + Autodrive + Benchmark Suites qualification
     runs-on: ubuntu-latest
