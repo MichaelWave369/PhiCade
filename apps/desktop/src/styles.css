@@ -1250,7 +1250,8 @@ button:focus-visible, select:focus-visible {
 }
 .arcade-mode .session-strip:hover,
 .arcade-mode .session-strip:focus-within { opacity: 1; }
-.arcade-mode .session-strip > :not(.fullscreen-toggle) { display: none; }
+.arcade-mode .session-strip > :not(.fullscreen-toggle):not(.n64-recovery-control) { display: none; }
+.arcade-mode .session-strip .n64-recovery-control { display: inline-flex; background: #231511; color: #ffcfb1; border-color: #8b4c3a; }
 .arcade-mode .session-strip .fullscreen-toggle { background: #0b130d; color: #d7f9df; }
 
 /* Batch core import keeps the operator's runtime actions together. */

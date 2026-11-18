@@ -98,6 +98,40 @@ supported GL/Vulkan context and N64-specific controls plus a rendering test
 suite; this launch bridge is a usable incremental step.
 
 
+## N64 CRT overlay fix (Windows / Vulkan)
+
+The first experimental N64 docking release used Win32 `SetParent` to make
+RetroArch a child of PhiCade's native top-level window. On Windows with
+WebView2, this could cause the game to vanish behind the WebView (leaving
+only an empty CRT) even though RetroArch was still running and Undock
+restored gameplay.
+
+The revised **DOCK N64 TO CRT** action keeps RetroArch's Vulkan game window
+**top-level**. It assigns the PhiCade window as its Win32 **owner** (not its
+parent), removes its borders, and positions the real game surface over the
+CRT with `ClientToScreen` and `SetWindowPos`. An owned window stays above
+PhiCade without global always-on-top behavior. It follows PhiCade window
+moves/resizes and the 4:3 fullscreen layout. **UNDOCK N64** restores the
+original owner, styles, z-order and location without reloading the game.
+
+This approach is **visually integrated**, not pixel capture, streaming or
+a reparented native child. HTML overlays cannot paint over the N64 image.
+As before, some Vulkan configurations may resist being resized or styled
+while running; the fallback is always **UNDOCK N64**. Undock remains visible
+in PhiCade fullscreen mode as an escape hatch. Windows compile/unit tests
+do not by themselves prove that a real RetroArch Vulkan swapchain displays
+correctly; this still needs a Star Fox 64 test.
+
+### First recovery test
+
+1. Exit any running RetroArch game normally; close PhiCade.
+2. Restart the feature branch with `npm run desktop`.
+3. Set RetroArch to windowed mode, launch Star Fox 64 from PhiCade and
+   let auto-docking attempt the overlay.
+4. If the game is still absent, click **UNDOCK N64**, verify external game
+   video remains playable, and report the precise PhiCade notice bar.
+   Do not force-close RetroArch or delete its configuration.
+
 ## Experimental N64 docking inside PhiCade (Windows)
 
 **New feature:** After the N64 external bridge launches an N64 ROM, PhiCade

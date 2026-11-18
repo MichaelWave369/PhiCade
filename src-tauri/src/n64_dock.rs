@@ -1,24 +1,30 @@
-//! Experimental Windows-only docking of a user-started RetroArch game HWND.
-//! This does not provide an in-process graphics context. Win32 owns the child
-//! window and RetroArch continues to render using its selected Vulkan/GL core.
-//! Window handles must never be guessed or supplied by JavaScript.
+//! Windows-only N64 docking by placing a *top-level owned popup* over the CRT.
+//!
+//! The former SetParent/WS_CHILD approach hid the Vulkan game behind WebView2.
+//! Keeping RetroArch's real top-level HWND preserves its GPU presentation path;
+//! the owner relationship keeps it above PhiCade without being system-topmost.
+//! Undock always restores original owner, frame style and screen geometry.
 use std::mem::MaybeUninit;
 
 type Hwnd = isize;
 type Bool = i32;
 const GWL_STYLE: i32 = -16;
+const GWL_EXSTYLE: i32 = -20;
+const GWLP_HWNDPARENT: i32 = -8; // owner of a top-level HWND, not child parent
 const GW_OWNER: u32 = 4;
-const WS_CHILD: isize = 0x4000_0000;
 const WS_POPUP: isize = 0x8000_0000u32 as isize;
+const WS_CHILD: isize = 0x4000_0000;
 const WS_CAPTION: isize = 0x00c0_0000;
 const WS_THICKFRAME: isize = 0x0004_0000;
 const WS_SYSMENU: isize = 0x0008_0000;
 const WS_MINIMIZEBOX: isize = 0x0002_0000;
 const WS_MAXIMIZEBOX: isize = 0x0001_0000;
+const WS_EX_TOPMOST: isize = 0x0000_0008;
 const SWP_NOACTIVATE: u32 = 0x0010;
 const SWP_FRAMECHANGED: u32 = 0x0020;
 const SWP_SHOWWINDOW: u32 = 0x0040;
 const HWND_TOP: Hwnd = 0;
+const HWND_TOPMOST: Hwnd = -1;
 const HWND_NOTOPMOST: Hwnd = -2;
 
 #[repr(C)]
@@ -29,6 +35,12 @@ struct Rect {
     right: i32,
     bottom: i32,
 }
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+struct Point {
+    x: i32,
+    y: i32,
+}
 
 #[link(name = "user32")]
 extern "system" {
@@ -38,10 +50,9 @@ extern "system" {
     fn IsWindow(hwnd: Hwnd) -> Bool;
     fn GetWindow(hwnd: Hwnd, command: u32) -> Hwnd;
     fn GetWindowRect(hwnd: Hwnd, rect: *mut Rect) -> Bool;
-    fn GetParent(hwnd: Hwnd) -> Hwnd;
+    fn ClientToScreen(hwnd: Hwnd, point: *mut Point) -> Bool;
     fn GetWindowLongPtrW(hwnd: Hwnd, index: i32) -> isize;
     fn SetWindowLongPtrW(hwnd: Hwnd, index: i32, value: isize) -> isize;
-    fn SetParent(hwnd: Hwnd, parent: Hwnd) -> Hwnd;
     fn PostMessageW(hwnd: Hwnd, message: u32, wparam: usize, lparam: isize) -> Bool;
     fn SetWindowPos(hwnd: Hwnd, after: Hwnd, x: i32, y: i32, width: i32, height: i32, flags: u32) -> Bool;
 }
@@ -53,25 +64,24 @@ pub(crate) struct DockRect {
     pub width: i32,
     pub height: i32,
 }
-
 impl DockRect {
     pub fn validate(self) -> Result<Self, String> {
         if self.width < 64 || self.height < 64 || self.width > 16384 || self.height > 16384
             || self.x < -16384 || self.x > 16384 || self.y < -16384 || self.y > 16384
         {
-            return Err("Invalid dock rectangle; try scrolling the PhiCade CRT into view".into());
+            return Err("Invalid dock rectangle; scroll the PhiCade CRT into view".into());
         }
         Ok(self)
     }
 }
 
-/// The original window styles and geometry are saved, so Undock is reversible.
-/// Windows can reset cross-process DPI awareness; treat this as experimental.
 pub(crate) struct DockedWindow {
     hwnd: Hwnd,
+    owner_hwnd: Hwnd,
     original_style: isize,
-    original_parent: Hwnd,
+    original_owner: Hwnd,
     original_rect: Rect,
+    original_topmost: bool,
 }
 
 struct WindowCandidate {
@@ -105,51 +115,73 @@ unsafe extern "system" fn find_callback(hwnd: Hwnd, data: isize) -> Bool {
     1
 }
 
+// While docked, the owner may be set, so EnumWindows still enumerates RetroArch
+// but this callback won't match. Graceful close must use the stored HWND instead.
 fn find_process_window(pid: u32) -> Option<Hwnd> {
     let mut selection = WindowCandidate { pid, hwnd: 0, area: 0 };
-    // The enum callback reads only windows owned by the child PID we launched.
-    unsafe {
-        EnumWindows(Some(find_callback), (&mut selection as *mut WindowCandidate) as isize);
-    }
+    unsafe { EnumWindows(Some(find_callback), (&mut selection as *mut WindowCandidate) as isize); }
     (selection.hwnd != 0).then_some(selection.hwnd)
 }
 
-/// Ask RetroArch to close itself normally so save data has a chance to flush.
 pub(crate) fn request_graceful_close(pid: u32) -> Result<(), String> {
     let hwnd = find_process_window(pid)
         .ok_or_else(|| "RetroArch game window not found; close it manually".to_owned())?;
-    // WM_CLOSE is the normal Win32 shutdown request, unlike Child::kill.
+    request_close_window(hwnd)
+}
+
+pub(crate) fn request_close_window(hwnd: Hwnd) -> Result<(), String> {
+    if unsafe { IsWindow(hwnd) } == 0 {
+        return Err("RetroArch game window has already closed".into());
+    }
     if unsafe { PostMessageW(hwnd, 0x0010, 0, 0) } == 0 {
         return Err("Could not request RetroArch close; close its window manually".into());
     }
     Ok(())
 }
 
+fn screen_rect(parent: Hwnd, rect: DockRect) -> Result<Rect, String> {
+    rect.validate()?;
+    let mut point = Point { x: rect.x, y: rect.y };
+    if unsafe { ClientToScreen(parent, &mut point) } == 0 {
+        return Err("Cannot map PhiCade CRT to Windows desktop coordinates".into());
+    }
+    Ok(Rect {
+        left: point.x,
+        top: point.y,
+        right: point.x.saturating_add(rect.width),
+        bottom: point.y.saturating_add(rect.height),
+    })
+}
+
 impl DockedWindow {
-    pub fn attach(parent: Hwnd, pid: u32, rect: DockRect) -> Result<Self, String> {
+    pub fn attach(owner: Hwnd, pid: u32, rect: DockRect) -> Result<Self, String> {
         rect.validate()?;
-        if parent == 0 {
+        if owner == 0 {
             return Err("PhiCade native window handle unavailable".into());
         }
-        let hwnd = find_process_window(pid)
-            .ok_or_else(|| "N64_WINDOW_NOT_READY: RetroArch's game window has not appeared yet".to_owned())?;
+        let hwnd = find_process_window(pid).ok_or_else(|| {
+            "N64_WINDOW_NOT_READY: RetroArch's game window has not appeared yet".to_owned()
+        })?;
         unsafe {
             let mut original_rect = Rect::default();
             if GetWindowRect(hwnd, &mut original_rect) == 0 {
-                return Err("Could not read RetroArch window geometry".into());
+                return Err("Cannot read RetroArch window geometry".into());
             }
             let original_style = GetWindowLongPtrW(hwnd, GWL_STYLE);
-            let original_parent = GetParent(hwnd);
-            // Windows SetParent does not update WS_CHILD/WS_POPUP automatically.
-            let child_style = (original_style | WS_CHILD)
-                & !(WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
-            SetWindowLongPtrW(hwnd, GWL_STYLE, child_style);
-            SetParent(hwnd, parent);
-            if GetParent(hwnd) != parent {
+            let original_owner = GetWindow(hwnd, GW_OWNER);
+            let original_topmost = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST != 0;
+            // Keep the Vulkan surface a top-level HWND. The former WS_CHILD /
+            // SetParent route was occluded by WebView2 and sometimes lost GPU frames.
+            let popup_style = (original_style | WS_POPUP)
+                & !(WS_CHILD | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+            SetWindowLongPtrW(hwnd, GWL_STYLE, popup_style);
+            SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner);
+            if GetWindow(hwnd, GW_OWNER) != owner {
+                SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, original_owner);
                 SetWindowLongPtrW(hwnd, GWL_STYLE, original_style);
-                return Err("Windows refused to dock the RetroArch window (possibly DPI/integrity mismatch)".into());
+                return Err("Windows refused to make RetroArch an owned overlay. Game remains external".into());
             }
-            let dock = Self { hwnd, original_style, original_parent, original_rect };
+            let dock = Self { hwnd, owner_hwnd: owner, original_style, original_owner, original_rect, original_topmost };
             if let Err(error) = dock.resize(rect) {
                 dock.detach();
                 return Err(error);
@@ -162,35 +194,53 @@ impl DockedWindow {
         unsafe { IsWindow(self.hwnd) != 0 }
     }
 
+    pub fn hwnd(&self) -> Hwnd { self.hwnd }
+
     pub fn resize(&self, rect: DockRect) -> Result<(), String> {
-        rect.validate()?;
         if !self.is_alive() {
             return Err("RetroArch game window has closed".into());
         }
-        let success = unsafe {
-            SetWindowPos(self.hwnd, HWND_TOP, rect.x, rect.y, rect.width, rect.height,
-                         SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW)
-        };
-        if success == 0 {
-            return Err("Could not resize the docked RetroArch window".into());
+        let pos = screen_rect(self.owner_hwnd, rect)?;
+        if unsafe {
+            SetWindowPos(self.hwnd, HWND_TOP, pos.left, pos.top, rect.width, rect.height,
+                SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW)
+        } == 0 {
+            return Err("Cannot position RetroArch over PhiCade's CRT".into());
+        }
+        // Validate the actual position instead of claiming DOCKED on an API call
+        // that succeeds while the window is still offscreen or unchanged.
+        let mut actual = Rect::default();
+        if unsafe { GetWindowRect(self.hwnd, &mut actual) } == 0 {
+            return Err("Cannot verify RetroArch overlay position".into());
+        }
+        let d = |a: i32, b: i32| (i64::from(a) - i64::from(b)).abs();
+        if d(actual.left, pos.left) > 12 || d(actual.top, pos.top) > 12
+            || d(actual.right - actual.left, rect.width) > 12
+            || d(actual.bottom - actual.top, rect.height) > 12
+        {
+            return Err(format!(
+                "RetroArch overlay geometry mismatch: expected {}x{} at {},{}; observed {}x{} at {},{}",
+                rect.width, rect.height, pos.left, pos.top,
+                actual.right - actual.left, actual.bottom - actual.top,
+                actual.left, actual.top
+            ));
         }
         Ok(())
     }
 
     pub fn detach(&self) {
         unsafe {
-            if IsWindow(self.hwnd) == 0 {
-                return;
-            }
-            // Restore to the desktop (or its former parent) *before* top-level style.
-            SetParent(self.hwnd, self.original_parent);
+            if IsWindow(self.hwnd) == 0 { return; }
+            // Restore original owner, style, z-order, and original desktop
+            // geometry. No game reload or loss of save state.
+            SetWindowLongPtrW(self.hwnd, GWLP_HWNDPARENT, self.original_owner);
             SetWindowLongPtrW(self.hwnd, GWL_STYLE, self.original_style);
             let width = (self.original_rect.right - self.original_rect.left).max(1);
             let height = (self.original_rect.bottom - self.original_rect.top).max(1);
-            let _ = SetWindowPos(
-                self.hwnd, HWND_NOTOPMOST, self.original_rect.left, self.original_rect.top,
-                width, height, SWP_FRAMECHANGED | SWP_SHOWWINDOW,
-            );
+            let _ = SetWindowPos(self.hwnd,
+                if self.original_topmost { HWND_TOPMOST } else { HWND_NOTOPMOST },
+                self.original_rect.left, self.original_rect.top, width, height,
+                SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
         }
     }
 }
@@ -203,5 +253,13 @@ mod tests {
         assert!(DockRect { x: 20, y: 30, width: 640, height: 480 }.validate().is_ok());
         assert!(DockRect { x: 0, y: 0, width: 0, height: 480 }.validate().is_err());
         assert!(DockRect { x: 0, y: 0, width: 64000, height: 480 }.validate().is_err());
+    }
+    #[test]
+    fn overlay_remains_top_level_not_child() {
+        let original = WS_CAPTION | WS_THICKFRAME | WS_SYSMENU;
+        let popup = (original | WS_POPUP)
+            & !(WS_CHILD | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+        assert_ne!(popup & WS_POPUP, 0);
+        assert_eq!(popup & WS_CHILD, 0);
     }
 }
