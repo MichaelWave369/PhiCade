@@ -29,7 +29,7 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::VecDeque,
     fs,
-    io::BufWriter,
+    io::{BufWriter, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     process::{Child, Command},
     sync::Mutex,
@@ -1308,6 +1308,91 @@ fn system_id_from_extension(extension: &str) -> Option<SystemId> {
     }
 }
 
+// A surprising number of older SNES ROM collections have *no file extension*.
+// Rather than rename user files or blindly interpret every unknown file as a
+// game, inspect the SNES internal header at known LoROM/HiROM positions. The
+// 512-byte offset accommodates old copier-header dumps.
+const SNES_MIN_BYTES: u64 = 32 * 1024;
+const SNES_MAX_BYTES: u64 = 64 * 1024 * 1024;
+
+fn plausible_snes_rom_size(length: u64) -> bool {
+    (SNES_MIN_BYTES..=SNES_MAX_BYTES).contains(&length)
+        && matches!(length % 0x8000, 0 | 512)
+}
+
+fn plausible_snes_internal_header(header: &[u8; 64]) -> bool {
+    let map_mode = header[0x15] & 0x3f;
+    if !matches!(map_mode, 0x20..=0x25 | 0x30..=0x35) {
+        return false;
+    }
+    let reset_vector = u16::from_le_bytes([header[0x3c], header[0x3d]]);
+    if reset_vector < 0x8000 {
+        return false;
+    }
+    let complement = u16::from_le_bytes([header[0x1c], header[0x1d]]);
+    let checksum = u16::from_le_bytes([header[0x1e], header[0x1f]]);
+    if checksum == 0 && complement == 0 {
+        return false;
+    }
+    if checksum.wrapping_add(complement) != 0xffff {
+        return false;
+    }
+    let title = &header[..21];
+    title.iter().filter(|&&ch| (0x21..=0x7e).contains(&ch)).count() >= 4
+}
+
+fn looks_like_extensionless_snes(path: &Path) -> bool {
+    if path.extension().is_some() {
+        return false;
+    }
+    let Ok(mut file) = fs::File::open(path) else { return false; };
+    let Ok(metadata) = file.metadata() else { return false; };
+    let length = metadata.len();
+    if !plausible_snes_rom_size(length) {
+        return false;
+    }
+    let copier_header = length % 0x8000;
+    for address in [0x7fc0_u64, 0xffc0, 0x407fc0, 0x40ffc0] {
+        let Some(offset) = address.checked_add(copier_header) else { continue; };
+        if offset + 64 > length {
+            continue;
+        }
+        let mut header = [0_u8; 64];
+        if file.seek(SeekFrom::Start(offset)).is_ok()
+            && file.read_exact(&mut header).is_ok()
+            && plausible_snes_internal_header(&header)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn maybe_extensionless_snes(path: &Path, allow_unverified: bool) -> Option<RomEntry> {
+    if path.extension().is_some() {
+        return None;
+    }
+    let confirmed = looks_like_extensionless_snes(path);
+    if !confirmed {
+        if !allow_unverified {
+            return None;
+        }
+        let length = fs::metadata(path).ok()?.len();
+        if !plausible_snes_rom_size(length) {
+            return None;
+        }
+    }
+    let display_name = path.file_name()?.to_string_lossy().to_string();
+    Some(RomEntry {
+        path: path.to_string_lossy().to_string(),
+        display_name,
+        system: "SNES",
+        // Synthetic routing hint only: the original extensionless path is
+        // unchanged, and Snes9x receives its actual bytes through Libretro.
+        extension: "sfc".to_owned(),
+    })
+}
+
 fn entry_from_path(path: &Path) -> Option<RomEntry> {
     let extension = path.extension()?.to_string_lossy().to_ascii_lowercase();
     let system = classify_extension(&extension)?;
@@ -1322,7 +1407,7 @@ fn entry_from_path(path: &Path) -> Option<RomEntry> {
 }
 
 #[tauri::command]
-fn scan_rom_directory(path: String) -> Result<Vec<RomEntry>, String> {
+fn scan_rom_directory(path: String, allow_unverified_snes: Option<bool>) -> Result<Vec<RomEntry>, String> {
     let root = PathBuf::from(&path)
         .canonicalize()
         .map_err(|error| format!("cannot resolve selected directory: {error}"))?;
@@ -1341,7 +1426,9 @@ fn scan_rom_directory(path: String) -> Result<Vec<RomEntry>, String> {
         let candidate = entry.path();
 
         if candidate.is_file() {
-            if let Some(game) = entry_from_path(&candidate) {
+            if let Some(game) = entry_from_path(&candidate)
+                .or_else(|| maybe_extensionless_snes(&candidate, allow_unverified_snes.unwrap_or(false)))
+            {
                 games.push(game);
             }
         }
@@ -6366,6 +6453,42 @@ mod tests {
         assert!(is_n64_libretro_core(Path::new("mupen64plus_next_libretro.dll")));
         assert!(is_n64_libretro_core(Path::new("parallel_n64_libretro.dll")));
         assert!(!is_n64_libretro_core(Path::new("fceumm_libretro.dll")));
+    }
+
+    #[test]
+    fn legacy_snes_internal_header_identifies_extensionless_dumps() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let stamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let root = std::env::temp_dir().join(format!("phicade-snes-{stamp}-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        for copier in [0_usize, 512] {
+            let mut bytes = vec![0_u8; 0x20000 + copier];
+            let header = &mut bytes[0x7fc0 + copier..0x8000 + copier];
+            header[..15].copy_from_slice(b"SECRET OF MANA ");
+            header[0x15] = 0x20; // LoROM
+            header[0x1c..0x1e].copy_from_slice(&0x1234u16.to_le_bytes());
+            header[0x1e..0x20].copy_from_slice(&0xedcbu16.to_le_bytes());
+            header[0x3c..0x3e].copy_from_slice(&0x8000u16.to_le_bytes());
+            let name = if copier == 0 { "Secret of Mana" } else { "Secret of Evermore" };
+            let path = root.join(name);
+            fs::write(&path, bytes).unwrap();
+            let rom = maybe_extensionless_snes(&path, false).expect("valid extensionless SNES ROM");
+            assert_eq!(rom.system, "SNES");
+            assert_eq!(rom.extension, "sfc");
+            assert_eq!(rom.display_name, name);
+            assert_eq!(rom.path, path.to_string_lossy());
+            // The file on disk must remain extensionless.
+            assert_eq!(path.extension(), None);
+        }
+        let save = root.join("Secret of Mana.srm");
+        fs::write(&save, vec![0_u8; 8192]).unwrap();
+        assert!(maybe_extensionless_snes(&save, true).is_none());
+        let bad = root.join("Random blob");
+        fs::write(&bad, vec![0_u8; 0x20000]).unwrap();
+        assert!(maybe_extensionless_snes(&bad, false).is_none());
+        // Operator fallback is explicitly opt-in and limited to ROM-sized files.
+        assert!(maybe_extensionless_snes(&bad, true).is_some());
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
