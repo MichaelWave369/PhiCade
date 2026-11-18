@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ActionBus, type ActionSource, type GameAction } from "./actionBus";
 import {
   diffGameBoyButtons,
@@ -97,6 +98,33 @@ const AUDIO_START_LEAD_SECONDS = 0.03;
 const MAX_AUDIO_QUEUE_SECONDS = 0.14;
 const PHIBOT_AGENT_ID = "phi-local";
 
+// This is a deterministic preference order, not proof that a runtime is qualified.
+// The native registry re-checks SHA-256 and identity for each approved session.
+const CORE_PREFERENCES: Record<string, string[]> = {
+  NES: ["fceumm", "mesen", "nestopia"],
+  SNES: ["snes9x", "bsnes"],
+  GB: ["sameboy", "gambatte", "mgba"],
+  GBC: ["sameboy", "gambatte", "mgba"],
+  GBA: ["mgba", "vba"],
+  GENESIS: ["genesis plus gx", "picodrive"],
+  PS1: ["beetle psx", "pcsx rearmed"],
+};
+
+function matchingCores(game: RomEntry, registrations: RuntimeRegistrationReceipt[]) {
+  const extension = game.extension.toLowerCase().replace(/^\./, "");
+  const ranked = registrations.filter((entry) => {
+    const extensions = entry.core.validExtensions.toLowerCase().split(/[|,;\s]+/).map((part) => part.replace(/^\./, ""));
+    return extensions.includes(extension);
+  });
+  const preferences = CORE_PREFERENCES[game.system] ?? [];
+  const rank = (entry: RuntimeRegistrationReceipt) => {
+    const name = entry.core.libraryName.toLowerCase();
+    const index = preferences.findIndex((preferred) => name.includes(preferred));
+    return index < 0 ? preferences.length : index;
+  };
+  return ranked.sort((a, b) => rank(a) - rank(b) || a.core.libraryName.localeCompare(b.core.libraryName) || a.coreSha256.localeCompare(b.coreSha256));
+}
+
 const milestones = [
   ["BRIEFING", "BANKS", "CIRCLE and CROSS each hold their own TRIANGLE/SQUARE relation, with opposite bindings visible at the same time."],
   ["ERASURE", "MEMORY", "A removes both bank markers and all position-bearing symbol evidence before the later decision exists."],
@@ -122,10 +150,13 @@ export function App() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextAudioTimeRef = useRef(0);
   const providerBusyRef = useRef(false);
+  const launchBusyRef = useRef(false);
 
   const [activeSystem, setActiveSystem] = useState<(typeof systems)[number]>("ALL");
   const [libraryQuery, setLibraryQuery] = useState("");
   const [libraryVisibleCount, setLibraryVisibleCount] = useState(48);
+  const [arcadeMode, setArcadeMode] = useState(false);
+  const [launchBusy, setLaunchBusy] = useState(false);
   const [lastInput, setLastInput] = useState("NO INPUT");
   const [notice, setNotice] = useState(native ? "NATIVE SHELL ONLINE" : "WEB PREVIEW // NATIVE FEATURES OFFLINE");
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
@@ -1391,36 +1422,93 @@ export function App() {
     );
   };
 
-  const launchGame = async () => {
+  // A deliberate PLAY click approves one local session, never the core globally.
+  // The backend still re-hashes the core and verifies its live identity.
+  const launchGameFor = async (game: RomEntry) => {
     if (!native) {
-      setNotice("EMULATION REQUIRES THE TAURI DESKTOP SHELL");
+      setNotice("PLAY REQUIRES THE TAURI DESKTOP SHELL");
       return;
     }
-    if (!selectedGame) {
-      setNotice("SELECT A GB/GBC IMAGE FROM THE LIBRARY FIRST");
-      return;
-    }
-    if (!(["GB", "GBC"] as string[]).includes(selectedGame.system)) {
-      setNotice("LEGACY SAMEBOY LAUNCH IS GB/GBC ONLY // USE A REGISTERED RUNTIME FOR OTHER CONTENT");
+    if (running || registeredLaunchBusy || launchBusyRef.current) return;
+
+    const matches = matchingCores(game, runtimeRegistrations);
+    const preferred = matches.find((entry) => entry.coreSha256 === selectedRuntimeSha) ?? matches[0] ?? null;
+    const useLegacySameBoy = !preferred && ["GB", "GBC"].includes(game.system);
+    if (!preferred && !useLegacySameBoy) {
+      setNotice(`NO REGISTERED CORE FOR ${game.system} (.${game.extension}) // REGISTER A COMPATIBLE LIBRETRO CORE FIRST`);
       return;
     }
 
+    launchBusyRef.current = true;
+    setLaunchBusy(true);
+    setSelectedGame(game);
     try {
-      let corePath = settings.sameboyCorePath;
-      if (!corePath) corePath = await chooseCore();
-      if (!corePath) {
-        setNotice("SAMEBOY CORE SELECTION CANCELLED");
-        return;
+      let info: SessionInfo;
+      if (preferred) {
+        await prepareSessionLaunch();
+        info = await startRegisteredEmulation(preferred.coreSha256, game.path, true);
+        setSelectedRuntimeSha(preferred.coreSha256);
+        setRegisteredLaunchApproved(false);
+      } else {
+        let corePath = settings.sameboyCorePath;
+        if (!corePath) corePath = await chooseCore();
+        if (!corePath) {
+          setNotice("SAMEBOY CORE SELECTION CANCELLED");
+          return;
+        }
+        await prepareSessionLaunch();
+        info = await startEmulation(corePath, game.path);
       }
-
-      await prepareSessionLaunch();
-      const info = await startEmulation(corePath, selectedGame.path);
-      await adoptSession(info, selectedGame.displayName);
+      await adoptSession(info, game.displayName);
     } catch (error) {
-      setNotice(`LAUNCH ERROR // ${String(error)}`);
+      setNotice(`PLAY ERROR // ${String(error)}`);
       setRunning(false);
+    } finally {
+      launchBusyRef.current = false;
+      setLaunchBusy(false);
     }
   };
+
+  const launchGame = async () => {
+    if (!selectedGame) {
+      setNotice("SELECT A GAME FROM THE LIBRARY FIRST");
+      return;
+    }
+    await launchGameFor(selectedGame);
+  };
+
+  const toggleArcadeMode = async () => {
+    if (!native) {
+      setNotice("FULLSCREEN REQUIRES THE TAURI DESKTOP SHELL");
+      return;
+    }
+    if (!running && !arcadeMode) {
+      setNotice("START A GAME BEFORE ENTERING ARCADE FULLSCREEN");
+      return;
+    }
+    const next = !arcadeMode;
+    try {
+      await getCurrentWindow().setFullscreen(next);
+      setArcadeMode(next);
+    } catch (error) {
+      setNotice(`FULLSCREEN ERROR // ${String(error)}`);
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (event.key === "F11" || (event.altKey && event.key === "Enter")) {
+        event.preventDefault();
+        void toggleArcadeMode();
+      } else if (event.key === "Escape" && arcadeMode) {
+        event.preventDefault();
+        void toggleArcadeMode();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [arcadeMode, running, native]);
 
   const launchRegisteredRuntime = async (mode: "launcher" | "file") => {
     if (!native) {
@@ -1471,6 +1559,10 @@ export function App() {
     gamepadRef.current = emptyGameBoyButtons();
     try {
       await stopEmulation();
+      if (arcadeMode) {
+        await getCurrentWindow().setFullscreen(false);
+        setArcadeMode(false);
+      }
       setSession(null);
       setProfile(null);
       setDriverMemory(null);
@@ -1516,7 +1608,7 @@ export function App() {
   };
 
   return (
-    <main className="shell">
+    <main className={arcadeMode ? "shell arcade-mode" : "shell"}>
       <header className="masthead">
         <div>
           <p className="eyebrow">Φ GAME RUNTIME / CARTRIDGE TERMINAL</p>
@@ -1582,6 +1674,8 @@ export function App() {
                   key={game.path}
                   title={game.path}
                   onClick={() => setSelectedGame(game)}
+                  onDoubleClick={() => { void launchGameFor(game); }}
+                  disabled={launchBusy || running}
                 >
                   <span className="system-chip">{game.system}</span>
                   <strong>{game.displayName}</strong>
@@ -1711,9 +1805,10 @@ export function App() {
           </div>
 
           <div className="session-strip">
-            <button onClick={launchGame} disabled={running || !native}>LOAD / RUN</button>
+            <button className="play-game" onClick={() => void launchGame()} disabled={running || launchBusy || registeredLaunchBusy || !native || !selectedGame}>{launchBusy ? "STARTING..." : "PLAY GAME"}</button>
             <button onClick={stopGame} disabled={!running || replayRecording || autodrive?.active}>EJECT</button>
-            <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : "NO CORE LOADED"}</span>
+            <button className="fullscreen-toggle" onClick={() => void toggleArcadeMode()} disabled={!running || !native}>{arcadeMode ? "EXIT FULLSCREEN (F11)" : "FULLSCREEN (F11)"}</button>
+            <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : selectedGame ? `${selectedGame.system} / ${selectedGame.displayName}` : "SELECT GAME TO PLAY"}</span>
           </div>
 
           <div className="agent-strip">
