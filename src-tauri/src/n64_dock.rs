@@ -2,7 +2,7 @@
 //! This does not provide an in-process graphics context. Win32 owns the child
 //! window and RetroArch continues to render using its selected Vulkan/GL core.
 //! Window handles must never be guessed or supplied by JavaScript.
-use std::{ffi::c_void, mem::MaybeUninit};
+use std::mem::MaybeUninit;
 
 type Hwnd = isize;
 type Bool = i32;
@@ -19,7 +19,6 @@ const SWP_NOACTIVATE: u32 = 0x0010;
 const SWP_FRAMECHANGED: u32 = 0x0020;
 const SWP_SHOWWINDOW: u32 = 0x0040;
 const HWND_TOP: Hwnd = 0;
-const HWND_TOPMOST: Hwnd = -1;
 const HWND_NOTOPMOST: Hwnd = -2;
 
 #[repr(C)]
@@ -43,6 +42,7 @@ extern "system" {
     fn GetWindowLongPtrW(hwnd: Hwnd, index: i32) -> isize;
     fn SetWindowLongPtrW(hwnd: Hwnd, index: i32, value: isize) -> isize;
     fn SetParent(hwnd: Hwnd, parent: Hwnd) -> Hwnd;
+    fn PostMessageW(hwnd: Hwnd, message: u32, wparam: usize, lparam: isize) -> Bool;
     fn SetWindowPos(hwnd: Hwnd, after: Hwnd, x: i32, y: i32, width: i32, height: i32, flags: u32) -> Bool;
 }
 
@@ -112,6 +112,17 @@ fn find_process_window(pid: u32) -> Option<Hwnd> {
         EnumWindows(Some(find_callback), (&mut selection as *mut WindowCandidate) as isize);
     }
     (selection.hwnd != 0).then_some(selection.hwnd)
+}
+
+/// Ask RetroArch to close itself normally so save data has a chance to flush.
+pub(crate) fn request_graceful_close(pid: u32) -> Result<(), String> {
+    let hwnd = find_process_window(pid)
+        .ok_or_else(|| "RetroArch game window not found; close it manually".to_owned())?;
+    // WM_CLOSE is the normal Win32 shutdown request, unlike Child::kill.
+    if unsafe { PostMessageW(hwnd, 0x0010, 0, 0) } == 0 {
+        return Err("Could not request RetroArch close; close its window manually".into());
+    }
+    Ok(())
 }
 
 impl DockedWindow {
