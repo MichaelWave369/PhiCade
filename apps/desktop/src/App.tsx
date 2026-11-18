@@ -40,6 +40,7 @@ import {
   listBenchmarkSuites,
   listOllamaModels,
   listRuntimeRegistrations,
+  importRuntimeCoreFolder,
   qualifyOllamaModel,
   registerRuntimeCore,
   loadSettings,
@@ -57,6 +58,7 @@ import {
   selectRomDirectory,
   selectSameBoyCore,
   selectLibretroCore,
+  selectLibretroCoreDirectory,
   selectRuntimeContent,
   setGameProfile,
   startEmulation,
@@ -79,6 +81,7 @@ import {
   type BenchmarkSuiteReportCandidate,
   type BenchmarkSuiteReportListEntry,
   type ControlMode,
+  type CoreFolderImportReport,
   type DriverStatus,
   type FramePacket,
   type GameProfile,
@@ -216,6 +219,7 @@ export function App() {
   const [scanning, setScanning] = useState(false);
   const [runtimeRegistrations, setRuntimeRegistrations] = useState<RuntimeRegistrationReceipt[]>([]);
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
+  const [coreFolderReport, setCoreFolderReport] = useState<CoreFolderImportReport | null>(null);
   const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
   const [registeredLaunchApproved, setRegisteredLaunchApproved] = useState(false);
   const [registeredLaunchBusy, setRegisteredLaunchBusy] = useState(false);
@@ -452,6 +456,31 @@ export function App() {
       );
     } catch (error) {
       setNotice(`RUNTIME REGISTRY ERROR // ${String(error)}`);
+    } finally {
+      setRuntimeRegistryBusy(false);
+    }
+  };
+
+  const registerRuntimeFolder = async () => {
+    if (!native || running || runtimeRegistryBusy) return;
+    setRuntimeRegistryBusy(true);
+    setCoreFolderReport(null);
+    try {
+      const folderPath = await selectLibretroCoreDirectory();
+      if (!folderPath) {
+        setNotice("CORE DIRECTORY IMPORT CANCELLED");
+        return;
+      }
+      const report = await importRuntimeCoreFolder(folderPath);
+      setCoreFolderReport(report);
+      const registrations = await listRuntimeRegistrations();
+      setRuntimeRegistrations(registrations);
+      if (!selectedRuntimeSha && report.registered.length > 0) {
+        setSelectedRuntimeSha(report.registered[0].coreSha256);
+      }
+      setNotice(`CORE FOLDER IMPORT // ${report.registered.length}/${report.candidates} REGISTERED // ${report.skipped.length} SKIPPED // CLICK PLAY ON A GAME`);
+    } catch (error) {
+      setNotice(`CORE DIRECTORY IMPORT ERROR // ${String(error)}`);
     } finally {
       setRuntimeRegistryBusy(false);
     }
@@ -1711,8 +1740,26 @@ export function App() {
               onClick={() => void registerRuntime()}
               disabled={!native || runtimeRegistryBusy || running}
             >
-              {runtimeRegistryBusy ? "INSPECTING CORE..." : "REGISTER LIBRETRO CORE"}
+              {runtimeRegistryBusy ? "INSPECTING CORES..." : "REGISTER ONE LIBRETRO CORE"}
             </button>
+            <button
+              className="utility-button core-folder-import"
+              onClick={() => void registerRuntimeFolder()}
+              disabled={!native || runtimeRegistryBusy || running || registeredLaunchBusy}
+              title="Registers extracted, locally supplied *_libretro DLLs in one folder; no downloads"
+            >
+              {runtimeRegistryBusy ? "IMPORTING..." : "IMPORT ALL CORES FROM FOLDER"}
+            </button>
+            <p className="microcopy core-folder-hint">Unzip official Libretro cores into one folder first. This imports only matching files and grants no permanent launch authority.</p>
+            {coreFolderReport && (
+              <div className="core-folder-report" aria-live="polite">
+                <strong>{coreFolderReport.registered.length} REGISTERED / {coreFolderReport.candidates} FOUND</strong>
+                {coreFolderReport.skipped.slice(0, 5).map((item, index) => (
+                  <p key={index} title={item}>{item}</p>
+                ))}
+                {coreFolderReport.skipped.length > 5 && <p>+{coreFolderReport.skipped.length - 5} more failures</p>}
+              </div>
+            )}
             {runtimeRegistrations.length === 0 ? (
               <p className="microcopy">NO REGISTERED RUNTIMES // REGISTRATION GRANTS NO LAUNCH AUTHORITY</p>
             ) : (
