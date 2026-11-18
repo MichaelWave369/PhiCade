@@ -1275,3 +1275,11 @@ button:focus-visible, select:focus-visible {
 .n64-bridge-setup .panel-title { color: var(--green); margin-bottom: 8px; }
 .n64-bridge-setup .microcopy { letter-spacing: normal; line-height: 1.55; }
 .n64-bridge-setup button { font-size: 10px; }
+
+
+/* The N64 child HWND paints over the .crt rectangle; HTML remains available
+   around the game surface. Window-position IPC tracks scroll and resize. */
+.session-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.session-strip button { white-space: nowrap; }
+.n64-bridge-setup .microcopy { line-height: 1.55; }
+.arcade-mode .screen-panel .crt { overflow: hidden; }
