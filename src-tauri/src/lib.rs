@@ -1286,9 +1286,11 @@ fn stop_n64_bridge(state: State<'_, N64BridgeState>) -> Result<(), String> {
         if let Some(window) = dock.take() { window.detach(); }
     }
     if let Some(child) = process.as_mut() {
-        match child.try_wait().map_err(|error| format!("cannot inspect N64 process: {error}"))? {
-            None => child.kill().map_err(|error| format!("cannot stop N64 game: {error}"))?,
-            Some(_) => {}
+        if child.try_wait().map_err(|error| format!("cannot inspect N64 process: {error}"))?.is_none() {
+            #[cfg(target_os = "windows")]
+            n64_dock::request_graceful_close(child.id())?;
+            #[cfg(not(target_os = "windows"))]
+            return Err("Close RetroArch manually on this platform".into());
         }
     }
     *process = None;
@@ -6097,7 +6099,7 @@ pub fn run() {
                     let state = window.app_handle().state::<N64BridgeState>();
                     if let Ok(mut dock) = state.dock.lock() {
                         if let Some(child_window) = dock.take() { child_window.detach(); }
-                    }
+                    };
                 }
             }
         })
