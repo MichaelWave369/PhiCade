@@ -985,11 +985,11 @@ export async function getN64BridgeStatus(): Promise<N64BridgeStatus> {
 }
 
 export async function dockN64Bridge(rect: N64DockRect): Promise<boolean> {
-  return invoke<boolean>("dock_n64_bridge", rect);
+  return invoke<boolean>("dock_n64_bridge", { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
 }
 
 export async function resizeN64Dock(rect: N64DockRect): Promise<void> {
-  return invoke("resize_n64_dock", rect);
+  return invoke("resize_n64_dock", { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
 }
 
 export async function undockN64Bridge(): Promise<void> {
