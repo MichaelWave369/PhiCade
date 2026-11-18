@@ -32,6 +32,7 @@ import {
   getLastAutodriveReceipt,
   getLastBenchmarkCampaignReceipt,
   getLastModelGameplayBenchmark,
+  getN64BridgeStatus,
   getOllamaQualificationStatus,
   issueAgentTurn,
   listBenchmarkCampaignReceipts,
@@ -42,6 +43,10 @@ import {
   listRuntimeRegistrations,
   importRuntimeCoreFolder,
   launchN64Bridge,
+  dockN64Bridge,
+  resizeN64Dock,
+  undockN64Bridge,
+  stopN64Bridge,
   qualifyOllamaModel,
   registerRuntimeCore,
   loadSettings,
@@ -89,6 +94,7 @@ import {
   type FramePacket,
   type GameProfile,
   type ModelBenchmarkArtifact,
+  type N64DockRect,
   type OllamaModel,
   type OllamaQualificationStatus,
   type PortableEvidenceBundleArtifact,
@@ -139,6 +145,20 @@ const milestones = [
   ["COMMIT", "CONTEXT", "Layout × bank × query × operator spans sixteen variants; fixed and context-ignoring shortcuts cap at 8/16."],
 ] as const;
 
+// WebView CSS coordinates become physical Win32 client pixels for native docking.
+function n64DockRectFor(element: HTMLElement | null): N64DockRect | null {
+  if (!element) return null;
+  const bounds = element.getBoundingClientRect();
+  const scale = window.devicePixelRatio || 1;
+  const rect = {
+    x: Math.round(bounds.left * scale),
+    y: Math.round(bounds.top * scale),
+    width: Math.round(bounds.width * scale),
+    height: Math.round(bounds.height * scale),
+  };
+  return rect.width >= 64 && rect.height >= 64 ? rect : null;
+}
+
 function decodeBase64(value: string): Uint8Array {
   if (!value) return new Uint8Array();
   const binary = window.atob(value);
@@ -151,6 +171,7 @@ export function App() {
   const bus = useMemo(() => new ActionBus(), []);
   const native = isNativeShell();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const crtRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef(0);
   const runningRef = useRef(false);
   const gamepadRef = useRef<GameBoyButtonState>(emptyGameBoyButtons());
@@ -225,6 +246,8 @@ export function App() {
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
   const [coreFolderReport, setCoreFolderReport] = useState<CoreFolderImportReport | null>(null);
   const [n64LaunchPid, setN64LaunchPid] = useState<number | null>(null);
+  const [n64Docked, setN64Docked] = useState(false);
+  const [n64AutoDock, setN64AutoDock] = useState(false);
   const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
   const [registeredLaunchApproved, setRegisteredLaunchApproved] = useState(false);
   const [registeredLaunchBusy, setRegisteredLaunchBusy] = useState(false);
@@ -1522,7 +1545,9 @@ export function App() {
         setSettings(nextSettings);
         const result = await launchN64Bridge(retroarchPath, corePath, game.path);
         setN64LaunchPid(result.pid);
-        setNotice(`N64 EXTERNAL WINDOW LAUNCHED // ${game.displayName} // PID ${result.pid} // GAMEPAD & FULLSCREEN IN RETROARCH`);
+        setN64Docked(false);
+        setN64AutoDock(true);
+        setNotice(`N64 LAUNCHED // ${game.displayName} // AUTO-DOCKING RETROARCH INTO PHICADE CRT`);
       } catch (error) {
         setNotice(`N64 LAUNCH ERROR // ${String(error)}`);
       } finally {
@@ -1570,6 +1595,149 @@ export function App() {
     }
   };
 
+  // Docking is best-effort. The external RetroArch window remains playable if
+  // Windows rejects cross-process parenting (often DPI or graphics-related).
+  const dockN64Now = async () => {
+    const rect = n64DockRectFor(crtRef.current);
+    if (!rect) {
+      setNotice("N64 DOCK ERROR // CRT AREA NOT READY");
+      return;
+    }
+    try {
+      await dockN64Bridge(rect);
+      setN64AutoDock(false);
+      setN64Docked(true);
+      setNotice("N64 DOCKED // RETROARCH VULKAN VIDEO IN PHICADE // XBOX CONTROLLER THROUGH RETROARCH");
+    } catch (error) {
+      setNotice(`N64 DOCK ERROR // ${String(error)} // GAME STILL RUNS EXTERNALLY`);
+    }
+  };
+
+  const undockN64Now = async () => {
+    try {
+      setN64AutoDock(false);
+      await undockN64Bridge();
+      setN64Docked(false);
+      setNotice("N64 UNDOCKED // RETROARCH IS STILL RUNNING IN ITS OWN WINDOW");
+    } catch (error) {
+      setNotice(`N64 UNDOCK ERROR // ${String(error)}`);
+    }
+  };
+
+  const closeN64Now = async () => {
+    try {
+      setN64AutoDock(false);
+      await stopN64Bridge();
+      setN64Docked(false);
+      setN64LaunchPid(null);
+      if (arcadeMode) {
+        await getCurrentWindow().setFullscreen(false);
+        setArcadeMode(false);
+      }
+      setNotice("N64 CLOSE REQUESTED // RETROARCH MAY FLUSH SAVE DATA BEFORE EXITING");
+    } catch (error) {
+      setNotice(`N64 CLOSE ERROR // ${String(error)} // CLOSE RETROARCH DIRECTLY IF NECESSARY`);
+    }
+  };
+
+  // When the new N64 window appears, attach it to PhiCade automatically.
+  useEffect(() => {
+    if (!n64LaunchPid || !n64AutoDock || n64Docked) return;
+    let cancelled = false;
+    let retry = 0;
+    let attempts = 0;
+    const attempt = async () => {
+      if (cancelled) return;
+      const element = crtRef.current;
+      element?.scrollIntoView({ block: "center", inline: "nearest" });
+      const rect = n64DockRectFor(element);
+      if (rect) {
+        try {
+          await dockN64Bridge(rect);
+          if (!cancelled) {
+            setN64Docked(true);
+            setN64AutoDock(false);
+            setNotice("N64 DOCKED IN PHICADE // STAR FOX RENDERS VIA RETROARCH VULKAN");
+          }
+          return;
+        } catch (error) {
+          const isLoading = String(error).includes("N64_WINDOW_NOT_READY");
+          if (!isLoading) {
+            if (!cancelled) {
+              setN64AutoDock(false);
+              setNotice(`N64 DOCK UNAVAILABLE // ${String(error)} // EXTERNAL GAME STILL PLAYABLE`);
+            }
+            return;
+          }
+        }
+      }
+      attempts += 1;
+      if (attempts < 36) {
+        retry = window.setTimeout(() => { void attempt(); }, 250);
+      } else if (!cancelled) {
+        setN64AutoDock(false);
+        setNotice("N64 WINDOW NOT READY FOR DOCKING // GAME RUNS EXTERNALLY // RETRY WITH DOCK BUTTON");
+      }
+    };
+    retry = window.setTimeout(() => { void attempt(); }, 350);
+    return () => { cancelled = true; window.clearTimeout(retry); };
+  }, [n64LaunchPid, n64AutoDock, n64Docked]);
+
+  // A docked HWND must follow the CSS CRT panel when the layout scrolls,
+  // resizes, or switches to PhiCade's F11 arcade fullscreen layout.
+  useEffect(() => {
+    if (!n64Docked || !crtRef.current) return;
+    let animation = 0;
+    let syncing = false;
+    const sync = () => {
+      window.cancelAnimationFrame(animation);
+      animation = window.requestAnimationFrame(() => {
+        if (syncing) return;
+        const rect = n64DockRectFor(crtRef.current);
+        if (!rect) return;
+        syncing = true;
+        void resizeN64Dock(rect).catch((error) => {
+          void undockN64Bridge().catch(() => undefined);
+          setN64Docked(false);
+          setNotice(`N64 DOCK LOST // ${String(error)} // RETROARCH RETURNED TO EXTERNAL WINDOW`);
+        }).finally(() => { syncing = false; });
+      });
+    };
+    const observer = new ResizeObserver(sync);
+    observer.observe(crtRef.current);
+    window.addEventListener("resize", sync);
+    window.addEventListener("scroll", sync, true);
+    sync();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", sync, true);
+      window.cancelAnimationFrame(animation);
+    };
+  }, [n64Docked, arcadeMode]);
+
+  // Clear the dock indicator when the user closes RetroArch itself.
+  useEffect(() => {
+    if (n64LaunchPid === null) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await getN64BridgeStatus();
+        if (cancelled) return;
+        if (!status.running) {
+          setN64LaunchPid(null);
+          setN64Docked(false);
+          setN64AutoDock(false);
+          setNotice("N64 SESSION ENDED // PHICADE READY");
+        } else if (n64Docked && !status.docked) {
+          setN64Docked(false);
+        }
+      } catch { /* Keep the game undisturbed if a status probe fails. */ }
+    };
+    const timer = window.setInterval(() => { void poll(); }, 1500);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [n64LaunchPid, n64Docked]);
+
   const launchGame = async () => {
     if (!selectedGame) {
       setNotice("SELECT A GAME FROM THE LIBRARY FIRST");
@@ -1583,7 +1751,7 @@ export function App() {
       setNotice("FULLSCREEN REQUIRES THE TAURI DESKTOP SHELL");
       return;
     }
-    if (!running && !arcadeMode) {
+    if (!running && !n64Docked && !arcadeMode) {
       setNotice("START A GAME BEFORE ENTERING ARCADE FULLSCREEN");
       return;
     }
@@ -1609,7 +1777,7 @@ export function App() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [arcadeMode, running, native]);
+  }, [arcadeMode, running, n64Docked, native]);
 
   const launchRegisteredRuntime = async (mode: "launcher" | "file") => {
     if (!native) {
@@ -1922,10 +2090,10 @@ export function App() {
 
         <section className="screen-panel" aria-label="emulator display">
           <div className="bezel">
-            <div className="crt">
+            <div className="crt" ref={crtRef}>
               <canvas ref={canvasRef} className={`game-canvas ${running ? "visible" : ""}`} aria-label="emulator video" />
-              <div className="scanlines" />
-              {!running && (
+              {!n64Docked && <div className="scanlines" />}
+              {!running && !n64Docked && (
                 <div className="boot-copy">
                   <div className="phi-mark">Φ</div>
                   <h2>PHICADE</h2>
@@ -1937,10 +2105,12 @@ export function App() {
           </div>
 
           <div className="session-strip">
-            <button className="play-game" onClick={() => void launchGame()} disabled={running || launchBusy || registeredLaunchBusy || !native || !selectedGame}>{launchBusy ? "STARTING..." : "PLAY GAME"}</button>
-            <button onClick={stopGame} disabled={!running || replayRecording || autodrive?.active}>EJECT</button>
-            <button className="fullscreen-toggle" onClick={() => void toggleArcadeMode()} disabled={!running || !native}>{arcadeMode ? "EXIT FULLSCREEN (F11)" : "FULLSCREEN (F11)"}</button>
-            <span>{session ? `${session.core.libraryName} ${session.core.libraryVersion}` : selectedGame ? `${selectedGame.system} / ${selectedGame.displayName}` : "SELECT GAME TO PLAY"}</span>
+            <button className="play-game" onClick={() => void launchGame()} disabled={running || n64LaunchPid !== null || launchBusy || registeredLaunchBusy || !native || !selectedGame}>{launchBusy ? "STARTING..." : "PLAY GAME"}</button>
+            <button onClick={n64LaunchPid !== null && !running ? () => { void closeN64Now(); } : stopGame} disabled={n64LaunchPid !== null ? launchBusy : !running || replayRecording || autodrive?.active}>{n64LaunchPid !== null && !running ? "CLOSE N64" : "EJECT"}</button>
+            {n64LaunchPid !== null && !n64Docked && <button onClick={() => void dockN64Now()} disabled={n64AutoDock}>DOCK N64 TO CRT</button>}
+            {n64Docked && <button onClick={() => void undockN64Now()}>UNDOCK N64</button>}
+            <button className="fullscreen-toggle" onClick={() => void toggleArcadeMode()} disabled={(!running && !n64Docked) || !native}>{arcadeMode ? "EXIT FULLSCREEN (F11)" : "FULLSCREEN (F11)"}</button>
+            <span>{n64Docked ? "N64 // RETROARCH VULKAN DOCKED" : n64LaunchPid !== null ? "N64 // EXTERNAL RETROARCH GAME" : session ? `${session.core.libraryName} ${session.core.libraryVersion}` : selectedGame ? `${selectedGame.system} / ${selectedGame.displayName}` : "SELECT GAME TO PLAY"}</span>
           </div>
 
           <div className="agent-strip">
