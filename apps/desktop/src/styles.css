@@ -1167,3 +1167,88 @@ button:focus-visible, select:focus-visible {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
+
+
+/* Arcade-first controls and a native Tauri fullscreen theater. */
+.game-row:disabled { opacity: .55; }
+.session-strip { grid-template-columns: auto auto auto minmax(0,1fr); }
+.session-strip .play-game { color: var(--green); border-color: #436f50; font-weight: 700; }
+.session-strip .play-game:hover:not(:disabled) { background: #12301b; }
+.session-strip .fullscreen-toggle { color: var(--ink); }
+@media (max-width: 650px) {
+  .session-strip { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .session-strip span { grid-column: 1 / -1; }
+}
+.shell.arcade-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #010302;
+}
+.arcade-mode .masthead,
+.arcade-mode .notice-bar,
+.arcade-mode .system-tabs,
+.arcade-mode .library-panel,
+.arcade-mode .telemetry-panel,
+.arcade-mode .milestone-grid,
+.arcade-mode footer { display: none !important; }
+.arcade-mode .console-grid {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  gap: 0;
+}
+.arcade-mode .screen-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: none;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+.arcade-mode .screen-panel > :not(.bezel):not(.session-strip) { display: none !important; }
+.arcade-mode .screen-panel .bezel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  width: min(100vw, calc(100dvh * 4 / 3));
+  height: min(100dvh, calc(100vw * 3 / 4));
+  flex: 0 0 auto;
+}
+.arcade-mode .screen-panel .crt {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+.arcade-mode .session-strip {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  padding: 0;
+  background: rgba(3,7,4,.75);
+  opacity: .75;
+  transition: opacity .15s;
+}
+.arcade-mode .session-strip:hover,
+.arcade-mode .session-strip:focus-within { opacity: 1; }
+.arcade-mode .session-strip > :not(.fullscreen-toggle) { display: none; }
+.arcade-mode .session-strip .fullscreen-toggle { background: #0b130d; color: #d7f9df; }
