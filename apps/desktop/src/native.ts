@@ -71,6 +71,13 @@ export interface RuntimeRegistrationReceipt {
   authorityGranted: boolean;
 }
 
+export interface CoreFolderImportReport {
+  examined: number;
+  candidates: number;
+  registered: RuntimeRegistrationReceipt[];
+  skipped: string[];
+}
+
 export interface RuntimeSessionFeatures {
   stateSnapshots: boolean;
   exactReplay: boolean;
@@ -863,6 +870,16 @@ export async function selectLibretroCore(): Promise<string | null> {
   return typeof selected === "string" ? selected : null;
 }
 
+export async function selectLibretroCoreDirectory(): Promise<string | null> {
+  if (!isNativeShell()) return null;
+  const selected = await open({
+    directory: true,
+    multiple: false,
+    title: "Select folder of extracted Libretro cores",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
 export async function selectRuntimeContent(): Promise<string | null> {
   if (!isNativeShell()) return null;
   const selected = await open({
@@ -875,6 +892,10 @@ export async function selectRuntimeContent(): Promise<string | null> {
 
 export async function registerRuntimeCore(corePath: string): Promise<RuntimeRegistrationReceipt> {
   return invoke<RuntimeRegistrationReceipt>("register_runtime_core", { corePath });
+}
+
+export async function importRuntimeCoreFolder(folderPath: string): Promise<CoreFolderImportReport> {
+  return invoke<CoreFolderImportReport>("import_runtime_core_folder", { folderPath });
 }
 
 export async function listRuntimeRegistrations(): Promise<RuntimeRegistrationReceipt[]> {
