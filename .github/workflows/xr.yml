@@ -39,6 +39,40 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - run: rustfmt --edition 2021 --check crates/phicade-xr-protocol/src/lib.rs
-      - run: cargo clippy -p phicade-xr-protocol --all-targets --no-deps -- -D warnings
-      - run: cargo test -p phicade-xr-protocol -p phicade-runtime -p phicade-libretro --all-targets
+      - run: rustfmt --edition 2021 --check crates/phicade-xr-protocol/src/lib.rs crates/phicade-xr-bridge/src/lib.rs crates/phicade-libretro/src/lightgun.rs crates/phicade-libretro/src/bin/xr_lightgun_qualify.rs src-tauri/src/xr_host.rs src-tauri/src/dolphinxr.rs
+      - run: cargo clippy -p phicade-xr-protocol -p phicade-xr-bridge --all-targets --no-deps -- -D warnings
+      - run: cargo test -p phicade-xr-protocol -p phicade-xr-bridge -p phicade-runtime -p phicade-libretro --all-targets
+      - run: python scripts/check-xr-rust-dependencies.py
+      - run: bash scripts/qualify-xr.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xr-native-lightgun-evidence
+          path: artifacts/xr-lightgun-qualification.json
+  windows-xr:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run tauri -- icon src-tauri/icons/icon.png
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
+      - run: cargo test -p phicade-xr-protocol -p phicade-xr-bridge --all-targets
+      - name: Build original MIT lightgun demo core
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          cl /nologo /std:c11 /LD xr\fixtures\photon-range-core.c /Fe:artifacts\photon_range_libretro.dll
+      - run: cargo run -p phicade-libretro --bin xr_lightgun_qualify -- artifacts/photon_range_libretro.dll | Out-File -Encoding utf8 artifacts/xr-lightgun-windows-qualification.json
+      - run: Get-FileHash artifacts/photon_range_libretro.dll -Algorithm SHA256 | Format-List | Out-File artifacts/xr-homebrew-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xr-original-homebrew-windows
+          path: |
+            artifacts/photon_range_libretro.dll
+            artifacts/xr-lightgun-windows-qualification.json
+            artifacts/xr-homebrew-sha256.txt

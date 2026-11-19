@@ -37,6 +37,8 @@ use std::{
 use tauri::{AppHandle, Manager, State};
 
 mod evidence_bundle;
+mod xr_host;
+mod dolphinxr;
 #[cfg(target_os = "windows")]
 mod n64_dock;
 pub mod providers;
@@ -604,6 +606,7 @@ struct SuiteCohortEvidence {
 
 struct EmulatorSession {
     core: LibretroCore,
+    xr_gateway: phicade_xr_protocol::XrGateway,
     runtime_features: RuntimeSessionFeatures,
     game_path: String,
     game_key: String,
@@ -1818,6 +1821,7 @@ fn start_registered_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        xr_gateway: phicade_xr_protocol::XrGateway::default(),
         runtime_features: runtime_features.clone(),
         game_path,
         game_key,
@@ -2735,6 +2739,7 @@ fn start_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        xr_gateway: phicade_xr_protocol::XrGateway::default(),
         runtime_features: runtime_features.clone(),
         game_path: info.game_path.clone(),
         game_key,
@@ -2918,6 +2923,8 @@ fn set_control_mode(
     };
 
     session.authority.set_mode(mode, grant)?;
+    session.xr_gateway.revoke();
+    session.core.neutralize_inputs();
     session.pending_agent_turn = None;
     session.agent_inbox.clear();
     session.agent_memory = AgentMemoryState::new();
@@ -5714,6 +5721,7 @@ fn step_emulation(
     }
 
     let mut incoming_actions = actions;
+    incoming_actions.extend(session.xr_gateway.drain(authority_frame, xr_host::now_ms()));
 
     while session
         .agent_inbox
@@ -6183,6 +6191,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(EmulatorState::default())
         .manage(N64BridgeState::default())
+        .manage(dolphinxr::DolphinXrState::default())
         .plugin(tauri_plugin_dialog::init())
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::CloseRequested { .. }) {
@@ -6196,6 +6205,12 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            xr_host::xr_open_host,
+            xr_host::xr_submit_input,
+            xr_host::xr_revoke_host,
+            dolphinxr::inspect_dolphinxr,
+            dolphinxr::launch_dolphinxr,
+            dolphinxr::dolphinxr_status,
             load_settings,
             save_settings,
             register_runtime_core,

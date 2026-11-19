@@ -64,3 +64,94 @@ cargo test -p phicade-runtime -p phicade-libretro -p phicade-xr-protocol --all-t
 
 See XR_ARCHITECTURE.md, XR_COMPATIBILITY.md and XR_TEST_REPORT.md for the native
 bridge, external runtime integration and evidence limits as those phases land.
+
+## Play a native PC game on the paired screen
+
+1. Build/run the desktop application as usual (`npm run desktop`). Register a
+   trusted libretro core and launch your own game through PhiCade's existing Play
+   approval. GPU-only external N64 windows are not part of this canvas stream.
+2. Open **XR HOST** above the desktop CRT. Choose controller or spectator. Only
+   enable the light-gun device for a core/profile you are deliberately testing.
+3. Select capture width, FPS and bitrate. Click **APPROVE XR SESSION + CREATE
+   OFFER**. This grants input to this exact running session; registration is not
+   a permanent input grant.
+4. In the headset's HTTPS arcade, open the connection panel, paste the offer and
+   click Create answer. Paste the answer into the PC and Accept paired headset.
+5. Select **YOUR PHICADE**, then its theater or cabinet screen. Enable stream audio
+   if the browser pauses playback. For gamepad mode: right face buttons A/B, left
+   face buttons X/Y, left stick as D-pad and analog, right stick as analog,
+   right stick click Start, left stick click Select, triggers L2/R2 and grips L/R.
+6. Revoke from the PC to stop input and release held controls. A stalled input
+   stream releases after 300 ms. Failure/sleep/relaunch needs a fresh offer and
+   answer. A control-mode change revokes the native XR grant.
+
+Keep the headset and PC on the same reachable LAN; guest-network client isolation
+can prevent connection. Use the PC firewall's normal application permissions; do
+not expose a privileged port or forward emulator controls to the internet. The
+prototype has no public signaling/STUN/TURN service. An HTTPS arcade page can
+carry a paired WebRTC stream without exposing Tauri commands as network routes.
+
+Windows WebView2 canvas capture, audio and Quest browser interoperability still
+need field qualification. The completed browser tests cover Linux Chromium peers,
+not that Windows/headset combination. Only the current locally launched game is
+shared; the peer cannot browse local paths or launch arbitrary content.
+
+## Native original light-gun demo
+
+On Linux/macOS with a C compiler and Rust:
+
+```sh
+bash scripts/qualify-xr.sh
+```
+
+This compiles an original no-content core, runs the native qualifier and writes
+`artifacts/xr-lightgun-qualification.json`. On macOS change the output library
+extension/flags if required by your compiler. On Windows, use a Visual Studio
+Developer Command Prompt:
+
+```bat
+mkdir artifacts
+cl /nologo /std:c11 /LD xr\fixtures\photon-range-core.c /Fe:artifacts\photon_range_libretro.dll
+cargo run -p phicade-libretro --bin xr_lightgun_qualify -- artifacts/photon_range_libretro.dll
+```
+
+The Windows XR workflow also builds this original DLL and publishes its SHA-256
+as an artifact. Register the DLL in PhiCade, approve **RUN LAUNCHER** (no game file),
+then pair XR Host with light-gun enabled. Aim at the center ring. Offscreen trigger
+or reload should restore the magazine; the rendered score bar grows on a hit.
+The browser demo has optional swing/shake reload gestures and two independent
+magazines. Native host port 2 and commercial gun-game profiles remain unqualified.
+
+## DolphinXR Wii/GameCube path
+
+Obtain a portable OpenXR-enabled DolphinXR installation yourself from its official
+project, retaining its notices and source information. In the desktop:
+
+1. Open **DOLPHINXR** and select its executable. Keep its `Sys` directory beside
+   it, including `Profiles/Wiimote/OpenXR Wii Remote.ini` and/or
+   `Profiles/GCPad/Quest Touch GameCube.ini`.
+2. Review the executable hash and available profile. Pick your own Wii/GameCube
+   disc dump or original homebrew `.dol`/`.elf`.
+3. Choose Wii Remote + Nunchuk or GameCube Touch, handedness, bounded scale/motion
+   pitch and optional spatial screen/passthrough. Confirm that this is an
+   OpenXR-enabled build, then approve this specific launch.
+4. Exit browser VR before starting native OpenXR. Ensure your normal Meta Link,
+   SteamVR or other supported OpenXR runtime is active and the Quest is connected.
+5. Verify the actual native session, pointer, motion, sticks and buttons. Adjust
+   game-specific swing/shake/pointer bindings in DolphinXR's own controls UI. Each
+   game/profile has an isolated PhiCade user directory shown in the launch notice;
+   later manual edits are preserved. Close and save through DolphinXR itself.
+
+An installation/profile hash check is not hardware or game qualification. If a
+profile is absent, the binary changes, or a setting is invalid, launch is refused.
+No game is listed as tested until real runtime evidence exists. The browser motion
+adapter is separately tested and does not inject poses into DolphinXR.
+
+## Production packaging
+
+`npm run xr:build` outputs a standalone static site in `apps/xr/dist`, with relative
+asset URLs so it can live in a subdirectory. The existing GitHub Pages workflow
+also packages it under `xr/` alongside the Xbox gateway **after these changes are
+merged to main by the owner**. No main-branch merge or production deployment is
+performed by these PRs. The XR CI artifact includes the built site, browser report
+and screenshots for pre-merge review.

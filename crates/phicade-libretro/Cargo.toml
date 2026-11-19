@@ -9,6 +9,7 @@ description = "Minimal governed libretro host for PhiCade"
 base64 = "0.22"
 libloading = "0.8"
 phicade-runtime = { path = "../phicade-runtime" }
+phicade-xr-protocol = { path = "../phicade-xr-protocol" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"

@@ -21,6 +21,8 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 sha2 = "0.10"
 phicade-libretro = { path = "../crates/phicade-libretro" }
 phicade-runtime = { path = "../crates/phicade-runtime" }
+phicade-xr-protocol = { path = "../crates/phicade-xr-protocol" }
+phicade-xr-bridge = { path = "../crates/phicade-xr-bridge" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }

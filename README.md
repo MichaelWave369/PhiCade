@@ -11,6 +11,14 @@ PhiCade keeps runtime capabilities, model identity, benchmark conditions, and
 available replay evidence explicit instead of assuming every controller or core
 deserves the same powers.
 
+**XR prototype:** Run `npm ci && npm run xr` for a separate WebXR arcade with
+original light-gun and WorldWalk games. The desktop XR Host can pair a live
+software-frame session with one browser/headset; DolphinXR uses a separate,
+operator-approved external OpenXR path. See [XR Quickstart](docs/XR_QUICKSTART.md),
+[architecture](docs/XR_ARCHITECTURE.md), [compatibility](docs/XR_COMPATIBILITY.md),
+and [test evidence](docs/XR_TEST_REPORT.md). Quest and Windows streaming field
+qualification remain pending; commercial-title compatibility is unverified.
+
 **Xbox browser preview (Rung 59):** The [PhiCade Xbox Edition](docs/XBOX_EDITION.md)
 is a separate controller-oriented, static web launcher in `xbox/`.
 It exposes curated portal links only. Xbox hardware/controller qualification,

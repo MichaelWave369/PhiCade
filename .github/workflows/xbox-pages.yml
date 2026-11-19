@@ -4,11 +4,17 @@ on:
   pull_request:
     paths:
       - "xbox/**"
+      - "apps/xr/**"
+      - "xr/**"
+      - "package*.json"
       - ".github/workflows/xbox-pages.yml"
   push:
     branches: [main]
     paths:
       - "xbox/**"
+      - "apps/xr/**"
+      - "xr/**"
+      - "package*.json"
       - ".github/workflows/xbox-pages.yml"
   workflow_dispatch:
 
@@ -59,10 +65,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run xr:build
       - name: Prepare public site (no tests or runtime assets)
         run: |
           mkdir -p _xbox_site
           cp xbox/index.html xbox/styles.css xbox/app.mjs xbox/navigation.mjs _xbox_site/
+          mkdir -p _xbox_site/xr
+          cp -R apps/xr/dist/. _xbox_site/xr/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

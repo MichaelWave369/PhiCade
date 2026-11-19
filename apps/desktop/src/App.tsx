@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { XrHostPanel } from "./XrHostPanel";
+import { DolphinXrPanel } from "./DolphinXrPanel";
 import { ActionBus, type ActionSource, type GameAction } from "./actionBus";
 import {
   diffGameBoyButtons,
@@ -176,6 +178,7 @@ export function App() {
   const runningRef = useRef(false);
   const gamepadRef = useRef<GameBoyButtonState>(emptyGameBoyButtons());
   const audioContextRef = useRef<AudioContext | null>(null);
+  const xrAudioStreamRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const nextAudioTimeRef = useRef(0);
   const providerBusyRef = useRef(false);
   const launchBusyRef = useRef(false);
@@ -335,6 +338,7 @@ export function App() {
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);
+    if (xrAudioStreamRef.current) source.connect(xrAudioStreamRef.current);
     const startAt = Math.max(context.currentTime + AUDIO_START_LEAD_SECONDS, nextAudioTimeRef.current);
     source.start(startAt);
     nextAudioTimeRef.current = startAt + buffer.duration;
@@ -2141,6 +2145,8 @@ export function App() {
         </aside>
 
         <section className="screen-panel" aria-label="emulator display">
+          {native && <DolphinXrPanel />}
+          {native && <XrHostPanel canvasRef={canvasRef} audioContextRef={audioContextRef} audioStreamRef={xrAudioStreamRef} running={running} sessionKey={session?.gameKey ?? null} />}
           <div className="bezel">
             <div className="crt" ref={crtRef}>
               <canvas ref={canvasRef} className={`game-canvas ${running ? "visible" : ""}`} aria-label="emulator video" />
