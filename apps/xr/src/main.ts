@@ -603,6 +603,21 @@ function keyEvent(e: KeyboardEvent, pressed: boolean) {
   }
   if (pressed) keys.add(e.key.toLowerCase());
   else keys.delete(e.key.toLowerCase());
+  if (
+    active === 1 &&
+    worldMode === "first" &&
+    localOwnsDemo &&
+    pressed &&
+    !e.repeat
+  ) {
+    const moves: Record<string, [number, number]> = {
+      w: [0, -1],
+      s: [0, 1],
+      a: [-1, 0],
+      d: [1, 0],
+    };
+    if (moves[e.key.toLowerCase()]) world.move(...moves[e.key.toLowerCase()]);
+  }
   if (pressed && e.key.toLowerCase() === "r") range.reload();
 }
 window.addEventListener("keydown", (e) => keyEvent(e, true));
@@ -1238,6 +1253,7 @@ renderer.setAnimationLoop((time, frame) => {
   }
   if (active === 1 && worldMode === "first") {
     rig.position.set(world.x - 5, 0, world.z - 4);
+    if (!renderer.xr.isPresenting) camera.position.set(0, 1.5, 0);
     if (!Number.isFinite(rig.position.x)) {
       worldMode = "screen";
       recenter();
