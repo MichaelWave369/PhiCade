@@ -290,9 +290,10 @@ mod tests {
             &options(),
         )
         .unwrap();
+        let canonical_game = fs::canonicalize(&game).unwrap();
         assert!(plan
             .arguments
-            .contains(&game.to_string_lossy().into_owned()));
+            .contains(&canonical_game.to_string_lossy().into_owned()));
         assert!(plan
             .arguments
             .contains(&"Graphics.VR.AgentServer=False".into()));

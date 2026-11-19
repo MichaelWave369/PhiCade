@@ -29,6 +29,12 @@ target hit over WebRTC and to check host spectator input ownership. The existing
 the original homebrew DLL and runs the same ABI qualifier. The run/commit evidence is tracked on its integration PR;
 pending jobs are not counted as passes.
 
+The enhanced browser suite passed on integration commit `e1bf0f13`:
+[XR run 44628110406](https://github.com/MichaelWave369/PhiCade/actions/runs/44628110406),
+job `135927215399`. It verifies a guest-fired target hit over the real WebRTC
+data channel and confirms the local host cannot fire while spectating. Later
+first-person camera/input refinements remain subject to current-head checks.
+
 The existing Windows N64 job also compiled the entire modified Tauri shell at
 integration commit `e1bf0f13e2fea48909479940e99f7dc6cd3c0c46` and passed its N64
 regression tests: [CI run 44628110450](https://github.com/MichaelWave369/PhiCade/actions/runs/44628110450),
@@ -88,3 +94,10 @@ A runner/Playwright mismatch affected the intermediate `01eebdc` browser job:
 Playwright 1.56 did not support the runner's Ubuntu 26.04. Head `532f0c6` restores
 Playwright 1.65.1, the version from the successful earlier browser run. No failed
 installation is reported as a browser-test pass.
+
+The first Windows XR contract run found one assertion using a noncanonical
+fixture path while the launch plan correctly returned a canonical Windows path.
+The assertion now canonicalizes its expected path, including Windows extended
+path prefixes. The actual process argument remains a single canonical file path;
+no shell quoting or input policy was relaxed. The Windows rerun is tracked on
+PR #66 and is not counted as passed before completion.
