@@ -2418,6 +2418,8 @@ dependencies = [
  "hex",
  "phicade-libretro",
  "phicade-runtime",
+ "phicade-xr-bridge",
+ "phicade-xr-protocol",
  "png 0.17.16",
  "reqwest 0.12.28",
  "serde",
@@ -2437,6 +2439,7 @@ dependencies = [
  "hex",
  "libloading 0.8.9",
  "phicade-runtime",
+ "phicade-xr-protocol",
  "serde",
  "serde_json",
  "sha2 0.10.9",
@@ -2448,6 +2451,15 @@ version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "phicade-xr-bridge"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "sha2 0.10.9",
 ]
 
 [[package]]

@@ -22,6 +22,10 @@ test("desktop arcade renders, shoots a target and reconstructs the canonical til
   await expect(page.locator("#game-title")).toHaveText("HOLLER CIRCUIT");
   await page.screenshot({ path: "artifacts/xr-worldwalk-diorama.png" });
   await page.locator("#world-mode").selectOption("first");
+  await page.locator("#scene canvas").focus();
+  await page.keyboard.press("a");
+  await page.keyboard.press("a");
+  await expect(page.locator("#score")).toContainText("2 STEPS");
   await page.getByRole("button", { name: "Recenter" }).click();
   await page.getByRole("button", { name: "Mixed reality" }).click();
   await expect(page.locator("#status")).toContainText(

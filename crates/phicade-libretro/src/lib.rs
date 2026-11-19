@@ -1,4 +1,5 @@
 use libloading::Library;
+pub mod lightgun;
 use phicade_runtime::{
     ActionEnvelope, ActionKind, AudioBuffer, CapabilityStatus, ContentDescriptor, ContentLocator,
     CoreError, EmulatorCore, FrameBuffer, GameImage, RuntimeCapabilities,
@@ -26,6 +27,7 @@ pub const SCUMMVM_QUALIFICATION_PROFILE_ID: &str =
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
 const RETRO_DEVICE_ANALOG: c_uint = 5;
+const RETRO_DEVICE_LIGHTGUN: c_uint = 4;
 const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
 
 const B: c_uint = 0;
@@ -99,6 +101,7 @@ struct CallbackState {
     audio: Vec<i16>,
     input_mask: u16,
     analog_inputs: [i16; 4],
+    lightgun: lightgun::LightGunState,
     support_no_game: bool,
     core_path: CString,
     system_dir: CString,
@@ -115,6 +118,7 @@ impl Default for CallbackState {
             audio: Vec::new(),
             input_mask: 0,
             analog_inputs: [0; 4],
+            lightgun: lightgun::LightGunState::default(),
             support_no_game: false,
             core_path: CString::new(".").unwrap(),
             system_dir: CString::new(".").unwrap(),
@@ -208,6 +212,7 @@ type RetroLoadGame = unsafe extern "C" fn(*const RetroGameInfo) -> bool;
 type RetroUnloadGame = unsafe extern "C" fn();
 type RetroReset = unsafe extern "C" fn();
 type RetroRun = unsafe extern "C" fn();
+type RetroSetControllerPortDevice = unsafe extern "C" fn(c_uint, c_uint);
 type RetroSerializeSize = unsafe extern "C" fn() -> usize;
 type RetroSerialize = unsafe extern "C" fn(*mut c_void, usize) -> bool;
 type RetroUnserialize = unsafe extern "C" fn(*const c_void, usize) -> bool;
@@ -297,6 +302,7 @@ pub struct LibretroCore {
     load_game_fn: RetroLoadGame,
     reset_fn: RetroReset,
     run_fn: RetroRun,
+    set_controller_fn: Option<RetroSetControllerPortDevice>,
     serialize_size_fn: RetroSerializeSize,
     serialize_fn: RetroSerialize,
     unserialize_fn: RetroUnserialize,
@@ -340,6 +346,7 @@ impl LibretroCore {
             let unload_game: RetroUnloadGame = load_symbol(&library, b"retro_unload_game\0")?;
             let reset_fn: RetroReset = load_symbol(&library, b"retro_reset\0")?;
             let run_fn: RetroRun = load_symbol(&library, b"retro_run\0")?;
+            let set_controller_fn = load_symbol(&library, b"retro_set_controller_port_device\0").ok();
             let serialize_size_fn: RetroSerializeSize = load_symbol(&library, b"retro_serialize_size\0")?;
             let serialize_fn: RetroSerialize = load_symbol(&library, b"retro_serialize\0")?;
             let unserialize_fn: RetroUnserialize = load_symbol(&library, b"retro_unserialize\0")?;
@@ -354,6 +361,7 @@ impl LibretroCore {
                 state.audio.clear();
                 state.input_mask = 0;
                 state.analog_inputs = [0; 4];
+            state.lightgun = lightgun::LightGunState::default();
                 state.support_no_game = false;
                 state.core_path = path_cstring(&core_path)?;
                 state.variables.clear();
@@ -391,6 +399,7 @@ impl LibretroCore {
                 load_game_fn,
                 reset_fn,
                 run_fn,
+                set_controller_fn,
                 serialize_size_fn,
                 serialize_fn,
                 unserialize_fn,
@@ -406,6 +415,21 @@ impl LibretroCore {
     }
 
     pub fn identity(&self) -> &CoreIdentity { &self.identity }
+
+    /// Explicit local operator selection; device capability is not a commercial-game claim.
+    pub fn configure_lightgun(&mut self, enabled: bool) -> Result<(), CoreError> {
+        let set = self.set_controller_fn.ok_or_else(|| CoreError::Runtime("core does not export controller device selection".into()))?;
+        self.neutralize_inputs();
+        unsafe {set(0, if enabled {RETRO_DEVICE_LIGHTGUN} else {RETRO_DEVICE_JOYPAD})};
+        Ok(())
+    }
+
+    pub fn neutralize_inputs(&mut self) {
+        self.input_mask=0;
+        if let Ok(mut state)=callbacks().lock() {
+            state.input_mask=0;state.analog_inputs=[0;4];state.lightgun=lightgun::LightGunState::default();
+        }
+    }
     pub fn core_path(&self) -> &Path { &self.core_path }
     pub fn frame_count(&self) -> u64 { self.frame }
     pub fn shutdown_requested(&self) -> bool {
@@ -474,6 +498,7 @@ impl LibretroCore {
         if let Ok(mut state) = callbacks().lock() {
             state.input_mask = 0;
             state.analog_inputs = [0; 4];
+            state.lightgun = lightgun::LightGunState::default();
             state.audio.clear();
         }
         Ok(())
@@ -539,6 +564,7 @@ impl LibretroCore {
         if let Ok(mut state) = callbacks().lock() {
             state.input_mask = 0;
             state.analog_inputs = [0; 4];
+            state.lightgun = lightgun::LightGunState::default();
             state.audio.clear();
             state.video = RawVideo::default();
         }
@@ -583,6 +609,7 @@ impl LibretroCore {
         if let Ok(mut state) = callbacks().lock() {
             state.input_mask = 0;
             state.analog_inputs = [0; 4];
+            state.lightgun = lightgun::LightGunState::default();
             state.audio.clear();
             state.video = RawVideo::default();
         }
@@ -595,6 +622,7 @@ impl LibretroCore {
     fn apply_actions(&mut self, actions: &[ActionEnvelope]) -> Result<(), CoreError> {
         for event in actions {
             event.validate().map_err(CoreError::InvalidState)?;
+            if let Ok(mut state)=callbacks().lock() {state.lightgun.apply(&event.action);}
             match &event.action {
                 ActionKind::Button { button, pressed } => {
                     if let Some(id) = button_id(button) {
@@ -661,7 +689,8 @@ impl EmulatorCore for LibretroCore {
             state.audio.clear();
         }
         unsafe { (self.run_fn)() };
-        let state = callbacks().lock().map_err(|_| CoreError::Runtime("callback state poisoned".into()))?;
+        let mut state = callbacks().lock().map_err(|_| CoreError::Runtime("callback state poisoned".into()))?;
+        state.lightgun.finish_frame();
         *video = convert_video(&state.video, state.format)?;
         audio.sample_rate_hz = self.identity.sample_rate_hz;
         audio.interleaved_stereo_f32 = state.audio.iter().map(|s| *s as f32 / 32768.0).collect();
@@ -870,6 +899,7 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
             (ANALOG_RIGHT, ANALOG_Y) => state.analog_inputs[3],
             _ => 0,
         },
+        RETRO_DEVICE_LIGHTGUN => state.lightgun.input(id),
         _ => 0,
     }
 }

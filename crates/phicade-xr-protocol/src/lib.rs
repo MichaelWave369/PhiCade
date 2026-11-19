@@ -55,7 +55,7 @@ impl XrAction {
         match self {
             Self::Button { button, .. } => Self::Button {
                 button: button.clone(),
-                pressed: false,
+                pressed: button == "GUN_OFFSCREEN",
             },
             Self::Axis { axis, .. } => Self::Axis {
                 axis: axis.clone(),
@@ -266,6 +266,16 @@ mod tests {
             ActionKind::Button { pressed: false, .. }
         ));
         assert!(g.drain(3, 412).is_empty());
+        g.approve("quest".into(), "a".repeat(48), true, 500)
+            .unwrap();
+        let mut p = packet(1);
+        p.actions = vec![XrAction::Button {
+            button: "GUN_OFFSCREEN".into(),
+            pressed: false,
+        }];
+        g.submit("quest", &"a".repeat(48), p, 500).unwrap();
+        g.drain(4, 500);
+        assert!(g.drain(5,801).iter().any(|e|matches!(&e.action,ActionKind::Button{button,pressed:true} if button=="GUN_OFFSCREEN")));
     }
     #[test]
     fn expires_and_does_not_accept_system_or_source_spoofing() {
