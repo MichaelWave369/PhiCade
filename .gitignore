@@ -13,3 +13,6 @@ states/
 screenshots/
 .qualification/
 artifacts/
+*.tsbuildinfo
+playwright-report/
+test-results/

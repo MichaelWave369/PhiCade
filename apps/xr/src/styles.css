@@ -1,0 +1,479 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #e5efed;
+  background: #080e18;
+  font-synthesis: none;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+button,
+summary {
+  cursor: pointer;
+}
+button {
+  color: inherit;
+  background: #132129;
+  border: 1px solid #334442;
+  border-radius: 5px;
+  padding: 11px 14px;
+  transition:
+    background 0.18s,
+    transform 0.18s;
+}
+button:hover {
+  background: #233d3e;
+  border-color: #69e7c2;
+}
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #9bf2bd;
+  outline-offset: 3px;
+}
+.primary {
+  background: #c6f572;
+  color: #10251d;
+  border-color: #c6f572;
+  font-weight: 700;
+}
+.primary:hover {
+  background: #dcff9b;
+  color: #10251d;
+}
+button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+#scene {
+  position: fixed;
+  inset: 0;
+}
+#scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(7, 14, 22, 0.83), transparent 53%),
+    linear-gradient(0deg, rgba(7, 14, 22, 0.93), transparent 23%);
+}
+#ui > * {
+  pointer-events: auto;
+}
+header {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  padding: 0 46px;
+  gap: 36px;
+  border-bottom: 1px solid #d6f4e114;
+}
+.brand {
+  text-decoration: none;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 1px;
+  color: #e3f2e6;
+  white-space: nowrap;
+}
+.brand > span {
+  color: #c6f572;
+  font-size: 36px;
+  margin-right: 3px;
+}
+.brand b {
+  font-size: 12px;
+  color: #c6f572;
+  vertical-align: top;
+  border: 1px solid #789259;
+  padding: 3px;
+  margin-left: 6px;
+}
+.eyebrow {
+  font-family: "Space Grotesk", sans-serif;
+  letter-spacing: 2px;
+  font-size: 10px;
+  color: #99b0a8;
+}
+header .eyebrow {
+  flex: 1;
+}
+.badge {
+  border: 1px solid #52685c;
+  padding: 8px 12px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #c6f572;
+}
+.intro {
+  position: absolute;
+  top: 131px;
+  left: 46px;
+  pointer-events: none !important;
+}
+h1 {
+  font-family: "Space Grotesk", sans-serif;
+  letter-spacing: -1.5px;
+  font-size: 42px;
+  line-height: 1.1;
+  margin: 16px 0;
+}
+h1 span {
+  color: #c6f572;
+}
+.intro p {
+  font-size: 13px;
+  color: #9bb1a9;
+}
+.enter {
+  position: absolute;
+  top: 307px;
+  left: 46px;
+  display: flex;
+  gap: 8px;
+}
+.enter .primary {
+  min-width: 130px;
+  display: flex;
+  justify-content: space-between;
+}
+.drawer {
+  position: absolute;
+  left: 46px;
+  top: 374px;
+  width: 334px;
+  max-height: calc(100vh - 494px);
+  overflow: auto;
+  padding-right: 7px;
+  scrollbar-width: thin;
+  scrollbar-color: #3c5a50 transparent;
+}
+.section-label {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #829e93;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 13px;
+}
+.section-label:not(:first-child) {
+  margin-top: 25px;
+}
+.game {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  padding: 14px 9px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  gap: 13px;
+}
+.game .number {
+  font-family: "Space Grotesk";
+  color: #6e8981;
+  font-size: 12px;
+}
+.game b {
+  display: block;
+  font-family: "Space Grotesk";
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.game small {
+  display: block;
+  font-size: 11px;
+  color: #8eaaa0;
+  margin-top: 5px;
+}
+.game > span:last-child {
+  margin-left: auto;
+}
+.game.selected {
+  background: #c6f57210;
+  border-left: 2px solid #c6f572;
+}
+.game.selected .number,
+.game.selected b {
+  color: #c6f572;
+}
+.options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.options label,
+.scale,
+details label {
+  font-size: 11px;
+  color: #a4b9ae;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+select {
+  background: #142128;
+  color: #d9e9e0;
+  border: 1px solid #31483e;
+  border-radius: 3px;
+  width: 100%;
+  padding: 8px;
+  font-size: 10px;
+}
+.toggles {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #a4b9ae;
+  margin-top: 16px;
+}
+.toggles label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+input {
+  accent-color: #c6f572;
+}
+.tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 16px 0;
+}
+.tools button {
+  font-size: 11px;
+}
+.scale {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.scale input {
+  width: 180px;
+}
+details {
+  border-top: 1px solid #2b4039;
+  margin: 22px 0;
+  padding: 15px 0;
+  color: #a4b9ae;
+  font-size: 12px;
+}
+summary {
+  font-size: 12px;
+  list-style: none;
+  color: #d2e1d8;
+}
+summary span {
+  float: right;
+}
+details p {
+  font-size: 11px;
+  line-height: 1.7;
+}
+textarea {
+  width: 100%;
+  height: 75px;
+  background: #0c171e;
+  border: 1px solid #3b5348;
+  color: #cce2d5;
+  resize: vertical;
+  font-size: 10px;
+  border-radius: 3px;
+  padding: 8px;
+}
+details button {
+  margin: 8px 4px 12px 0;
+  font-size: 11px;
+}
+hr {
+  border: 0;
+  border-top: 1px solid #33483e;
+}
+.toast {
+  position: absolute;
+  bottom: 118px;
+  left: 50%;
+  transform: translateX(-30%);
+  max-width: 650px;
+  background: #111e26e8;
+  border: 1px solid #4b6752;
+  border-radius: 4px;
+  padding: 10px 18px;
+  font-size: 11px;
+  color: #cde8d4;
+  backdrop-filter: blur(8px);
+}
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 91px;
+  border-top: 1px solid #d6f4e119;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 46px;
+  gap: 30px;
+  font-family: "Space Grotesk";
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+footer small {
+  display: block;
+  margin: 8px 0 0 16px;
+  color: #819d91;
+  font-size: 10px;
+}
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #c6f572;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #c6f572;
+  margin-right: 6px;
+}
+.keys {
+  color: #819d91;
+  font-family: "DM Sans";
+  font-size: 10px;
+  letter-spacing: 0;
+  line-height: 1.9;
+  text-align: right;
+  margin-left: auto;
+}
+#stats {
+  font-size: 10px;
+  color: #c6f572;
+}
+#hide-ui {
+  position: absolute;
+  right: 35px;
+  top: 118px;
+  font-size: 10px;
+  background: #102028a0;
+}
+.minimal .intro,
+.minimal .drawer,
+.minimal .enter,
+.minimal header,
+.minimal .toast {
+  display: none;
+}
+.minimal {
+  background: transparent !important;
+}
+.minimal footer {
+  pointer-events: none;
+  background: #080e1890;
+}
+.xr-active .intro,
+.xr-active .drawer {
+  display: none;
+}
+.xr-active header {
+  height: 60px;
+}
+.xr-active .enter {
+  top: 74px;
+}
+.xr-active footer {
+  height: 68px;
+}
+.xr-active .toast {
+  bottom: 80px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 85%;
+}
+@media (max-height: 850px) {
+  .intro {
+    top: 112px;
+  }
+  h1 {
+    font-size: 32px;
+    margin: 11px 0;
+  }
+  .enter {
+    top: 265px;
+  }
+  .drawer {
+    top: 325px;
+    max-height: calc(100vh - 442px);
+  }
+}
+@media (max-width: 750px) {
+  header {
+    padding: 0 20px;
+    height: 72px;
+  }
+  header .eyebrow {
+    display: none;
+  }
+  .badge {
+    margin-left: auto;
+    font-size: 8px;
+  }
+  .intro {
+    left: 20px;
+    top: 92px;
+  }
+  h1 {
+    font-size: 29px;
+  }
+  .enter {
+    left: 20px;
+    top: 241px;
+  }
+  .enter button {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .drawer {
+    left: 20px;
+    top: 300px;
+    width: 282px;
+    max-height: calc(100vh - 390px);
+    background: #071018aa;
+    padding: 8px;
+  }
+  .toast {
+    display: none;
+  }
+  footer {
+    padding: 0 20px;
+    height: 72px;
+  }
+  .keys {
+    display: none;
+  }
+  #hide-ui {
+    right: 16px;
+    top: 86px;
+  }
+  .intro p {
+    font-size: 11px;
+  }
+}
