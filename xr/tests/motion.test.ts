@@ -48,6 +48,11 @@ describe("motion and controller adapters", () => {
       axis: "GUN_X",
       value: -32768,
     });
+    expect(neutralInput(true)).toContainEqual({
+      kind: "button",
+      button: "GUN_OFFSCREEN",
+      pressed: true,
+    });
   });
   it("maps video letterboxing before emitting emulator coordinates", () => {
     const a = { u: 0.5, v: 0.5, x: 0, y: 0, offscreen: false };

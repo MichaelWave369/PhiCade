@@ -3,7 +3,11 @@ import { BUTTONS, AXES } from "../protocol";
 export function neutralInput(lightgun: boolean): XrAction[] {
   return [
     ...BUTTONS.filter((b) => lightgun || !b.startsWith("GUN_")).map(
-      (button) => ({ kind: "button" as const, button, pressed: false }),
+      (button) => ({
+        kind: "button" as const,
+        button,
+        pressed: button === "GUN_OFFSCREEN",
+      }),
     ),
     ...AXES.filter((a) => lightgun || !a.startsWith("GUN_")).map((axis) => ({
       kind: "axis" as const,

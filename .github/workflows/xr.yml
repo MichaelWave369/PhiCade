@@ -50,17 +50,13 @@ jobs:
           path: artifacts/xr-lightgun-qualification.json
   windows-xr:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - run: npm ci
-      - run: npm run tauri -- icon src-tauri/icons/icon.png
       - uses: dtolnay/rust-toolchain@stable
       - uses: ilammy/msvc-dev-cmd@v1
-      - run: cargo check --manifest-path src-tauri/Cargo.toml --all-targets
+      # The existing CI/windows-n64-dock job checks all Tauri targets, including
+      # XR commands. Keep this job focused on native XR contracts and real ABI.
       - run: cargo test -p phicade-xr-protocol -p phicade-xr-bridge --all-targets
       - name: Build original MIT lightgun demo core
         shell: cmd

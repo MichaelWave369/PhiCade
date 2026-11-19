@@ -9,7 +9,7 @@ Date: 2026-11-19. Release status: **software prototype; not hardware-qualified**
 | Both frontend TypeScript builds | PASS locally | Existing desktop + separate XR app |
 | Both production bundles | PASS locally | Desktop and static XR build |
 | XR deterministic adapter tests | PASS locally, 15 tests | Aim mapping, invalid/behind rays, calibration, letterboxing, magazines, canonical tiles/collision/win, room authority, motion, gamepad, shared wire fixture |
-| Rust runtime/libretro/XR package tests | PASS locally | Existing runtime regressions + grant, input, profile and launch-plan tests; exact count recorded by CI |
+| Rust runtime/libretro/XR package tests | PASS locally, 132 tests | Existing runtime regressions + grant, input, profile and launch-plan tests |
 | Rust formatting and scoped strict Clippy | PASS locally | New XR Rust modules/crates; existing unrelated formatting not rewritten |
 | Original dynamic libretro core | PASS locally on Linux | Paired grant → Action Bus authority → real core ABI → visible target hit + audio; brief fire edge retained for one frame |
 | Npm dependency audit | PASS, zero findings at review time | Locked JS dependency graph |
@@ -21,23 +21,33 @@ Foundation browser evidence:
 [XR run 44623161919](https://github.com/MichaelWave369/PhiCade/actions/runs/44623161919),
 commit `8f018a8e0279030eda7e1ff97b42d49d7ac357e2`, three browser tests passed.
 The artifact `xr-browser-evidence` includes the built frontend, HTML report and
-desktop screenshot. The patched-dependency foundation head is
-`01eebdc69c023127a95ee26c6f7ff5d2d23bb1bc`; checks are tracked on PR #65.
+desktop screenshot. The current foundation head is
+`532f0c6e0fde2a61880ec0ce6a357a2181ffc29e`; checks are tracked on PR #65.
 
 The integration branch extends the browser test to require an actual guest-fired
-target hit over WebRTC and to check host spectator input ownership. Its separate
-Windows job compiles the Tauri shell, builds the original homebrew DLL and runs
-the same ABI qualifier. The run/commit evidence is tracked on its integration PR;
+target hit over WebRTC and to check host spectator input ownership. The existing Windows CI compiles the Tauri shell. The dedicated Windows XR job builds
+the original homebrew DLL and runs the same ABI qualifier. The run/commit evidence is tracked on its integration PR;
 pending jobs are not counted as passes.
+
+The existing Windows N64 job also compiled the entire modified Tauri shell at
+integration commit `e1bf0f13e2fea48909479940e99f7dc6cd3c0c46` and passed its N64
+regression tests: [CI run 44628110450](https://github.com/MichaelWave369/PhiCade/actions/runs/44628110450),
+job `135927215575`. This is Windows build evidence, not Quest execution.
+
+The integration Linux XR job also passed strict formatting/linting, all 132 Rust
+tests, the 24-package license closure, and the original-core ABI qualifier at
+`e1bf0f13`: [XR run 44628110406](https://github.com/MichaelWave369/PhiCade/actions/runs/44628110406),
+job `135927215523`. Its qualifier reports paired-grant and brief-trigger-edge
+verification true while commercial-game and Quest-hardware flags remain false.
 
 ## Milestones and changed areas
 
 | Milestone | Review | Changed areas |
 |---|---|---|
-| Foundation, phases 1/3/5/6/7 | [PR #65](https://github.com/MichaelWave369/PhiCade/pull/65) · `8f018a8` + dependency fix `01eebdc` | `apps/xr`, shared `xr` protocol/adapters/demo/room code, XR Rust protocol crate, lockfiles, browser/unit CI, quickstart |
-| Native integration, phases 2/3/4/8 | Dependent integration PR | Desktop XR Host and DolphinXR panels; native grant ingress; libretro gun state and original C core; external runtime planner; qualification/packaging/docs |
+| Foundation, phases 1/3/5/6/7 | [PR #65](https://github.com/MichaelWave369/PhiCade/pull/65) · `8f018a8`, `01eebdc`, `532f0c6` | `apps/xr`, shared `xr` protocol/adapters/demo/room code, XR Rust protocol crate, lockfiles, browser/unit CI, quickstart |
+| Native integration, phases 2/3/4/8 | [PR #66](https://github.com/MichaelWave369/PhiCade/pull/66) · `e1bf0f13` | Desktop XR Host and DolphinXR panels; native grant ingress; libretro gun state and original C core; external runtime planner; qualification/packaging/docs |
 
-The independent software pieces are implemented through all eight phases. The
+Working software spans all eight phases. The individual limits below and the
 acceptance gates that need Windows/Quest execution remain open.
 
 ## Pending or limited
@@ -73,3 +83,8 @@ patched versions now audit cleanly. A failed license inventory initially require
 reviewing the exact legacy dual-license expressions for memchr/version_check and
 unicode-ident's Unicode attribution. Those expressions are now explicit in the
 license checker. The checks do not authorize copying proprietary game assets.
+
+A runner/Playwright mismatch affected the intermediate `01eebdc` browser job:
+Playwright 1.56 did not support the runner's Ubuntu 26.04. Head `532f0c6` restores
+Playwright 1.65.1, the version from the successful earlier browser run. No failed
+installation is reported as a browser-test pass.

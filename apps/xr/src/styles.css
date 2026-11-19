@@ -1,6 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 :root {
-  font-family: "DM Sans", sans-serif;
+  font-family: "DM Sans", "Segoe UI", system-ui, sans-serif;
   color: #e5efed;
   background: #080e18;
   font-synthesis: none;

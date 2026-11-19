@@ -295,6 +295,49 @@ const calibrationTargets: [number, number][] = [
   [0.5, 0.8],
 ];
 let remoteVideo: HTMLVideoElement | null = null;
+let listener: THREE.AudioListener | null = null;
+let cabinetAudio: THREE.PositionalAudio | null = null;
+let spatialStream: MediaStream | null = null;
+function updateSpatialAudio() {
+  const enabled = el<HTMLInputElement>("spatial-audio").checked;
+  const stream = remoteVideo?.srcObject;
+  if (
+    !enabled ||
+    !(stream instanceof MediaStream) ||
+    !stream.getAudioTracks().length
+  ) {
+    if (spatialStream) cabinetAudio?.disconnect();
+    spatialStream = null;
+    if (remoteVideo) remoteVideo.muted = false;
+    return;
+  }
+  if (!listener) {
+    listener = new THREE.AudioListener();
+    camera.add(listener);
+  }
+  if (!cabinetAudio) {
+    cabinetAudio = new THREE.PositionalAudio(listener);
+    cabinetAudio.setRefDistance(1.5);
+    cabinetAudio.setRolloffFactor(0.6);
+    scene.add(cabinetAudio);
+  }
+  if (spatialStream !== stream) {
+    if (spatialStream) cabinetAudio.disconnect();
+    cabinetAudio.setMediaStreamSource(stream);
+    spatialStream = stream;
+  }
+  remoteVideo!.muted = true;
+  void listener.context
+    .resume()
+    .catch(() => status("Tap Cabinet spatial audio again to enable sound."));
+}
+el<HTMLInputElement>("spatial-audio").onchange = () => {
+  try {
+    updateSpatialAudio();
+  } catch (e) {
+    status(`Spatial audio unavailable: ${String(e)}`);
+  }
+};
 let sendInput: (actions: XrAction[]) => void = () => {};
 let sendPresence: (p: Presence) => void = () => {};
 let remoteControls = false,
@@ -311,6 +354,11 @@ export function setRemoteBridge(
   sendPresence = presence;
   remoteControls = owns;
   remoteLightgun = device === "lightgun";
+  try {
+    updateSpatialAudio();
+  } catch {
+    status("Spatial audio unavailable; use normal stream playback.");
+  }
 }
 const raycaster = new THREE.Raycaster(),
   pointer = new THREE.Vector2();
@@ -354,6 +402,10 @@ function choose(index: number) {
   );
 }
 function updatePresentation() {
+  if (xrMode === "ar" && worldMode === "first") {
+    worldMode = "diorama";
+    el<HTMLSelectElement>("world-mode").value = "diorama";
+  }
   worldGroup.visible = active === 1 && worldMode !== "screen";
   theater.visible = theaterOn && !worldGroup.visible;
   cabinets.forEach((c) => (c.visible = !theaterOn && xrMode !== "ar"));
@@ -367,7 +419,10 @@ function updatePresentation() {
     rig.position.set(world.x - 5, 0, world.z - 4);
     camera.position.set(0, 1.5, 0);
   } else {
-    worldGroup.scale.setScalar(xrMode === "ar" ? 0.16 : 0.28);
+    worldGroup.scale.setScalar(
+      (xrMode === "ar" ? 0.16 : 0.28) *
+        Number(el<HTMLInputElement>("scale").value),
+    );
     worldGroup.position.set(0, xrMode === "ar" ? 0.75 : 0.3, -2);
   }
 }
@@ -584,6 +639,8 @@ el<HTMLInputElement>("aim").onchange = (e) =>
 el<HTMLInputElement>("headlock").onchange = (e) => {
   headlock = (e.target as HTMLInputElement).checked;
   if (headlock) {
+    worldMode = "screen";
+    el<HTMLSelectElement>("world-mode").value = "screen";
     theaterOn = true;
     updatePresentation();
   }
@@ -591,13 +648,15 @@ el<HTMLInputElement>("headlock").onchange = (e) => {
 el<HTMLInputElement>("scale").oninput = (e) => {
   const v = Number((e.target as HTMLInputElement).value);
   theater.scale.setScalar(v);
+  if (worldGroup.visible && worldMode !== "first")
+    worldGroup.scale.setScalar(v * (xrMode === "ar" ? 0.16 : 0.28));
 };
 el<HTMLSelectElement>("hand").onchange = (e) => {
   const hand = (e.target as HTMLSelectElement).value;
   guns[0].profile.hand = hand === "left" ? "left" : "right";
   status(
     hand === "dual"
-      ? "Dual guns: right is player 1, left is player 2. Native core topology remains explicit."
+      ? "Dual guns: right is player 1, left is player 2 in Photon Range. Paired PC play supports one player."
       : `${hand} hand selected.`,
   );
 };
@@ -645,10 +704,16 @@ el("place").onclick = () => {
   const view = renderer.xr.isPresenting ? renderer.xr.getCamera() : camera;
   view.getWorldPosition(origin);
   view.getWorldDirection(direction);
-  theater.position.copy(origin).addScaledVector(direction, 2);
-  theater.quaternion.copy(view.getWorldQuaternion(new THREE.Quaternion()));
   theaterOn = true;
   updatePresentation();
+  if (worldGroup.visible) {
+    worldGroup.position.copy(origin).addScaledVector(direction, 1.4);
+    worldGroup.position.y = origin.y - 0.7;
+    worldGroup.quaternion.identity();
+  } else {
+    theater.position.copy(origin).addScaledVector(direction, 2);
+    theater.quaternion.copy(view.getWorldQuaternion(new THREE.Quaternion()));
+  }
   status("Screen placed. Stay aware of your room and headset boundary.");
 };
 let hitSource: XRHitTestSource | null = null,
@@ -718,6 +783,10 @@ async function enterXR(mode: "immersive-vr" | "immersive-ar") {
       scene.fog = new THREE.FogExp2(0x080f1c, 0.028);
       el("ui").classList.remove("xr-active");
       if (remoteControls) sendInput(neutralInput(remoteLightgun));
+      for (const c of controllers) {
+        c.userData.input = null;
+        c.userData.trigger = false;
+      }
       recenter();
     });
     session.addEventListener("visibilitychange", () => {
@@ -789,11 +858,16 @@ controllers.forEach((controller, i) => {
   controller.addEventListener("squeezeend", () => {
     squeezing.delete(i);
     if (xrMode === "ar" && hitPose) {
-      theater.position.setFromMatrixPosition(hitPose);
-      theater.position.y += 0.6;
-      theater.lookAt(
-        renderer.xr.getCamera().getWorldPosition(new THREE.Vector3()),
-      );
+      if (worldGroup.visible) {
+        worldGroup.position.setFromMatrixPosition(hitPose);
+        worldGroup.quaternion.setFromRotationMatrix(hitPose);
+      } else {
+        theater.position.setFromMatrixPosition(hitPose);
+        theater.position.y += 0.6;
+        theater.lookAt(
+          renderer.xr.getCamera().getWorldPosition(new THREE.Vector3()),
+        );
+      }
       status("Screen placed on the detected surface.");
     } else if (teleport.visible) {
       const head = renderer.xr
@@ -1061,10 +1135,13 @@ renderer.setAnimationLoop((time, frame) => {
       : null;
   }
   const remotePadActions: XrAction[] = [];
+  const acceptsTrackedInput =
+    renderer.xr.isPresenting &&
+    renderer.xr.getSession()?.visibilityState === "visible";
   for (let i = 0; i < controllers.length; i++) {
     const c = controllers[i],
       input = c.userData.input as XRInputSource | undefined;
-    if (!input) continue;
+    if (!input || !acceptsTrackedInput) continue;
     c.getWorldPosition(origin);
     direction
       .set(0, 0, -1)
@@ -1194,6 +1271,8 @@ renderer.setAnimationLoop((time, frame) => {
     drawScreens(time);
     drawAt = time;
   }
+  if (cabinetAudio)
+    (theaterOn ? theater : screens[2]).getWorldPosition(cabinetAudio.position);
   renderer.render(scene, camera);
 });
 window.addEventListener("resize", () => {

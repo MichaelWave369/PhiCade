@@ -14,6 +14,7 @@ No physical Quest execution has been performed by this development session.
 | Dual light guns | Original browser demo | Independent magazines and seats | Native port 2 unsupported |
 | NES/SNES/arcade/PSX commercial gun games | Unqualified | None | Core-specific subdevices/options/profiles need verification; no title claim |
 | PC → browser video/audio + input return | Prototype | Two-browser video/handshake; native grant tests | Windows Tauri WebView2 ↔ Quest LAN pending |
+| Cabinet spatial audio | Optional Web Audio panning/attenuation | Type-check/build | Real media/headset listening pending; ordinary playback remains available |
 | Gamepad Quest mapping | Yes | Button/axis/deadzone-boundary fixtures | Native game/controller testing pending |
 | Remote game library / ROM launch | Current operator-launched session only | Existing native launch path retained | Guest filesystem browsing/privileged launch unsupported |
 | DolphinXR external launcher | Yes, local portable installation | Hash/profile/argument/handedness tests | Actual external runtime and Quest pending |

@@ -90,6 +90,10 @@ can prevent connection. Use the PC firewall's normal application permissions; do
 not expose a privileged port or forward emulator controls to the internet. The
 prototype has no public signaling/STUN/TURN service. An HTTPS arcade page can
 carry a paired WebRTC stream without exposing Tauri commands as network routes.
+Keep the desktop game window visible during this prototype's frontend-driven
+frame loop. Cabinet spatial audio optionally positions the received game audio
+at its virtual display; use normal playback when a device lacks the required
+Web Audio support. Listening quality and headset behavior remain field tests.
 
 Windows WebView2 canvas capture, audio and Quest browser interoperability still
 need field qualification. The completed browser tests cover Linux Chromium peers,
