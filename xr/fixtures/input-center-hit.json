@@ -1,0 +1,13 @@
+{
+  "kind": "input",
+  "protocol": "phicade.xr.v1",
+  "sequence": 1,
+  "sentAt": 0,
+  "actions": [
+    { "kind": "axis", "axis": "GUN_X", "value": 0 },
+    { "kind": "axis", "axis": "GUN_Y", "value": 0 },
+    { "kind": "button", "button": "GUN_OFFSCREEN", "pressed": false },
+    { "kind": "button", "button": "GUN_TRIGGER", "pressed": true },
+    { "kind": "button", "button": "GUN_TRIGGER", "pressed": false }
+  ]
+}

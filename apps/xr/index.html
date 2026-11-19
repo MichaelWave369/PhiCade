@@ -1,27 +1,162 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080e18"><title>ΦCADE XR · New Dimensions</title></head>
-<body>
-  <div id="scene" aria-label="3D arcade"></div>
-  <main id="ui">
-    <header><a class="brand" href="./"><span>Φ</span>CADE <b>XR</b></a><div class="eyebrow">OLD WORLDS. NEW PLAYERS. NEW DIMENSIONS.</div><span class="badge" id="capability">DESKTOP PREVIEW</span></header>
-    <section class="intro"><div class="eyebrow">PHI369 LABS / IMMERSIVE ARCADE 01</div><h1>A new dimension<br>to the games you love<span>.</span></h1><p>Step inside. Pick a cabinet. Make yourself at home.</p></section>
-    <nav class="enter"><button id="vr" class="primary">Enter VR <span>↗</span></button><button id="ar">Mixed reality</button><button id="theater">Theater view</button></nav>
-    <aside class="drawer" aria-label="Arcade controls">
-      <div class="section-label">CHOOSE YOUR CABINET <span>01—03</span></div>
-      <button data-game="range" class="game selected"><span class="number">01</span><span><b>PHOTON RANGE</b><small>Original demo / Quest light guns</small></span><span>↗</span></button>
-      <button data-game="world" class="game"><span class="number">02</span><span><b>HOLLER CIRCUIT</b><small>Original demo / WorldWalk</small></span><span>↗</span></button>
-      <button data-game="remote" class="game"><span class="number">03</span><span><b>YOUR PHICADE</b><small>Paired PC / live game stream</small></span><span>↗</span></button>
-      <div class="section-label">MAKE IT YOURS</div>
-      <div class="options"><label>WorldWalk<select id="world-mode"><option value="screen">Spatial screen</option><option value="diorama">3D diorama</option><option value="first">First person · experimental</option></select></label><label>Gun hand<select id="hand"><option value="right">Right</option><option value="left">Left</option><option value="dual">Dual · 2 players demo</option></select></label><label>Locomotion<select id="locomotion"><option value="teleport">Teleport + snap turn</option><option value="smooth">Smooth + snap turn</option></select></label><label>Render scale<select id="quality"><option value="1">Balanced · 1×</option><option value="0.75">Performance · 0.75×</option><option value="1.25">Quality · 1.25×</option></select></label></div>
-      <div class="toggles"><label><input type="checkbox" id="crt" checked> CRT glow</label><label><input type="checkbox" id="aim" checked> Aim guide</label><label><input type="checkbox" id="headlock">Follow head</label></div>
-      <div class="tools"><button id="reload">Reload [R]</button><button id="calibrate">Calibrate aim</button><button id="reset">Recenter</button><button id="place">Place screen</button></div>
-      <label class="scale">Screen size <input id="scale" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
-      <details id="pairing"><summary>Connect a PC or share this room <span>+</span></summary><p>On the PC, launch a game and open <b>XR Host</b>. Paste its offer here, create an answer, then return the answer to the PC. Codes grant access to this session.</p><label>Host offer<textarea id="offer" spellcheck="false" placeholder="Paste the host's pairing offer"></textarea></label><button id="connect" class="primary">Create answer</button><label>Your answer<textarea id="answer" spellcheck="false" readonly></textarea></label><button id="copy-answer">Copy answer</button><button id="disconnect">Disconnect</button><hr><p>For a second browser in this demo room:</p><button id="host-room">Host demo room</button><label>Room offer<textarea id="room-offer" readonly></textarea></label><label>Guest answer<textarea id="room-answer" placeholder="Paste the guest's answer"></textarea></label><button id="accept-room">Accept guest</button></details>
-    </aside>
-    <div class="toast" role="status" id="status">PHOTON RANGE — aim at the target and click. R to reload.</div>
-    <footer><div><span class="live-dot"></span> <span id="game-title">PHOTON RANGE</span><small id="score">0 POINTS · 6 / 6 AMMO</small></div><div class="keys">WASD move · drag to look · click to play<br>Quest: trigger to play · squeeze to teleport · stick to turn</div><output id="stats">— FPS</output></footer>
-    <button id="hide-ui" aria-label="Toggle arcade controls">Hide controls</button>
-  </main>
-  <script type="module" src="/src/main.ts"></script>
-</body></html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#080e18" />
+    <title>ΦCADE XR · New Dimensions</title>
+  </head>
+  <body>
+    <div id="scene" aria-label="3D arcade"></div>
+    <main id="ui">
+      <header>
+        <a class="brand" href="./"><span>Φ</span>CADE <b>XR</b></a>
+        <div class="eyebrow">OLD WORLDS. NEW PLAYERS. NEW DIMENSIONS.</div>
+        <span class="badge" id="capability">DESKTOP PREVIEW</span>
+      </header>
+      <section class="intro">
+        <div class="eyebrow">PHI369 LABS / IMMERSIVE ARCADE 01</div>
+        <h1>A new dimension<br />to the games you love<span>.</span></h1>
+        <p>Step inside. Pick a cabinet. Make yourself at home.</p>
+      </section>
+      <nav class="enter">
+        <button id="vr" class="primary">Enter VR <span>↗</span></button
+        ><button id="ar">Mixed reality</button
+        ><button id="theater">Theater view</button>
+      </nav>
+      <aside class="drawer" aria-label="Arcade controls">
+        <div class="section-label">CHOOSE YOUR CABINET <span>01—03</span></div>
+        <button data-game="range" class="game selected">
+          <span class="number">01</span
+          ><span
+            ><b>PHOTON RANGE</b
+            ><small>Original demo / Quest light guns</small></span
+          ><span>↗</span>
+        </button>
+        <button data-game="world" class="game">
+          <span class="number">02</span
+          ><span
+            ><b>HOLLER CIRCUIT</b><small>Original demo / WorldWalk</small></span
+          ><span>↗</span>
+        </button>
+        <button data-game="remote" class="game">
+          <span class="number">03</span
+          ><span
+            ><b>YOUR PHICADE</b
+            ><small>Paired PC / live game stream</small></span
+          ><span>↗</span>
+        </button>
+        <div class="section-label">MAKE IT YOURS</div>
+        <div class="options">
+          <label
+            >WorldWalk<select id="world-mode">
+              <option value="screen">Spatial screen</option>
+              <option value="diorama">3D diorama</option>
+              <option value="first">First person · experimental</option>
+            </select></label
+          ><label
+            >Gun hand<select id="hand">
+              <option value="right">Right</option>
+              <option value="left">Left</option>
+              <option value="dual">Dual · 2 players demo</option>
+            </select></label
+          ><label
+            >Locomotion<select id="locomotion">
+              <option value="teleport">Teleport + snap turn</option>
+              <option value="smooth">Smooth + snap turn</option>
+            </select></label
+          ><label
+            >Render scale<select id="quality">
+              <option value="1">Balanced · 1×</option>
+              <option value="0.75">Performance · 0.75×</option>
+              <option value="1.25">Quality · 1.25×</option>
+            </select></label
+          >
+        </div>
+        <div class="toggles">
+          <label><input type="checkbox" id="crt" checked /> CRT glow</label
+          ><label><input type="checkbox" id="aim" checked /> Aim guide</label
+          ><label><input type="checkbox" id="headlock" />Follow head</label>
+        </div>
+        <label class="scale"
+          >Reload gesture
+          <select id="reload-gesture">
+            <option value="button">Button / offscreen</option>
+            <option value="shake">Shake + button</option>
+            <option value="swing">Swing + button</option>
+          </select></label
+        >
+        <div class="tools">
+          <button id="reload">Reload [R]</button
+          ><button id="calibrate">Calibrate aim</button
+          ><button id="reset">Recenter</button
+          ><button id="place">Place screen</button>
+        </div>
+        <label class="scale"
+          >Screen size
+          <input
+            id="scale"
+            type="range"
+            min="0.3"
+            max="2.5"
+            step="0.1"
+            value="1"
+        /></label>
+        <details id="pairing">
+          <summary>Connect a PC or share this room <span>+</span></summary>
+          <p>
+            On the PC, launch a game and open <b>XR Host</b>. Paste its offer
+            here, create an answer, then return the answer to the PC. Codes
+            grant access to this session.
+          </p>
+          <label
+            >Host offer<textarea
+              id="offer"
+              spellcheck="false"
+              placeholder="Paste the host's pairing offer"
+            ></textarea></label
+          ><button id="connect" class="primary">Create answer</button
+          ><label
+            >Your answer<textarea
+              id="answer"
+              spellcheck="false"
+              readonly
+            ></textarea></label
+          ><button id="resume-stream">Enable stream audio</button
+          ><button id="copy-answer">Copy answer</button
+          ><button id="disconnect">Disconnect</button>
+          <hr />
+          <p>For a second browser in this demo room:</p>
+          <button id="host-room">Host demo room</button
+          ><label
+            >Room offer<textarea id="room-offer" readonly></textarea></label
+          ><label
+            >Guest answer<textarea
+              id="room-answer"
+              placeholder="Paste the guest's answer"
+            ></textarea></label
+          ><button id="accept-room">Accept guest</button>
+        </details>
+      </aside>
+      <div class="toast" role="status" id="status">
+        PHOTON RANGE — aim at the target and click. R to reload.
+      </div>
+      <footer>
+        <div>
+          <span class="live-dot"></span>
+          <span id="game-title">PHOTON RANGE</span
+          ><small id="score">0 POINTS · 6 / 6 AMMO</small>
+        </div>
+        <div class="keys">
+          WASD move · drag to look · click to play<br />Quest: trigger to play ·
+          squeeze to teleport · stick to turn
+        </div>
+        <output id="stats">— FPS</output>
+      </footer>
+      <button id="hide-ui" aria-label="Toggle arcade controls">
+        Hide controls
+      </button>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

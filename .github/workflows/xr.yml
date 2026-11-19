@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:xr
+      - run: npm run test:xr:deps
+      - run: npm audit --audit-level=moderate
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:xr:browser
