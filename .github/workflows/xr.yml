@@ -1,0 +1,42 @@
+name: XR qualification
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  web-xr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:xr
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:xr:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: xr-browser-evidence
+          path: |
+            playwright-report/
+            test-results/
+            artifacts/xr-*.png
+            apps/xr/dist/
+  xr-protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: rustfmt --edition 2021 --check crates/phicade-xr-protocol/src/lib.rs
+      - run: cargo clippy -p phicade-xr-protocol --all-targets --no-deps -- -D warnings
+      - run: cargo test -p phicade-xr-protocol -p phicade-runtime -p phicade-libretro --all-targets

@@ -7,13 +7,20 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @phicade/desktop",
-    "build": "npm run build --workspace @phicade/desktop",
-    "typecheck": "npm run typecheck --workspace @phicade/desktop",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "xr": "npm run dev --workspace @phicade/xr",
+    "xr:build": "npm run build --workspace @phicade/xr",
+    "test:xr": "vitest run --config xr/vitest.config.ts",
+    "test:xr:browser": "playwright test --config xr/playwright.config.ts",
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@playwright/test": "1.65.1",
+    "@tauri-apps/cli": "^2.0.0",
+    "vite": "7.1.7",
+    "vitest": "3.2.4"
   }
 }
