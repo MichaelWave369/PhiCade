@@ -29,6 +29,19 @@ Official core downloads: https://buildbot.libretro.com/nightly/windows/x86_64/la
 
 These are suggested candidates, **not** a guarantee that every libretro core works with PhiCade's current generic host. Some cores need hardware rendering or firmware, interfaces that PhiCade has not yet qualified. BIOS filenames and hashes must match the **specific** core's documentation.
 
+## DOS and ScummVM user-owned content (experimental)
+
+- **DOS:** Use `.dosz` archives prepared from legally held DOS game files,
+  with a registered user-selected DOSBox Pure libretro core. PhiCade deliberately
+  does **not** treat every ZIP, EXE, COM or BAT file as a game. See
+  [PC Classics](PC_CLASSICS.md) for compatibility and input limitations.
+- **ScummVM:** The pre-existing registered ScummVM launcher remains supported;
+  `.scummvm` hook files now appear in their own library tab. Games still
+  require the correct user-supplied data and matching upstream engine support.
+- **Steam:** An explicit App ID field requests Windows to hand off to the user's
+  installed Steam client. Steam itself enforces installation/ownership, not
+  PhiCade. Steam games are not emulated or copied into PhiCade.
+
 ## Where firmware belongs
 
 PhiCade's native libretro host receives its Tauri application data **system** directory, normally on Windows:

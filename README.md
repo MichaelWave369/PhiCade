@@ -37,6 +37,14 @@ upstream feed is available, or a clearly labeled five-project starter index if
 not. Source links only. **No game downloading, installation, native execution,
 or compatibility qualification** is added to PhiCade.
 
+**PC Classics (DOS / ScummVM) + Steam handoff:** `*.dosz` and `*.scummvm`
+files are now indexed into dedicated desktop library tabs and match approved
+registered libretro cores by extension. The DOSBox Pure path is a **testable
+candidate**, not a claim of game compatibility. A separate Windows-only
+Steam App ID panel hands off to a locally installed Steam client on explicit
+operator request; **no Steam API emulator, DRM bypass, account scraping or
+automatic execution**. See [PC Classics](docs/PC_CLASSICS.md).
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.
