@@ -1,0 +1,53 @@
+name: DOSBox Pure / original DOS fixture qualification
+on:
+  pull_request:
+    paths:
+      - "fixtures/dos/**"
+      - "scripts/build-dos-fixture.py"
+      - "scripts/qualify-dosbox-pure.sh"
+      - "crates/phicade-libretro/**"
+      - ".github/workflows/dosbox-pure.yml"
+  push:
+    branches: [main]
+    paths:
+      - "fixtures/dos/**"
+      - "scripts/build-dos-fixture.py"
+      - "scripts/qualify-dosbox-pure.sh"
+      - "crates/phicade-libretro/**"
+      - ".github/workflows/dosbox-pure.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-fixture:
+    name: core / DOSBox Pure original VGA fixture
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native build and DOS assembler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential nasm python3 git
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build pinned core and exercise original program via PhiCade
+        run: bash ./scripts/qualify-dosbox-pure.sh
+      - name: Verify receipts don't claim untested capability
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("artifacts/dosbox-pure-original-fixture.json", encoding="utf8") as f:
+              r=json.load(f)
+          assert r["result"]=="PASS"
+          assert r["magentaGraphicsObserved"] is True
+          for field in ("keyboardGuestDeliveryQualified","mouseGuestDeliveryQualified",
+                        "guestCleanExitQualified","retailDosGameCompatibilityQualified"):
+              assert r[field] is False, field
+          print("PASS: original fixture observed; unsupported capabilities remain false")
+          PY
+      - name: Upload only metadata evidence receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: dosbox-pure-original-fixture-evidence
+          path: artifacts/dosbox-pure-original-fixture.json
+          if-no-files-found: error

@@ -45,6 +45,12 @@ Steam App ID panel hands off to a locally installed Steam client on explicit
 operator request; **no Steam API emulator, DRM bypass, account scraping or
 automatic execution**. See [PC Classics](docs/PC_CLASSICS.md).
 
+**DOSBox Pure Rung 2:** original DOS VGA and PC-speaker source fixture
+runs through the real libretro host in isolated GitHub CI. See
+[qualification status](docs/DOSBOX_PURE_QUALIFICATION.md).
+Guest keyboard/mouse, clean DOS exit, and commercial-game playability
+remain unqualified even if the video smoke test passes.
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.
