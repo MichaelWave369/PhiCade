@@ -27,7 +27,6 @@ pub const SCUMMVM_QUALIFICATION_PROFILE_ID: &str =
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
 const RETRO_DEVICE_MOUSE: c_uint = 2;
-const SET_KEYBOARD_CALLBACK_VALUE: c_uint = 12;
 const RETRO_DEVICE_ANALOG: c_uint = 5;
 const RETRO_DEVICE_LIGHTGUN: c_uint = 4;
 const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
