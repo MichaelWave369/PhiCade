@@ -34,8 +34,15 @@ jobs:
         run: |
           node --check xbox/app.mjs
           node --check xbox/navigation.mjs
+          node --check xbox/discovery/catalog.mjs
+          node --check xbox/discovery/app.mjs
+          node --check xbox/discovery/build-catalog.mjs
       - name: Test selection and gamepad mapping
         run: node --test xbox/tests/*.test.mjs
+      - name: Validate discovery metadata builder with source-owned fixture
+        run: |
+          node xbox/discovery/build-catalog.mjs --fixture xbox/discovery/seed.json --output /tmp/phicade-discovery-test.json
+          node --input-type=module -e 'import fs from "node:fs"; const j=JSON.parse(fs.readFileSync("/tmp/phicade-discovery-test.json","utf8")); if(j.sampledCount !== 5 || j.sourceStatus !== "test-fixture") process.exit(1)'
       - name: Verify static entry and curated HTTPS navigation
         shell: bash
         run: |
@@ -75,6 +82,10 @@ jobs:
         run: |
           mkdir -p _xbox_site
           cp xbox/index.html xbox/styles.css xbox/app.mjs xbox/navigation.mjs _xbox_site/
+          mkdir -p _xbox_site/discovery
+          cp xbox/discovery/index.html xbox/discovery/styles.css xbox/discovery/app.mjs xbox/discovery/catalog.mjs xbox/discovery/seed.json _xbox_site/discovery/
+          # Only a bounded source-credited metadata subset, never download binaries/assets.
+          node xbox/discovery/build-catalog.mjs --output _xbox_site/discovery/catalog.json
           mkdir -p _xbox_site/xr
           cp -R apps/xr/dist/. _xbox_site/xr/
       - uses: actions/configure-pages@v5

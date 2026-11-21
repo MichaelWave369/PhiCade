@@ -41,8 +41,13 @@ function setHelp(open) {
 function launchSelection() {
   if (!helpPanel.hidden) return;
   const url = cards[selected]?.href;
-  // All selectable destinations are hardcoded HTTPS links in index.html.
-  if (url && new URL(url).protocol === "https:") window.location.assign(url);
+  // Hardcoded HTTPS portals, plus the one explicitly approved local discovery route.
+  if (!url) return;
+  const target = new URL(url, window.location.href);
+  const localDiscovery = new URL("./discovery/", window.location.href);
+  if (target.protocol === "https:" || (target.origin === localDiscovery.origin && target.pathname === localDiscovery.pathname)) {
+    window.location.assign(target.href);
+  }
 }
 
 helpToggle.addEventListener("click", () => setHelp(helpPanel.hidden));
