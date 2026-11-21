@@ -1120,10 +1120,12 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
             _ => 0,
         },
         RETRO_DEVICE_LIGHTGUN => state.lightgun.input(id),
-        #[cfg(feature = "dos-lab-input")]
-        RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.lab_mouse[id as usize],
-        #[cfg(all(feature = "dos-session-input", not(feature = "dos-lab-input")))]
+        // When both features are enabled by the *CI qualifier*, use the
+        // production session input path, not the older lab-only mouse hook.
+        #[cfg(feature = "dos-session-input")]
         RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.session_mouse[id as usize],
+        #[cfg(all(feature = "dos-lab-input", not(feature = "dos-session-input")))]
+        RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.lab_mouse[id as usize],
         _ => 0,
     }
 }
