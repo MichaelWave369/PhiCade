@@ -261,6 +261,7 @@ export function App() {
   const [steamAppId, setSteamAppId] = useState("");
   const [dosInputId, setDosInputId] = useState<number | null>(null);
   const dosMouseBusyRef = useRef(false);
+  const dosMouseNextRef = useRef<{ dx: number; dy: number; left: boolean } | null>(null);
   const [steamLaunchBusy, setSteamLaunchBusy] = useState(false);
   const [n64Docked, setN64Docked] = useState(false);
   const [n64AutoDock, setN64AutoDock] = useState(false);
@@ -1685,10 +1686,23 @@ export function App() {
   }, [running, authority?.mode, dosInputId]);
 
   const sendDosPointer = (dx: number, dy: number, left: boolean) => {
-    if (dosInputId === null || !running || dosMouseBusyRef.current) return;
+    if (dosInputId === null || !running) return;
+    const event = { dx: boundedDosDelta(dx), dy: boundedDosDelta(dy), left };
+    if (dosMouseBusyRef.current) {
+      // Keep the final state (especially left-button release) rather than
+      // dropping it while the previous event is still in flight.
+      dosMouseNextRef.current = event;
+      return;
+    }
     dosMouseBusyRef.current = true;
-    void sendDosInputMouse(dosInputId, boundedDosDelta(dx), boundedDosDelta(dy), left)
-      .catch((error) => setNotice(`DOS MOUSE INPUT ERROR // ${String(error)}`))
+    void (async () => {
+      let next: typeof event | null = event;
+      while (next) {
+        await sendDosInputMouse(dosInputId, next.dx, next.dy, next.left);
+        next = dosMouseNextRef.current;
+        dosMouseNextRef.current = null;
+      }
+    })().catch((error) => setNotice(`DOS MOUSE INPUT ERROR // ${String(error)}`))
       .finally(() => { dosMouseBusyRef.current = false; });
   };
 
