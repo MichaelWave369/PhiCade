@@ -29,6 +29,9 @@ struct DosQualificationReceipt {
     frames_with_nonzero_audio: u64,
     frames_with_magenta_vga: u64,
     frames_with_green_vga: u64,
+    frames_with_cyan_vga: u64,
+    core_shutdown_callback_observed: bool,
+    frame_at_core_shutdown: Option<u64>,
     keyboard_callback_registered: bool,
     escape_guest_visual_transition_observed: bool,
     q_post_exit_visual_transition_observed: bool,
@@ -65,6 +68,11 @@ fn button(sequence: u64, frame: u64, pressed: bool) -> ActionEnvelope {
 fn count_vga_magenta(frame: &FrameBuffer) -> usize {
     frame.rgba8.chunks_exact(4)
         .filter(|p| p[0] >= 145 && p[2] >= 145 && p[1] < 135)
+        .count()
+}
+fn count_vga_cyan(frame: &FrameBuffer) -> usize {
+    frame.rgba8.chunks_exact(4)
+        .filter(|p| p[1] >= 145 && p[2] >= 145 && p[0] < 135)
         .count()
 }
 fn count_vga_green(frame: &FrameBuffer) -> usize {
@@ -113,6 +121,8 @@ fn run() -> Result<(), String> {
     if !identity.valid_extensions.split('|').any(|e| e.eq_ignore_ascii_case("dosz")) {
         return Err("core does not advertise .dosz support".into());
     }
+    core.lab_request_shutdown_when_guest_exits()
+        .map_err(|e| format!("could not enable lab-only auto shutdown option: {e:?}"))?;
     let fixture = ContentDescriptor::file(&fixture_path, "PhiCade original DOS VGA test")
         .with_runtime_hint(identity.library_name.clone());
     core.load_content(&fixture)
@@ -129,16 +139,18 @@ fn run() -> Result<(), String> {
     let mut frames_with_nonzero_audio = 0;
     let mut frames_with_magenta_vga = 0;
     let mut frames_with_green_vga = 0;
+    let mut frames_with_cyan_vga = 0;
     let mut q_post_exit_visual_transition_observed = false;
+    let mut frame_at_core_shutdown = None;
     let mut retropad_host_routing_observed = false;
     for i in 0..frames {
         // Test-only host input hooks, never exposed to Tauri or agent sessions.
-        if i == 75 { core.lab_mouse_state(8, -3, true).map_err(|e| format!("mouse press: {e:?}"))?; }
-        if i == 82 { core.lab_mouse_state(0, 0, false).map_err(|e| format!("mouse release: {e:?}"))?; }
         if i == 110 { core.lab_send_escape(true).map_err(|e| format!("escape down: {e:?}"))?; }
         if i == 115 { core.lab_send_escape(false).map_err(|e| format!("escape up: {e:?}"))?; }
-        if i == 175 { core.lab_send_q(true).map_err(|e| format!("Q down: {e:?}"))?; }
-        if i == 180 { core.lab_send_q(false).map_err(|e| format!("Q up: {e:?}"))?; }
+        if i == 145 { core.lab_mouse_state(8, -3, true).map_err(|e| format!("mouse press: {e:?}"))?; }
+        if i == 170 { core.lab_mouse_state(0, 0, false).map_err(|e| format!("mouse release: {e:?}"))?; }
+        if i == 200 { core.lab_send_q(true).map_err(|e| format!("Q down: {e:?}"))?; }
+        if i == 205 { core.lab_send_q(false).map_err(|e| format!("Q up: {e:?}"))?; }
         let actions = if i == 60 { vec![button(1, i, true)] }
         else if i == 70 { vec![button(2, i, false)] }
         else { Vec::new() };
@@ -150,11 +162,11 @@ fn run() -> Result<(), String> {
             if pixels > 0 {
                 let magenta = count_vga_magenta(&video) > pixels / 3;
                 let green = count_vga_green(&video) > pixels / 3;
+                let cyan = count_vga_cyan(&video) > pixels / 3;
                 if magenta { frames_with_magenta_vga += 1; }
                 if green { frames_with_green_vga += 1; }
-                // After the guest Q handler, a returned menu/text screen
-                // is corroborating evidence, NOT direct proof of DOS exit.
-                if i > 190 && !green && frames_with_green_vga >= 3 {
+                if cyan { frames_with_cyan_vga += 1; }
+                if i > 205 && !cyan && frames_with_cyan_vga >= 3 {
                     q_post_exit_visual_transition_observed = true;
                 }
             }
@@ -171,6 +183,16 @@ fn run() -> Result<(), String> {
         if i == 70 && core.input_mask_snapshot() != 0 {
             return Err("retropad release did not clear input state".into());
         }
+        // The core issues SHUTDOWN only under the lab-only menu_time=0
+        // policy after it observes the auto-started DOS game terminate.
+        // Do not mistake a changed framebuffer or host Drop for DOS exit.
+        if core.shutdown_requested() {
+            if i < 200 {
+                return Err(format!("unexpected shutdown before Q completion, frame {i}"));
+            }
+            frame_at_core_shutdown = Some(i);
+            break;
+        }
     }
     if frames_with_video == 0 || video.width == 0 || video.height == 0 {
         return Err("DOSBox Pure provided no renderable video".into());
@@ -181,6 +203,12 @@ fn run() -> Result<(), String> {
     if frames_with_green_vga < 3 {
         return Err(format!("DOS BIOS did not observably respond to Escape; matching green frames={frames_with_green_vga}"));
     }
+    if frames_with_cyan_vga < 3 {
+        return Err(format!("DOS mouse driver did not observably respond to left click; matching cyan frames={frames_with_cyan_vga}"));
+    }
+    if frame_at_core_shutdown.is_none() {
+        return Err("guest DOS exit did not produce the expected core shutdown callback".into());
+    }
     if !retropad_host_routing_observed {
         return Err("governed retropad button did not reach host state".into());
     }
@@ -188,7 +216,7 @@ fn run() -> Result<(), String> {
     let receipt = DosQualificationReceipt {
         schema: "phicade.dosbox-pure-original-fixture.v1",
         result: "PASS",
-        scope: "original DOS .COM fixture only; no commercial game compatibility claim",
+        scope: "original DOS .COM VGA, mouse-left and guest exit fixture only; no commercial game claim",
         core_name: identity.library_name,
         core_version: identity.library_version,
         upstream_source_revision: "e39497e7c2a32c67c26e6598dd14f6d58c384bfd",
@@ -200,6 +228,9 @@ fn run() -> Result<(), String> {
         frames_with_nonzero_audio,
         frames_with_magenta_vga,
         frames_with_green_vga,
+        frames_with_cyan_vga,
+        core_shutdown_callback_observed: true,
+        frame_at_core_shutdown,
         keyboard_callback_registered: true,
         escape_guest_visual_transition_observed: true,
         q_post_exit_visual_transition_observed,
@@ -214,8 +245,10 @@ fn run() -> Result<(), String> {
         retropad_host_routing_observed,
         // Green state is only reachable via BIOS keyboard Esc branch.
         keyboard_guest_delivery_qualified: true,
-        mouse_guest_delivery_qualified: false,
-        guest_clean_exit_qualified: false,
+        // Only the original DOS fixture's INT 33h button check is qualified.
+        mouse_guest_delivery_qualified: true,
+        // Lab policy requests RETRO_ENVIRONMENT_SHUTDOWN when the guest exits.
+        guest_clean_exit_qualified: true,
         retail_dos_game_compatibility_qualified: false,
         capability_manifest,
     };

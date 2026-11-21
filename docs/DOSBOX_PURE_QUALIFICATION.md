@@ -101,3 +101,34 @@ opt-in CI feature, no lab injection methods compile into the host.
 Next: implement a tiny guest-generated exit receipt or instrument a
 source-built fixture to prove `int 21h / 4Ch` completion; then design
 separate properly authorized desktop keyboard/mouse interfaces.
+
+## Rung 4: independent guest mouse button and guest exit evidence
+
+**Target:** Go beyond host-side input polls and frame changes.
+
+1. Build the same independently authored 16-bit DOS program, now with
+   an explicit INT 33h function 3 polling branch.
+2. The DOS program first receives Escape through BIOS INT 16h and paints
+   VGA green. It then checks the *guest-side* DOS mouse-driver button mask.
+3. Only if the DOS mouse driver reports a left click does the guest paint
+   VGA cyan, which the host must observe in at least three frames.
+4. When the guest later reads Q, after both previous milestones, it
+   restores text mode and runs DOS INT 21h AH=4Ch.
+5. In this controlled CI-only test the host requests DOSBox Pure's
+   documented menu_time=0 behavior. Only a post-Q
+   RETRO_ENVIRONMENT_SHUTDOWN callback counts as completed guest exit.
+
+**Lab isolation:** The new option setter is compiled only with
+`dos-lab-input`; it requires a specific core identity, prior user-provided
+test archive, and an unloaded core. It cannot be used by the normal Tauri
+commands, Action Bus, or Phi-Bot. No retail game binaries are supplied.
+
+**Meaning of a passing receipt:** It qualifies the original fixture's
+BIOS ESC path, DOS mouse-driver *left click* and guest exit as observed
+by DOSBox Pure's own shutdown notification. It **does not** qualify
+mouse motion in general, arbitrary keyboard combinations, retail DOS
+game compatibility, persistence, Windows hardware input, or a universal
+clean-exit lifecycle contract for other cores.
+
+Until the GitHub checks actually pass these are proposed acceptance tests
+and not completed claims.

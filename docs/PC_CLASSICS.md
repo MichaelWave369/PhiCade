@@ -96,6 +96,15 @@ guest DOS mouse-driver input. No new Tauri/agent input privilege exists.
 Normal gameplay does not compile or expose the laboratory injection API.
 See [original DOS qualification](DOSBOX_PURE_QUALIFICATION.md).
 
+## Rung 4: original mouse and guest exit qualification
+
+The next lab-only qualification adds DOS INT 33h mouse button feedback
+(cyan guest VGA state) and a DOSBox Pure shutdown callback after the
+guest's Q/INT 21h exit path. Only an independently observed callback
+may qualify the original program's end of execution.
+Retail games, mouse motion, desktop hardware and arbitrary core exit
+semantics remain outside this claim. See [the qualification matrix](DOSBOX_PURE_QUALIFICATION.md).
+
 ## CI acceptance
 
 - [ ] Classification accepts `.dosz` / `.scummvm` and excludes

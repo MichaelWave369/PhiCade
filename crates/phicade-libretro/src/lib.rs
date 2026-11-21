@@ -467,6 +467,26 @@ impl LibretroCore {
         Ok(())
     }
 
+    /// CI-only confirmation of a guest-driven DOS process termination.
+    /// DOSBox Pure sends RETRO_ENVIRONMENT_SHUTDOWN after an auto-started
+    /// program exits when dosbox_pure_menu_time is 0. This can be set only
+    /// before loading the original DOS fixture with an explicitly enabled
+    /// lab feature; no normal player/session runtime receives this option.
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_request_shutdown_when_guest_exits(&mut self) -> Result<(), CoreError> {
+        if self.loaded || !self.identity.library_name.eq_ignore_ascii_case("DOSBox-pure") {
+            return Err(CoreError::InvalidState("DOSBox Pure must be unloaded for lab option".into()));
+        }
+        let mut state = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("core option state poisoned".into()))?;
+        let option = state.variables.iter_mut()
+            .find(|(key, _)| key.as_bytes() == b"dosbox_pure_menu_time")
+            .ok_or_else(|| CoreError::Runtime("DOSBox Pure menu_time option not registered".into()))?;
+        option.1 = CString::new("0").expect("literal option is safe");
+        state.shutdown = false;
+        Ok(())
+    }
+
     /// Controlled mouse state for isolated CI measurement. Does not expose
     /// arbitrary desktop mouse activity or grant real-game mouse capability.
     #[cfg(feature = "dos-lab-input")]
