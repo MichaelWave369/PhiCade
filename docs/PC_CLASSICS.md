@@ -85,6 +85,17 @@ callbacks, core and fixture hashes, and retropad host-state changes.
 **Still not qualified:** guest keyboard/mouse, DOS-side exit, or real
 game compatibility. See [Rung 2 evidence](DOSBOX_PURE_QUALIFICATION.md).
 
+## Rung 3 lab-only input evidence
+
+With the `dos-lab-input` Cargo feature explicitly enabled by CI, the
+host captures DOSBox Pure's keyboard callback and sends synthetic Escape
+and Q key events to the **original fixture only**. The DOS BIOS Esc
+handler changes the VGA field from magenta to green, which CI checks.
+Host-side synthetic mouse polling is tracked but is not confused with
+guest DOS mouse-driver input. No new Tauri/agent input privilege exists.
+Normal gameplay does not compile or expose the laboratory injection API.
+See [original DOS qualification](DOSBOX_PURE_QUALIFICATION.md).
+
 ## CI acceptance
 
 - [ ] Classification accepts `.dosz` / `.scummvm` and excludes

@@ -30,6 +30,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential nasm python3 git
       - uses: dtolnay/rust-toolchain@stable
+      - name: Verify lab-only input callback contract
+        run: cargo test --locked -p phicade-libretro --features dos-lab-input --lib
       - name: Build pinned core and exercise original program via PhiCade
         run: bash ./scripts/qualify-dosbox-pure.sh
       - name: Verify receipts don't claim untested capability
@@ -40,10 +42,14 @@ jobs:
               r=json.load(f)
           assert r["result"]=="PASS"
           assert r["magentaGraphicsObserved"] is True
-          for field in ("keyboardGuestDeliveryQualified","mouseGuestDeliveryQualified",
+          assert r["framesWithGreenVga"] >= 3
+          assert r["keyboardCallbackRegistered"] is True
+          assert r["escapeGuestVisualTransitionObserved"] is True
+          assert r["keyboardGuestDeliveryQualified"] is True
+          for field in ("mouseGuestDeliveryQualified",
                         "guestCleanExitQualified","retailDosGameCompatibilityQualified"):
               assert r[field] is False, field
-          print("PASS: original fixture observed; unsupported capabilities remain false")
+          print("PASS: guest Esc branch observed; mouse and guest exit remain unqualified")
           PY
       - name: Upload only metadata evidence receipt
         uses: actions/upload-artifact@v4

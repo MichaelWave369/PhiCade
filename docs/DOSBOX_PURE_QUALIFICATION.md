@@ -60,3 +60,44 @@ core or third-party game binaries through the repository.
 Add controlled keyboard and mouse device delivery, inject Escape into
 the original fixture, and demonstrate a guest-originated clean exit.
 Do not promote DOSBox Pure to general-game qualification prematurely.
+
+## Rung 3: opt-in, CI-only guest keyboard and mouse-device probe
+
+The libretro host now retains the actual keyboard callback registered by
+DOSBox Pure. An explicit Cargo feature, `dos-lab-input` (off by default),
+enables a tightly scoped Escape/Q injection and bounded synthetic mouse
+state. These are **not** Tauri commands, app controls, or agent capabilities.
+
+Source-compiled `PHITEST.COM` paints magenta, then only paints **green**
+after the BIOS `int 16h` key-read branch observes Escape. CI injects Escape
+through the registered upstream callback and requires multiple green
+frames. This is end-to-end guest keyboard evidence, not just input-mask
+verification. The test sends `Q` as a second guest key to attempt normal
+DOS shutdown. A subsequent video transition is measured but does **not**
+alone establish DOS-side exit, so `guestCleanExitQualified` remains false.
+
+Mouse support is intentionally staged: the lab feature lets the core
+poll a bounded relative mouse snapshot. Receipt counts record actual
+mouse-device polls, but no guest DOS mouse-driver acknowledgment is
+demonstrated, so `mouseGuestDeliveryQualified` remains false.
+
+The core's normal `ActionBus`, Tauri commands, runtime registration,
+controllers and Phi-Bot permissions are unchanged. No mouse/keyboard
+events are synthesized from unapproved user or agent input. Outside the
+opt-in CI feature, no lab injection methods compile into the host.
+
+### Qualification matrix
+
+| Evidence | After green guest transition |
+| --- | --- |
+| Source-built DOSZ + VGA magenta | Already proven in Rung 2 |
+| Registered keyboard callback | Must be present |
+| Guest BIOS read of ESC | Require multiple VGA green frames |
+| Synthetic mouse sampled by core | Record poll count, not guest claim |
+| Q-triggered visual return | Observe separately, not conclusive exit |
+| Guest DOS-side exit | Still unqualified |
+| Retail DOS game support | Still unqualified |
+
+Next: implement a tiny guest-generated exit receipt or instrument a
+source-built fixture to prove `int 21h / 4Ch` completion; then design
+separate properly authorized desktop keyboard/mouse interfaces.
