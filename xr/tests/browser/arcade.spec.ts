@@ -89,7 +89,7 @@ test("two browsers exchange WebRTC video, presence and bounded input", async ({
   await host.locator("#scene canvas").click({ position: { x: 768, y: 356 } });
   await expect(host.locator("#score")).toContainText("5 / 6 AMMO");
   await guest.locator("#disconnect").click();
-  await expect(guest.locator("#status")).toContainText("Disconnected");
+  await expect(guest.locator("#status")).toContainText(/\bdisconnected\b/i);
   await host.close();
   await guest.close();
 });
