@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-11-21T00:00:00Z",
+  "count": 5,
+  "games": [
+    {
+      "title": "Halo: Combat Evolved",
+      "slug": "halo-combat-evolved-xbox",
+      "console": "Xbox",
+      "project": "halo-ce-universal",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "Android"
+      ],
+      "status": "listed",
+      "facts": {}
+    },
+    {
+      "title": "The Legend of Zelda: Ocarina of Time",
+      "slug": "the-legend-of-zelda-ocarina-of-time-nintendo-64",
+      "console": "Nintendo 64",
+      "project": "Ship of Harkinian",
+      "platforms": [
+        "Windows",
+        "Linux",
+        "macOS",
+        "Switch",
+        "Wii U"
+      ],
+      "status": "listed",
+      "facts": {}
+    },
+    {
+      "title": "Super Mario 64",
+      "slug": "super-mario-64-nintendo-64-sm64pc",
+      "console": "Nintendo 64",
+      "project": "sm64ex",
+      "platforms": [
+        "Windows"
+      ],
+      "status": "listed",
+      "facts": {}
+    },
+    {
+      "title": "The Legend Of Zelda: A Link To The Past",
+      "slug": "the-legend-of-zelda-a-link-to-the-past-snes-snesrev",
+      "console": "SNES",
+      "project": "zelda3",
+      "platforms": [
+        "Windows"
+      ],
+      "status": "listed",
+      "facts": {}
+    },
+    {
+      "title": "GoldenEye 007",
+      "slug": "goldeneye-007-nintendo-64",
+      "console": "Nintendo 64",
+      "project": "goldeneye-pc-port",
+      "platforms": [
+        "Windows",
+        "Linux"
+      ],
+      "status": "listed",
+      "facts": {}
+    }
+  ]
+}

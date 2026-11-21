@@ -34,3 +34,5 @@ footer{display:flex;justify-content:space-between;gap:16px;color:#7f8da8;font-si
 @media(max-width:950px){.launch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{gap:23px}.status-board{padding:16px}.status-board div{flex-direction:column;gap:3px}}
 @media(max-width:600px){.shell{padding:22px 16px}.topbar{align-items:flex-start}.brand-mark{width:45px;height:45px;font-size:30px;border-radius:10px}h1{font-size:20px}.topbar .eyebrow{font-size:9px}.topbar .help-button{padding:9px;font-size:10px}.hero{display:block;padding:48px 0 35px}.hero h2{font-size:52px}.status-board{margin-top:29px}.launch-grid{grid-template-columns:1fr}.launch-card{min-height:196px}.section-heading{align-items:flex-start;flex-direction:column}.notice-strip{align-items:flex-start;flex-direction:column}footer{flex-wrap:wrap;line-height:1.7}}
 @media(prefers-reduced-motion:reduce){.launch-card{transition:none}.launch-card:hover,.launch-card:focus-visible,.launch-card.is-selected{transform:none}}
+
+.theme-discovery{--accent:#a9ffd7;--glow:#319c8a}

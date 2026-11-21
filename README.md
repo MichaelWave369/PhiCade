@@ -30,6 +30,13 @@ lives in `crates/phicade-scarlett-lab/`. It validates bounded, source-built
 x86-64 PE fixtures and emits JSON evidence. **No Xbox Series compatibility or
 game execution is implemented**, and the existing arcade runtime is unchanged.
 
+**Decomp Discovery (read-only, browser Rung 1):** [Open-port discovery lane](docs/DECOMP_DISCOVERY.md)
+is available at `xbox/discovery/`, linked from Xbox Edition. It displays a
+bounded, credited metadata sample of Decomp Buddy's public catalog when the
+upstream feed is available, or a clearly labeled five-project starter index if
+not. Source links only. **No game downloading, installation, native execution,
+or compatibility qualification** is added to PhiCade.
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.
