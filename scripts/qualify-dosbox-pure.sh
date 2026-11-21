@@ -28,7 +28,7 @@ nasm -f bin "$ROOT/fixtures/dos/phitest.asm" -o "$WORK/PHITEST.COM"
 python3 "$ROOT/scripts/build-dos-fixture.py" \
   --com "$WORK/PHITEST.COM" --output "$FIXTURE"
 
-cargo run --locked --quiet -p phicade-libretro --bin qualify_dosbox_pure -- \
+cargo run --locked --quiet -p phicade-libretro --features dos-lab-input --bin qualify_dosbox_pure -- \
   --core "$CORE" --fixture "$FIXTURE" --frames 240 --receipt "$RECEIPT"
 
 echo "Original fixture receipt: $RECEIPT"

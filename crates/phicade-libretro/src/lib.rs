@@ -26,6 +26,8 @@ pub const SCUMMVM_QUALIFICATION_PROFILE_ID: &str =
     "phicade.scummvm-2026.3.0-launcher-qualified.v1";
 
 const RETRO_DEVICE_JOYPAD: c_uint = 1;
+const RETRO_DEVICE_MOUSE: c_uint = 2;
+const SET_KEYBOARD_CALLBACK_VALUE: c_uint = 12;
 const RETRO_DEVICE_ANALOG: c_uint = 5;
 const RETRO_DEVICE_LIGHTGUN: c_uint = 4;
 const RETRO_MEMORY_SAVE_RAM: c_uint = 0;
@@ -102,6 +104,11 @@ struct CallbackState {
     input_mask: u16,
     analog_inputs: [i16; 4],
     lightgun: lightgun::LightGunState,
+    keyboard_callback: Option<RetroKeyboardEvent>,
+    #[cfg(feature = "dos-lab-input")]
+    lab_mouse: [i16; 7],
+    #[cfg(feature = "dos-lab-input")]
+    lab_mouse_polls: u64,
     support_no_game: bool,
     core_path: CString,
     system_dir: CString,
@@ -119,6 +126,11 @@ impl Default for CallbackState {
             input_mask: 0,
             analog_inputs: [0; 4],
             lightgun: lightgun::LightGunState::default(),
+            keyboard_callback: None,
+            #[cfg(feature = "dos-lab-input")]
+            lab_mouse: [0; 7],
+            #[cfg(feature = "dos-lab-input")]
+            lab_mouse_polls: 0,
             support_no_game: false,
             core_path: CString::new(".").unwrap(),
             system_dir: CString::new(".").unwrap(),
@@ -189,6 +201,12 @@ struct RetroLogCallback {
 
 unsafe extern "C" {
     fn phicade_libretro_log();
+}
+
+type RetroKeyboardEvent = unsafe extern "C" fn(bool, c_uint, u32, u16);
+#[repr(C)]
+struct RetroKeyboardCallback {
+    callback: Option<RetroKeyboardEvent>,
 }
 
 type EnvironmentCallback = unsafe extern "C" fn(c_uint, *mut c_void) -> bool;
@@ -363,6 +381,12 @@ impl LibretroCore {
                 state.analog_inputs = [0; 4];
             state.lightgun = lightgun::LightGunState::default();
                 state.support_no_game = false;
+                state.keyboard_callback = None;
+                #[cfg(feature = "dos-lab-input")]
+                {
+                    state.lab_mouse = [0; 7];
+                    state.lab_mouse_polls = 0;
+                }
                 state.core_path = path_cstring(&core_path)?;
                 state.variables.clear();
                 state.shutdown = false;
@@ -412,6 +436,59 @@ impl LibretroCore {
                 frame: 0,
             })
         }
+    }
+
+    /// CI-only input probe. The feature is not used by the desktop backend,
+    /// IPC, Action Bus or agent APIs. Only DOSBox Pure gets this test hook.
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_send_escape(&mut self, pressed: bool) -> Result<(), CoreError> {
+        if !self.loaded || !self.identity.library_name.eq_ignore_ascii_case("DOSBox-pure") {
+            return Err(CoreError::InvalidState("DOSBox Pure lab fixture must be loaded".into()));
+        }
+        // Copy callback out while holding the lock, then drop the lock before
+        // calling upstream code: DOSBox Pure may re-enter our callbacks.
+        let callback = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("keyboard callback state poisoned".into()))?
+            .keyboard_callback
+            .ok_or_else(|| CoreError::Runtime("core did not register keyboard callback".into()))?;
+        unsafe { callback(pressed, 27, if pressed { 27 } else { 0 }, 0); }
+        Ok(())
+    }
+
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_send_q(&mut self, pressed: bool) -> Result<(), CoreError> {
+        if !self.loaded || !self.identity.library_name.eq_ignore_ascii_case("DOSBox-pure") {
+            return Err(CoreError::InvalidState("DOSBox Pure lab fixture must be loaded".into()));
+        }
+        let callback = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("keyboard callback state poisoned".into()))?
+            .keyboard_callback
+            .ok_or_else(|| CoreError::Runtime("core did not register keyboard callback".into()))?;
+        unsafe { callback(pressed, 113, if pressed { 113 } else { 0 }, 0); }
+        Ok(())
+    }
+
+    /// Controlled mouse state for isolated CI measurement. Does not expose
+    /// arbitrary desktop mouse activity or grant real-game mouse capability.
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_mouse_state(&mut self, x: i16, y: i16, left: bool) -> Result<(), CoreError> {
+        if !self.loaded || !self.identity.library_name.eq_ignore_ascii_case("DOSBox-pure") {
+            return Err(CoreError::InvalidState("DOSBox Pure lab fixture must be loaded".into()));
+        }
+        let mut state = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("mouse state poisoned".into()))?;
+        state.lab_mouse = [x, y, if left { 1 } else { 0 }, 0, 0, 0, 0];
+        Ok(())
+    }
+
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_mouse_poll_count(&self) -> u64 {
+        callbacks().lock().map(|state| state.lab_mouse_polls).unwrap_or(0)
+    }
+
+    #[cfg(feature = "dos-lab-input")]
+    pub fn lab_keyboard_registered(&self) -> bool {
+        callbacks().lock().map(|state| state.keyboard_callback.is_some()).unwrap_or(false)
     }
 
     pub fn identity(&self) -> &CoreIdentity { &self.identity }
@@ -818,7 +895,12 @@ unsafe extern "C" fn environment_callback(command: c_uint, data: *mut c_void) ->
             *(data as *mut c_uint) = 3;
             true
         }
-        SET_KEYBOARD_CALLBACK => true,
+        SET_KEYBOARD_CALLBACK => {
+            if data.is_null() { return false; }
+            let keyboard = &*(data as *const RetroKeyboardCallback);
+            state.keyboard_callback = keyboard.callback;
+            true
+        },
         SET_PIXEL_FORMAT => {
             if data.is_null() { return false; }
             state.format = match *(data as *const c_uint) {
@@ -887,7 +969,9 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
     if port != 0 {
         return 0;
     }
-    let Ok(state) = callbacks().lock() else { return 0; };
+    let Ok(mut state) = callbacks().lock() else { return 0; };
+    #[cfg(feature = "dos-lab-input")]
+    if device == RETRO_DEVICE_MOUSE { state.lab_mouse_polls += 1; }
     match device {
         RETRO_DEVICE_JOYPAD if id <= 15 => {
             if state.input_mask & (1u16 << id) != 0 { 1 } else { 0 }
@@ -900,6 +984,8 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
             _ => 0,
         },
         RETRO_DEVICE_LIGHTGUN => state.lightgun.input(id),
+        #[cfg(feature = "dos-lab-input")]
+        RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.lab_mouse[id as usize],
         _ => 0,
     }
 }
@@ -919,6 +1005,25 @@ mod tests {
 
         assert!(ok);
         assert!(!callback.log.is_null());
+    }
+
+    #[cfg(feature = "dos-lab-input")]
+    #[test]
+    fn lab_mouse_callback_reads_bounded_mouse_state() {
+        let mut state = callbacks().lock().unwrap();
+        state.lab_mouse = [14, -12, 1, 0, 0, 0, 0];
+        state.lab_mouse_polls = 0;
+        drop(state);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 0) }, 14);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 1) }, -12);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 2) }, 1);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 7) }, 0);
+        assert_eq!(callbacks().lock().unwrap().lab_mouse_polls, 4);
+    }
+
+    #[test]
+    fn keyboard_registration_rejects_null_data() {
+        assert!(!unsafe { environment_callback(SET_KEYBOARD_CALLBACK, ptr::null_mut()) });
     }
 
     #[test]
