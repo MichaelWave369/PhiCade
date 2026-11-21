@@ -535,6 +535,11 @@ impl LibretroCore {
             .map_err(|_| CoreError::Runtime("callback state poisoned".into()))?
             .keyboard_callback.is_some();
         if !available { return Err(CoreError::Runtime("core did not register keyboard input".into())); }
+        if self.session_dos_enabled {
+            // Reapproval of an active session must release previous key downs
+            // before resetting local state, otherwise keys can stick in DOS.
+            self.release_dos_session_input();
+        }
         self.session_dos_enabled = true;
         self.session_dos_keys.clear();
         if let Ok(mut state) = callbacks().lock() { state.session_mouse = [0; 7]; }
