@@ -105,6 +105,19 @@ may qualify the original program's end of execution.
 Retail games, mouse motion, desktop hardware and arbitrary core exit
 semantics remain outside this claim. See [the qualification matrix](DOSBOX_PURE_QUALIFICATION.md).
 
+## Rung 5: operator-approved desktop DOS input
+
+PhiCade's native desktop can explicitly enable a restricted input bridge
+only for an active registered DOSBox Pure `.dosz` session in HUMAN mode.
+The CRT must be focused for keyboard events; the D-pad maps to arrows,
+A to Space and B to Escape. The bridge clamps mouse movement, rejects
+all but a small key allowlist, and clears held keys/buttons on blur or
+disable. Stale session IDs are refused after game replacement. This is
+not general OS keyboard injection, and Phi-Bot receives no new authority.
+
+See [DOS session input contract](DOS_SESSION_INPUT.md). Hardware play
+and more complex DOS keyboard/mouse layouts still require manual tests.
+
 ## CI acceptance
 
 - [ ] Classification accepts `.dosz` / `.scummvm` and excludes

@@ -19,7 +19,7 @@ hex = "0.4"
 png = "0.17"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 sha2 = "0.10"
-phicade-libretro = { path = "../crates/phicade-libretro" }
+phicade-libretro = { path = "../crates/phicade-libretro", features = ["dos-session-input"] }
 phicade-runtime = { path = "../crates/phicade-runtime" }
 phicade-xr-protocol = { path = "../crates/phicade-xr-protocol" }
 phicade-xr-bridge = { path = "../crates/phicade-xr-bridge" }

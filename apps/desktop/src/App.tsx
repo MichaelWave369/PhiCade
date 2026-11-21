@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { boundedDosDelta, dosKeyFromBrowser, dosKeyFromGamepad } from "./dosInput";
 import { XrHostPanel } from "./XrHostPanel";
 import { DolphinXrPanel } from "./DolphinXrPanel";
 import { ActionBus, type ActionSource, type GameAction } from "./actionBus";
@@ -46,6 +47,11 @@ import {
   importRuntimeCoreFolder,
   launchN64Bridge,
   launchSteamApp,
+  approveDosInput,
+  sendDosInputKey,
+  sendDosInputMouse,
+  releaseDosInput,
+  disableDosInput,
   dockN64Bridge,
   resizeN64Dock,
   undockN64Bridge,
@@ -253,6 +259,9 @@ export function App() {
   const [coreFolderReport, setCoreFolderReport] = useState<CoreFolderImportReport | null>(null);
   const [n64LaunchPid, setN64LaunchPid] = useState<number | null>(null);
   const [steamAppId, setSteamAppId] = useState("");
+  const [dosInputId, setDosInputId] = useState<number | null>(null);
+  const dosMouseBusyRef = useRef(false);
+  const dosMouseNextRef = useRef<{ dx: number; dy: number; left: boolean } | null>(null);
   const [steamLaunchBusy, setSteamLaunchBusy] = useState(false);
   const [n64Docked, setN64Docked] = useState(false);
   const [n64AutoDock, setN64AutoDock] = useState(false);
@@ -373,6 +382,13 @@ export function App() {
         const controllerIndex = controllers[0]?.index ?? 0;
         const nextButtons = readGameBoyButtons(controllerIndex, settings.controllerDeadzone);
         for (const action of diffGameBoyButtons(gamepadRef.current, nextButtons)) {
+          if (dosInputId !== null) {
+            if (action.kind === "button") {
+              const mapped = dosKeyFromGamepad(action.button);
+              if (mapped) await sendDosInputKey(dosInputId, mapped, action.pressed);
+            }
+            continue; // prevent double-delivery via ordinary Libretro retropad
+          }
           const event = bus.publish(frameRef.current, { kind: "human", seat: 1 }, action);
           setLastInput(`#${event.sequence.toString().padStart(4, "0")} GAMEPAD:P1 → ${action.kind === "button" ? `${action.button}:${action.pressed ? "DOWN" : "UP"}` : action.kind}`);
         }
@@ -414,7 +430,7 @@ export function App() {
       cancelled = true;
       window.cancelAnimationFrame(animation);
     };
-  }, [running, controllers, settings.controllerDeadzone, bus, session?.core.fps]);
+  }, [running, controllers, settings.controllerDeadzone, bus, session?.core.fps, dosInputId]);
 
   useEffect(() => () => {
     if (native) void stopEmulation();
@@ -1458,6 +1474,10 @@ export function App() {
   };
 
   const prepareSessionLaunch = async () => {
+    if (dosInputId !== null) {
+      await disableDosInput(dosInputId).catch(() => undefined);
+      setDosInputId(null);
+    }
     if (!audioContextRef.current) audioContextRef.current = new AudioContext();
     await audioContextRef.current.resume();
     nextAudioTimeRef.current = audioContextRef.current.currentTime;
@@ -1636,6 +1656,54 @@ export function App() {
       launchBusyRef.current = false;
       setLaunchBusy(false);
     }
+  };
+
+  // Local, per-session approval. Focus is limited to the PhiCade CRT;
+  // this does not install a global keyboard hook or grant agent authority.
+  const toggleDosInput = async () => {
+    if (!native || !running || session?.core.libraryName.toLowerCase() !== "dosbox-pure") return;
+    try {
+      if (dosInputId !== null) {
+        await disableDosInput(dosInputId);
+        setDosInputId(null);
+        setNotice("DOS KEYBOARD AND MOUSE RELEASED");
+      } else {
+        const receipt = await approveDosInput(true);
+        setDosInputId(receipt.sessionId);
+        setNotice("DOS INPUT APPROVED FOR THIS GAME ONLY // CLICK CRT TO FOCUS");
+        window.requestAnimationFrame(() => crtRef.current?.focus());
+      }
+    } catch (error) {
+      setNotice(`DOS INPUT PERMISSION ERROR // ${String(error)}`);
+    }
+  };
+
+  useEffect(() => {
+    if ((!running || authority?.mode !== "human") && dosInputId !== null) {
+      void disableDosInput(dosInputId).catch(() => undefined);
+      setDosInputId(null);
+    }
+  }, [running, authority?.mode, dosInputId]);
+
+  const sendDosPointer = (dx: number, dy: number, left: boolean) => {
+    if (dosInputId === null || !running) return;
+    const event = { dx: boundedDosDelta(dx), dy: boundedDosDelta(dy), left };
+    if (dosMouseBusyRef.current) {
+      // Keep the final state (especially left-button release) rather than
+      // dropping it while the previous event is still in flight.
+      dosMouseNextRef.current = event;
+      return;
+    }
+    dosMouseBusyRef.current = true;
+    void (async () => {
+      let next: typeof event | null = event;
+      while (next) {
+        await sendDosInputMouse(dosInputId, next.dx, next.dy, next.left);
+        next = dosMouseNextRef.current;
+        dosMouseNextRef.current = null;
+      }
+    })().catch((error) => setNotice(`DOS MOUSE INPUT ERROR // ${String(error)}`))
+      .finally(() => { dosMouseBusyRef.current = false; });
   };
 
   // A Steam App ID is a number, not a filepath or executable. Steam must
@@ -1898,6 +1966,10 @@ export function App() {
   };
 
   const stopGame = async () => {
+    if (dosInputId !== null) {
+      await disableDosInput(dosInputId).catch(() => undefined);
+      setDosInputId(null);
+    }
     setRunning(false);
     gamepadRef.current = emptyGameBoyButtons();
     try {
@@ -2209,7 +2281,41 @@ export function App() {
           {native && <DolphinXrPanel />}
           {native && <XrHostPanel canvasRef={canvasRef} audioContextRef={audioContextRef} audioStreamRef={xrAudioStreamRef} running={running} sessionKey={session?.gameKey ?? null} />}
           <div className="bezel">
-            <div className="crt" ref={crtRef}>
+            <div className="crt" ref={crtRef} tabIndex={dosInputId !== null ? 0 : undefined}
+              role={dosInputId !== null ? "application" : undefined}
+              aria-label={dosInputId !== null ? "Focused DOS keyboard and mouse area" : undefined}
+              onKeyDown={(event) => {
+                if (dosInputId === null || !running || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+                const key = dosKeyFromBrowser(event.key);
+                if (!key) return;
+                event.preventDefault();
+                event.stopPropagation();
+                void sendDosInputKey(dosInputId, key, true).catch((error) => setNotice(`DOS KEY ERROR // ${String(error)}`));
+              }}
+              onKeyUp={(event) => {
+                if (dosInputId === null || !running) return;
+                const key = dosKeyFromBrowser(event.key);
+                if (!key) return;
+                event.preventDefault();
+                event.stopPropagation();
+                void sendDosInputKey(dosInputId, key, false).catch(() => undefined);
+              }}
+              onMouseDown={(event) => {
+                if (dosInputId === null || !running || event.button !== 0) return;
+                event.currentTarget.focus();
+                event.preventDefault();
+                sendDosPointer(0, 0, true);
+              }}
+              onMouseUp={(event) => {
+                if (event.button === 0) sendDosPointer(0, 0, false);
+              }}
+              onMouseMove={(event) => {
+                if (dosInputId === null) return;
+                sendDosPointer(event.movementX, event.movementY, (event.buttons & 1) !== 0);
+              }}
+              onMouseLeave={() => { if (dosInputId !== null) void releaseDosInput(dosInputId).catch(() => undefined); }}
+              onBlur={() => { if (dosInputId !== null) void releaseDosInput(dosInputId).catch(() => undefined); }}
+            >
               <canvas ref={canvasRef} className={`game-canvas ${running ? "visible" : ""}`} aria-label="emulator video" />
               {!n64Docked && <div className="scanlines" />}
               {!running && !n64Docked && (
@@ -2223,6 +2329,22 @@ export function App() {
             </div>
           </div>
 
+          {running && session?.core.libraryName.toLowerCase() === "dosbox-pure" && (
+            <div className="session-strip" aria-label="DOS input permissions">
+              <button
+                type="button"
+                onClick={() => void toggleDosInput()}
+                disabled={authority?.mode !== "human" || replayRecording || autodrive?.active}
+              >
+                {dosInputId === null ? "ENABLE DOS INPUT (HUMAN)" : "DISABLE DOS INPUT"}
+              </button>
+              <span>
+                {dosInputId === null
+                  ? "OFF // explicit per-session approval required"
+                  : "ON // focus CRT for keyboard/mouse; gamepad A=SPACE B=ESC, D-PAD=ARROWS"}
+              </span>
+            </div>
+          )}
           <div className="session-strip">
             <button className="play-game" onClick={() => void launchGame()} disabled={running || n64LaunchPid !== null || launchBusy || registeredLaunchBusy || !native || !selectedGame}>{launchBusy ? "STARTING..." : "PLAY GAME"}</button>
             <button onClick={n64LaunchPid !== null && !running ? () => { void closeN64Now(); } : stopGame} disabled={n64LaunchPid !== null ? launchBusy : !running || replayRecording || autodrive?.active}>{n64LaunchPid !== null && !running ? "CLOSE N64" : "EJECT"}</button>

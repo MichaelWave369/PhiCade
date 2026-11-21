@@ -1,0 +1,40 @@
+name: DOS Rung 5 / session-scoped desktop input
+on:
+  pull_request:
+    paths:
+      - "apps/desktop/src/dosInput*"
+      - "apps/desktop/src/App.tsx"
+      - "apps/desktop/src/native.ts"
+      - "crates/phicade-libretro/**"
+      - "src-tauri/**"
+      - ".github/workflows/dos-session-input.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/desktop/src/dosInput*"
+      - "apps/desktop/src/App.tsx"
+      - "apps/desktop/src/native.ts"
+      - "crates/phicade-libretro/**"
+      - "src-tauri/**"
+      - ".github/workflows/dos-session-input.yml"
+permissions:
+  contents: read
+jobs:
+  dos-session:
+    name: core / DOS session input feature and browser mappings
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Isolated opt-in libretro input tests
+        run: cargo test --locked -p phicade-libretro --features dos-session-input --lib
+      - name: Browser mapping tests and TypeScript
+        run: |
+          npm ci --ignore-scripts
+          npx vitest run apps/desktop/src/dosInput.test.ts
+          npm run typecheck --workspace @phicade/desktop
