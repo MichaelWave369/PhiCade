@@ -74,6 +74,17 @@ scraping, or automatic game execution.**
 | Steam game compatibility or ownership detection | Not implemented |
 | Steamworks API emulation | Out of scope |
 
+## Rung 2: original DOS VGA fixture qualification
+
+An original 16-bit DOS .COM program lives in fixtures/dos/phitest.asm.
+CI assembles it, packages a single-file DOSZ archive, builds a pinned
+DOSBox Pure core from upstream source, and runs it through PhiCade's
+actual libretro host. The receipt records observed video and audio
+callbacks, core and fixture hashes, and retropad host-state changes.
+
+**Still not qualified:** guest keyboard/mouse, DOS-side exit, or real
+game compatibility. See [Rung 2 evidence](DOSBOX_PURE_QUALIFICATION.md).
+
 ## CI acceptance
 
 - [ ] Classification accepts `.dosz` / `.scummvm` and excludes
