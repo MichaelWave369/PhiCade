@@ -14,6 +14,12 @@ export interface AppSettings {
   ollamaModel: string | null;
 }
 
+export interface SteamHandoffReceipt {
+  appId: number;
+  protocolUri: string;
+  handoffRequested: boolean;
+}
+
 export interface N64LaunchReceipt {
   pid: number;
   coreSha256: string;
@@ -976,6 +982,11 @@ export async function startEmulation(
   gamePath: string,
 ): Promise<SessionInfo> {
   return invoke<SessionInfo>("start_emulation", { corePath, gamePath });
+}
+
+export async function launchSteamApp(appId: number, operatorApproved: boolean): Promise<SteamHandoffReceipt> {
+  if (!isNativeShell()) throw new Error("Steam client handoff requires the Windows desktop app");
+  return invoke<SteamHandoffReceipt>("launch_steam_app", { appId, operatorApproved });
 }
 
 export async function launchN64Bridge(retroarchPath: string, corePath: string, gamePath: string): Promise<N64LaunchReceipt> {

@@ -39,6 +39,7 @@ use tauri::{AppHandle, Manager, State};
 mod evidence_bundle;
 mod xr_host;
 mod dolphinxr;
+mod steam_bridge;
 #[cfg(target_os = "windows")]
 mod n64_dock;
 pub mod providers;
@@ -1099,6 +1100,9 @@ fn classify_extension(extension: &str) -> Option<&'static str> {
         "md" | "gen" | "32x" => Some("GENESIS"),
         "cue" | "chd" | "pbp" => Some("PS1"),
         "n64" | "z64" | "v64" => Some("N64"),
+        // Deliberate formats only. Do not ingest arbitrary ZIPs or EXEs.
+        "dosz" => Some("DOS"),
+        "scummvm" => Some("SCUMMVM"),
         _ => None,
     }
 }
@@ -6216,6 +6220,7 @@ pub fn run() {
             register_runtime_core,
             import_runtime_core_folder,
             launch_n64_bridge,
+            steam_bridge::launch_steam_app,
             n64_bridge_status,
             dock_n64_bridge,
             resize_n64_dock,
@@ -6514,6 +6519,8 @@ mod tests {
         assert_eq!(classify_extension("sfc"), Some("SNES"));
         assert_eq!(classify_extension("gba"), Some("GBA"));
         assert_eq!(classify_extension("md"), Some("GENESIS"));
+        assert_eq!(classify_extension("dosz"), Some("DOS"));
+        assert_eq!(classify_extension("scummvm"), Some("SCUMMVM"));
     }
 
     #[test]
@@ -6521,6 +6528,9 @@ mod tests {
         assert_eq!(classify_extension("txt"), None);
         assert_eq!(classify_extension("exe"), None);
         assert_eq!(classify_extension("zip"), None);
+        assert_eq!(classify_extension("bat"), None);
+        assert_eq!(classify_extension("com"), None);
+        assert_eq!(classify_extension("steam"), None);
     }
 
     #[test]

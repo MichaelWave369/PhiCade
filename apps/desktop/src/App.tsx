@@ -45,6 +45,7 @@ import {
   listRuntimeRegistrations,
   importRuntimeCoreFolder,
   launchN64Bridge,
+  launchSteamApp,
   dockN64Bridge,
   resizeN64Dock,
   undockN64Bridge,
@@ -107,7 +108,7 @@ import {
   type SessionInfo,
 } from "./native";
 
-const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "N64", "PS1"] as const;
+const systems = ["ALL", "NES", "SNES", "GB", "GBC", "GBA", "GENESIS", "N64", "PS1", "DOS", "SCUMMVM"] as const;
 const AUDIO_START_LEAD_SECONDS = 0.03;
 const MAX_AUDIO_QUEUE_SECONDS = 0.14;
 const PHIBOT_AGENT_ID = "phi-local";
@@ -123,6 +124,8 @@ const CORE_PREFERENCES: Record<string, string[]> = {
   GENESIS: ["genesis plus gx", "picodrive"],
   N64: ["mupen64plus", "parallel"],
   PS1: ["beetle psx", "pcsx rearmed"],
+  DOS: ["dosbox pure", "dosbox-pure"],
+  SCUMMVM: ["scummvm"],
 };
 
 function matchingCores(game: RomEntry, registrations: RuntimeRegistrationReceipt[]) {
@@ -249,6 +252,8 @@ export function App() {
   const [runtimeRegistryBusy, setRuntimeRegistryBusy] = useState(false);
   const [coreFolderReport, setCoreFolderReport] = useState<CoreFolderImportReport | null>(null);
   const [n64LaunchPid, setN64LaunchPid] = useState<number | null>(null);
+  const [steamAppId, setSteamAppId] = useState("");
+  const [steamLaunchBusy, setSteamLaunchBusy] = useState(false);
   const [n64Docked, setN64Docked] = useState(false);
   const [n64AutoDock, setN64AutoDock] = useState(false);
   const [selectedRuntimeSha, setSelectedRuntimeSha] = useState<string | null>(null);
@@ -1633,6 +1638,26 @@ export function App() {
     }
   };
 
+  // A Steam App ID is a number, not a filepath or executable. Steam must
+  // be installed locally and remains responsible for ownership and DRM.
+  const requestSteamLaunch = async () => {
+    if (!native || running || steamLaunchBusy) return;
+    const value = steamAppId.trim();
+    if (!/^[1-9][0-9]{0,9}$/.test(value) || Number(value) > 0xffffffff) {
+      setNotice("STEAM APP ID MUST BE A VALID POSITIVE NUMBER");
+      return;
+    }
+    setSteamLaunchBusy(true);
+    try {
+      const receipt = await launchSteamApp(Number(value), true);
+      setNotice(`STEAM CLIENT HANDOFF REQUESTED // APP ${receipt.appId} // VERIFY GAME LAUNCH IN STEAM`);
+    } catch (error) {
+      setNotice(`STEAM CLIENT HANDOFF FAILED // ${String(error)}`);
+    } finally {
+      setSteamLaunchBusy(false);
+    }
+  };
+
   // Docking is best-effort. The external RetroArch window remains playable if
   // Windows rejects cross-process parenting (often DPI or graphics-related).
   const dockN64Now = async () => {
@@ -2038,6 +2063,42 @@ export function App() {
             {n64LaunchPid !== null && <p className="microcopy">LAST EXTERNAL N64 LAUNCH // PID {n64LaunchPid}</p>}
           </div>
 
+          <div className="rule" />
+          <div className="n64-bridge-setup">
+            <div className="panel-title">PC CLASSICS // DOS + SCUMMVM</div>
+            <p className="microcopy">
+              DOS: `.dosz` packages can match a registered DOSBox Pure libretro core.
+              SCUMMVM: `.scummvm` hooks can match the existing ScummVM libretro runtime.
+              Both still require local authorized game files and explicit session approval.
+            </p>
+            <p className="microcopy">
+              General `.zip`, `.exe`, `.bat`, and `.com` files are intentionally not auto-indexed.
+              Runtime compatibility is not yet qualified on real DOS games.
+            </p>
+          </div>
+          <div className="rule" />
+          <div className="n64-bridge-setup">
+            <div className="panel-title">STEAM // INSTALLED CLIENT HANDOFF</div>
+            <p className="microcopy">
+              Launch through your existing Steam installation and account, not a Steam emulator.
+              Enter a numeric Steam App ID and approve one handoff. No library scraping or DRM bypass.
+            </p>
+            <label htmlFor="phicade-steam-app-id" className="microcopy">STEAM APP ID</label>
+            <input
+              id="phicade-steam-app-id"
+              type="text"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="e.g. 480"
+              value={steamAppId}
+              onChange={(event) => setSteamAppId(event.target.value)}
+              disabled={!native || steamLaunchBusy || running}
+            />
+            <button className="utility-button" onClick={() => void requestSteamLaunch()} disabled={!native || steamLaunchBusy || running}>
+              {steamLaunchBusy ? "REQUESTING STEAM..." : "OPEN IN STEAM (APPROVE)"}
+            </button>
+            <p className="microcopy">Windows desktop only in this rung. Client receipt confirms the handoff request, not installation, entitlement, or game startup.</p>
+          </div>
           <div className="rule" />
           <div className="runtime-manager">
             <div className="runtime-manager-heading">
