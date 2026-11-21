@@ -1,5 +1,6 @@
 ; PHITEST.COM: original PhiCade DOS fixture; source assembled by NASM in CI.
-; BIOS VGA mode 13h, magenta/green state, PIT speaker, Esc+Q guest-exit path.
+; Original DOS VGA color transitions: magenta -> green (Esc) -> cyan (mouse).
+; Q then triggers DOS int21h 4Ch; host must see core shutdown notification.
 ; Keyboard/mouse guest delivery and DOS-side exit remain unqualified at this rung.
 bits 16
 org 0x100
@@ -26,6 +27,27 @@ start:
     out 0x61, al
 
 .keyboard_loop:
+    ; DOS mouse-driver INT 33h, function 3 returns BX button bits.
+    ; Mouse input is ignored until BIOS keyboard ESC is observed.
+    cmp byte [escape_seen], 1
+    jne .check_keys
+    cmp byte [mouse_seen], 1
+    je .check_keys
+    mov ax, 0x0003
+    int 0x33
+    test bx, 0x0001
+    jz .check_keys
+    ; Cyan state is reachable only when the GUEST mouse-driver sees
+    ; a left click after Escape. No host-side frame painting.
+    mov ax, 0xa000
+    mov es, ax
+    xor di, di
+    mov cx, 320*200
+    mov al, 0x0b
+    rep stosb
+    mov byte [mouse_seen], 1
+
+.check_keys:
     mov ah, 0x01
     int 0x16
     jz .keyboard_loop
@@ -38,7 +60,6 @@ start:
     jmp .keyboard_loop
 
 .escape_received:
-    ; Visual marker proves the guest BIOS read ESC. No host paint logic.
     mov ax, 0xa000
     mov es, ax
     xor di, di
@@ -51,7 +72,10 @@ start:
 .exit_requested:
     cmp byte [escape_seen], 1
     jne .keyboard_loop
-    ; Only run this code after BOTH guest key events have been read.
+    cmp byte [mouse_seen], 1
+    jne .keyboard_loop
+    ; The host only qualifies the EXIT when the CORE sends its
+    ; documented RETRO_ENVIRONMENT_SHUTDOWN after guest termination.
     in al, 0x61
     and al, 0xfc
     out 0x61, al
@@ -61,3 +85,4 @@ start:
     int 0x21
 
 escape_seen: db 0
+mouse_seen: db 0

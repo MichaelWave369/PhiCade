@@ -45,7 +45,7 @@ Steam App ID panel hands off to a locally installed Steam client on explicit
 operator request; **no Steam API emulator, DRM bypass, account scraping or
 automatic execution**. See [PC Classics](docs/PC_CLASSICS.md).
 
-**DOSBox Pure Rungs 2–3:** original DOS VGA and PC-speaker source fixture
+**DOSBox Pure Rungs 2–4:** original DOS VGA and PC-speaker source fixture
 runs through the real libretro host in isolated GitHub CI. See
 [qualification status](docs/DOSBOX_PURE_QUALIFICATION.md).
 Guest keyboard/mouse, clean DOS exit, and commercial-game playability

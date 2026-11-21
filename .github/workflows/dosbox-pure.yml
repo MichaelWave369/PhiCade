@@ -1,4 +1,4 @@
-name: DOSBox Pure / original DOS fixture qualification
+name: DOSBox Pure / Rung 4 guest mouse and exit qualification
 on:
   pull_request:
     paths:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 jobs:
   original-fixture:
-    name: core / DOSBox Pure original VGA fixture
+    name: core / DOSBox Pure original guest input and exit
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,13 +43,18 @@ jobs:
           assert r["result"]=="PASS"
           assert r["magentaGraphicsObserved"] is True
           assert r["framesWithGreenVga"] >= 3
+          assert r["framesWithCyanVga"] >= 3
           assert r["keyboardCallbackRegistered"] is True
           assert r["escapeGuestVisualTransitionObserved"] is True
           assert r["keyboardGuestDeliveryQualified"] is True
-          for field in ("mouseGuestDeliveryQualified",
-                        "guestCleanExitQualified","retailDosGameCompatibilityQualified"):
-              assert r[field] is False, field
-          print("PASS: guest Esc branch observed; mouse and guest exit remain unqualified")
+          assert r["mouseDevicePolledInCore"] is True
+          assert r["mouseGuestDeliveryQualified"] is True
+          assert r["coreShutdownCallbackObserved"] is True
+          assert isinstance(r["frameAtCoreShutdown"], int)
+          assert r["frameAtCoreShutdown"] >= 200
+          assert r["guestCleanExitQualified"] is True
+          assert r["retailDosGameCompatibilityQualified"] is False
+          print("PASS: BIOS keyboard, guest mouse left-click, and core shutdown on guest exit; commercial games unqualified")
           PY
       - name: Upload only metadata evidence receipt
         uses: actions/upload-artifact@v4
