@@ -25,6 +25,11 @@ It exposes curated portal links only. Xbox hardware/controller qualification,
 native emulator execution, remote streaming, and PhiOS runtime access are
 **not** part of this preview.
 
+**Scarlett Lab (experimental, Rung 1):** [Read-only PE32+ inspection lab](docs/SCARLETT_LAB.md)
+lives in `crates/phicade-scarlett-lab/`. It validates bounded, source-built
+x86-64 PE fixtures and emits JSON evidence. **No Xbox Series compatibility or
+game execution is implemented**, and the existing arcade runtime is unchanged.
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.
