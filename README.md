@@ -51,6 +51,13 @@ runs through the real libretro host in isolated GitHub CI. See
 Guest keyboard/mouse, clean DOS exit, and commercial-game playability
 remain unqualified even if the video smoke test passes.
 
+**DOS Rung 5 (experimental desktop input):** a session-approved, HUMAN-only
+keyboard/mouse bridge for loaded DOSBox Pure `.dosz` games, with focused-CRT
+key capture, bounded mouse deltas, limited gamepad key mapping and release on
+blur/disable. No global keyboard hook, AI grants, or automatic game download.
+See [DOS desktop input boundary](docs/DOS_SESSION_INPUT.md).
+Real hardware/gameplay qualification is pending.
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.

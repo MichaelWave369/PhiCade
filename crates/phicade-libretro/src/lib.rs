@@ -104,6 +104,8 @@ struct CallbackState {
     analog_inputs: [i16; 4],
     lightgun: lightgun::LightGunState,
     keyboard_callback: Option<RetroKeyboardEvent>,
+    #[cfg(feature = "dos-session-input")]
+    session_mouse: [i16; 7],
     #[cfg(feature = "dos-lab-input")]
     lab_mouse: [i16; 7],
     #[cfg(feature = "dos-lab-input")]
@@ -126,6 +128,8 @@ impl Default for CallbackState {
             analog_inputs: [0; 4],
             lightgun: lightgun::LightGunState::default(),
             keyboard_callback: None,
+            #[cfg(feature = "dos-session-input")]
+            session_mouse: [0; 7],
             #[cfg(feature = "dos-lab-input")]
             lab_mouse: [0; 7],
             #[cfg(feature = "dos-lab-input")]
@@ -330,6 +334,10 @@ pub struct LibretroCore {
     game_path: Option<CString>,
     input_mask: u16,
     frame: u64,
+    #[cfg(feature = "dos-session-input")]
+    session_dos_enabled: bool,
+    #[cfg(feature = "dos-session-input")]
+    session_dos_keys: std::collections::BTreeSet<c_uint>,
 }
 
 unsafe fn load_symbol<T: Copy>(lib: &Library, name: &[u8]) -> Result<T, CoreError> {
@@ -381,6 +389,8 @@ impl LibretroCore {
             state.lightgun = lightgun::LightGunState::default();
                 state.support_no_game = false;
                 state.keyboard_callback = None;
+                #[cfg(feature = "dos-session-input")]
+                { state.session_mouse = [0; 7]; }
                 #[cfg(feature = "dos-lab-input")]
                 {
                     state.lab_mouse = [0; 7];
@@ -433,6 +443,10 @@ impl LibretroCore {
                 game_path: None,
                 input_mask: 0,
                 frame: 0,
+                #[cfg(feature = "dos-session-input")]
+                session_dos_enabled: false,
+                #[cfg(feature = "dos-session-input")]
+                session_dos_keys: std::collections::BTreeSet::new(),
             })
         }
     }
@@ -509,6 +523,79 @@ impl LibretroCore {
     pub fn lab_keyboard_registered(&self) -> bool {
         callbacks().lock().map(|state| state.keyboard_callback.is_some()).unwrap_or(false)
     }
+
+    /// Opt-in, current-session input for locally registered DOSBox Pure.
+    /// Only Tauri's explicit HUMAN-mode, DOSZ session gate may call this API.
+    #[cfg(feature = "dos-session-input")]
+    pub fn enable_dos_session_input(&mut self) -> Result<(), CoreError> {
+        if !self.loaded || !self.identity.library_name.eq_ignore_ascii_case("DOSBox-pure") {
+            return Err(CoreError::InvalidState("DOS input requires loaded DOSBox Pure".into()));
+        }
+        let available = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("callback state poisoned".into()))?
+            .keyboard_callback.is_some();
+        if !available { return Err(CoreError::Runtime("core did not register keyboard input".into())); }
+        self.session_dos_enabled = true;
+        self.session_dos_keys.clear();
+        if let Ok(mut state) = callbacks().lock() { state.session_mouse = [0; 7]; }
+        Ok(())
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    pub fn dos_session_key(&mut self, key: &str, pressed: bool) -> Result<(), CoreError> {
+        if !self.session_dos_enabled || !self.loaded {
+            return Err(CoreError::InvalidState("DOS session input is not approved".into()));
+        }
+        let (code, character) = dos_allowed_key(key)
+            .ok_or_else(|| CoreError::InvalidState("key is outside approved DOS mapping".into()))?;
+        // Idempotent handling prevents auto-repeat and duplicate release.
+        if pressed == self.session_dos_keys.contains(&code) { return Ok(()); }
+        let callback = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("callback state poisoned".into()))?
+            .keyboard_callback
+            .ok_or_else(|| CoreError::Runtime("DOS keyboard callback unavailable".into()))?;
+        // Never hold callback mutex across upstream C callback re-entrancy.
+        unsafe { callback(pressed, code, if pressed { character } else { 0 }, 0); }
+        if pressed { self.session_dos_keys.insert(code); } else { self.session_dos_keys.remove(&code); }
+        Ok(())
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    pub fn dos_session_mouse(&mut self, dx: i16, dy: i16, left: bool) -> Result<(), CoreError> {
+        if !self.session_dos_enabled || !self.loaded {
+            return Err(CoreError::InvalidState("DOS session input is not approved".into()));
+        }
+        if !(-64..=64).contains(&dx) || !(-64..=64).contains(&dy) {
+            return Err(CoreError::InvalidState("mouse delta exceeds per-frame bounds".into()));
+        }
+        let mut state = callbacks().lock()
+            .map_err(|_| CoreError::Runtime("mouse callback state poisoned".into()))?;
+        state.session_mouse = [dx, dy, if left { 1 } else { 0 }, 0, 0, 0, 0];
+        Ok(())
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    pub fn release_dos_session_input(&mut self) {
+        let cb = callbacks().lock().ok().and_then(|state| state.keyboard_callback);
+        // Capture before invoking callbacks: callbacks may re-enter host state.
+        let keys: Vec<_> = self.session_dos_keys.iter().copied().collect();
+        if self.session_dos_enabled {
+            if let Some(callback) = cb {
+                for key in keys { unsafe { callback(false, key, 0, 0); } }
+            }
+        }
+        self.session_dos_keys.clear();
+        if let Ok(mut state) = callbacks().lock() { state.session_mouse = [0; 7]; }
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    pub fn disable_dos_session_input(&mut self) {
+        self.release_dos_session_input();
+        self.session_dos_enabled = false;
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    pub fn dos_session_input_enabled(&self) -> bool { self.session_dos_enabled }
 
     pub fn identity(&self) -> &CoreIdentity { &self.identity }
 
@@ -785,6 +872,14 @@ impl EmulatorCore for LibretroCore {
             state.audio.clear();
         }
         unsafe { (self.run_fn)() };
+        #[cfg(feature = "dos-session-input")]
+        if self.session_dos_enabled {
+            if let Ok(mut s) = callbacks().lock() {
+                // Relative mouse movement is a one-frame pulse; button holds persist.
+                s.session_mouse[0] = 0;
+                s.session_mouse[1] = 0;
+            }
+        }
         let mut state = callbacks().lock().map_err(|_| CoreError::Runtime("callback state poisoned".into()))?;
         state.lightgun.finish_frame();
         *video = convert_video(&state.video, state.format)?;
@@ -798,11 +893,28 @@ impl EmulatorCore for LibretroCore {
 
 impl Drop for LibretroCore {
     fn drop(&mut self) {
+        #[cfg(feature = "dos-session-input")]
+        self.disable_dos_session_input();
         unsafe {
             if self.loaded { (self.unload_game)(); }
             (self.deinit)();
         }
     }
+}
+
+#[cfg(feature = "dos-session-input")]
+fn dos_allowed_key(value: &str) -> Option<(c_uint, u32)> {
+    // SDL1.2/libretro RETROK key codes: explicit limited DOS game mapping.
+    Some(match value {
+        "Escape" => (27, 27), "Enter" => (13, 13), "Space" => (32, 32),
+        "ArrowUp" => (273, 0), "ArrowDown" => (274, 0),
+        "ArrowRight" => (275, 0), "ArrowLeft" => (276, 0),
+        "Tab" => (9, 9), "Backspace" => (8, 8),
+        "w" => (119, 119), "a" => (97, 97),
+        "s" => (115, 115), "d" => (100, 100),
+        "q" => (113, 113),
+        _ => return None,
+    })
 }
 
 fn button_id(button: &str) -> Option<c_uint> {
@@ -1005,6 +1117,8 @@ unsafe extern "C" fn input_state_callback(port:c_uint, device:c_uint, index:c_ui
         RETRO_DEVICE_LIGHTGUN => state.lightgun.input(id),
         #[cfg(feature = "dos-lab-input")]
         RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.lab_mouse[id as usize],
+        #[cfg(all(feature = "dos-session-input", not(feature = "dos-lab-input")))]
+        RETRO_DEVICE_MOUSE if (id as usize) < 7 => state.session_mouse[id as usize],
         _ => 0,
     }
 }
@@ -1024,6 +1138,29 @@ mod tests {
 
         assert!(ok);
         assert!(!callback.log.is_null());
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    #[test]
+    fn session_dos_keyboard_allowlist_is_exact() {
+        assert_eq!(dos_allowed_key("Escape"), Some((27, 27)));
+        assert_eq!(dos_allowed_key("ArrowUp"), Some((273, 0)));
+        assert_eq!(dos_allowed_key("q"), Some((113, 113)));
+        for key in ["F11", "Control", "Meta", "Alt", "Delete", "Enter;rm -rf /", "Q", ""] {
+            assert!(dos_allowed_key(key).is_none(), "{key}");
+        }
+    }
+
+    #[cfg(feature = "dos-session-input")]
+    #[test]
+    fn session_dos_mouse_defaults_neutral_and_read_bounded() {
+        let mut state = callbacks().lock().unwrap();
+        state.session_mouse = [8, -3, 1, 0, 0, 0, 0];
+        drop(state);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 0) }, 8);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 1) }, -3);
+        assert_eq!(unsafe { input_state_callback(0, RETRO_DEVICE_MOUSE, 0, 2) }, 1);
+        if let Ok(mut state) = callbacks().lock() { state.session_mouse = [0; 7]; }
     }
 
     #[cfg(feature = "dos-lab-input")]

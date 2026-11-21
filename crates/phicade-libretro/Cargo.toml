@@ -19,6 +19,8 @@ hex = "0.4"
 default = []
 # Lab-only, not exposed to Tauri/IPC/Action Bus or normal player sessions.
 dos-lab-input = []
+# User-approved DOS sessions only; distinct from CI-only fixture hooks.
+dos-session-input = []
 
 [[bin]]
 name = "qualify_dosbox_pure"

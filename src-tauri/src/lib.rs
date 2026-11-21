@@ -32,7 +32,7 @@ use std::{
     io::{BufWriter, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     process::{Child, Command},
-    sync::Mutex,
+    sync::{Mutex, atomic::{AtomicU64, Ordering}},
 };
 use tauri::{AppHandle, Manager, State};
 
@@ -49,6 +49,7 @@ use providers::ollama::{
 };
 
 const MAX_LIBRARY_ENTRIES: usize = 4096;
+static DOS_INPUT_IDS: AtomicU64 = AtomicU64::new(1);
 const WEB_AUDIO_SAMPLE_RATE_HZ: u32 = 48_000;
 const SRAM_FLUSH_INTERVAL_FRAMES: u64 = 300;
 const REPLAY_CHECKPOINT_INTERVAL_FRAMES: u64 = 60;
@@ -607,6 +608,8 @@ struct SuiteCohortEvidence {
 
 struct EmulatorSession {
     core: LibretroCore,
+    dos_input_id: u64,
+    dos_input_active: bool,
     xr_gateway: phicade_xr_protocol::XrGateway,
     runtime_features: RuntimeSessionFeatures,
     game_path: String,
@@ -1825,6 +1828,8 @@ fn start_registered_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        dos_input_id: DOS_INPUT_IDS.fetch_add(1, Ordering::Relaxed),
+        dos_input_active: false,
         xr_gateway: phicade_xr_protocol::XrGateway::default(),
         runtime_features: runtime_features.clone(),
         game_path,
@@ -2743,6 +2748,8 @@ fn start_emulation(
 
     let mut emulator_session = EmulatorSession {
         core,
+        dos_input_id: DOS_INPUT_IDS.fetch_add(1, Ordering::Relaxed),
+        dos_input_active: false,
         xr_gateway: phicade_xr_protocol::XrGateway::default(),
         runtime_features: runtime_features.clone(),
         game_path: info.game_path.clone(),
@@ -2926,6 +2933,10 @@ fn set_control_mode(
         }
     };
 
+    if mode != ControlMode::Human && session.dos_input_active {
+        session.core.disable_dos_session_input();
+        session.dos_input_active = false;
+    }
     session.authority.set_mode(mode, grant)?;
     session.xr_gateway.revoke();
     session.core.neutralize_inputs();
@@ -6137,6 +6148,80 @@ fn flush_game_save(state: State<'_, EmulatorState>) -> Result<(), String> {
     flush_save_ram(session)
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DosInputReceipt {
+    session_id: u64,
+    enabled: bool,
+    scope: &'static str,
+}
+
+fn check_dos_input(session: &EmulatorSession, id: u64) -> Result<(), String> {
+    if !session.dos_input_active || session.dos_input_id != id {
+        return Err("DOS input denied: inactive or stale session grant".into());
+    }
+    if session.authority.mode != ControlMode::Human || session.recording.is_some()
+        || session.autodrive.as_ref().is_some_and(|a| a.active) {
+        return Err("DOS input denied outside human-only session".into());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn approve_dos_input(state: State<'_, EmulatorState>, operator_approved: bool) -> Result<DosInputReceipt, String> {
+    if !operator_approved { return Err("explicit operator approval required".into()); }
+    let mut guard = state.session.lock().map_err(|_| "session lock poisoned".to_owned())?;
+    let session = guard.as_mut().ok_or("no active session")?;
+    if !session.core.identity().library_name.eq_ignore_ascii_case("DOSBox-pure")
+        || !Path::new(&session.game_path).extension().and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("dosz")) {
+        return Err("input only permitted for registered DOSBox Pure DOSZ session".into());
+    }
+    if session.authority.mode != ControlMode::Human || session.recording.is_some()
+        || session.autodrive.as_ref().is_some_and(|a| a.active) {
+        return Err("requires non-recording human-only session".into());
+    }
+    session.core.enable_dos_session_input().map_err(|e| format!("DOS enable failed: {e:?}"))?;
+    session.dos_input_active = true;
+    Ok(DosInputReceipt { session_id: session.dos_input_id, enabled: true,
+        scope: "current human DOSZ session only; allowed keys and bounded mouse" })
+}
+
+#[tauri::command]
+fn dos_input_key(state: State<'_, EmulatorState>, session_id: u64, key: String, pressed: bool) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|_| "session lock poisoned".to_owned())?;
+    let session = guard.as_mut().ok_or("no active DOS session")?;
+    check_dos_input(session, session_id)?;
+    session.core.dos_session_key(&key, pressed).map_err(|e| format!("DOS key refused: {e:?}"))
+}
+
+#[tauri::command]
+fn dos_input_mouse(state: State<'_, EmulatorState>, session_id: u64, dx: i16, dy: i16, left: bool) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|_| "session lock poisoned".to_owned())?;
+    let session = guard.as_mut().ok_or("no active DOS session")?;
+    check_dos_input(session, session_id)?;
+    session.core.dos_session_mouse(dx, dy, left).map_err(|e| format!("DOS mouse refused: {e:?}"))
+}
+
+#[tauri::command]
+fn release_dos_input(state: State<'_, EmulatorState>, session_id: u64) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|_| "session lock poisoned".to_owned())?;
+    let session = guard.as_mut().ok_or("no active DOS session")?;
+    check_dos_input(session, session_id)?;
+    session.core.release_dos_session_input();
+    Ok(())
+}
+
+#[tauri::command]
+fn disable_dos_input(state: State<'_, EmulatorState>, session_id: u64) -> Result<(), String> {
+    let mut guard = state.session.lock().map_err(|_| "session lock poisoned".to_owned())?;
+    let session = guard.as_mut().ok_or("no active DOS session")?;
+    if session.dos_input_id != session_id { return Err("stale DOS session".into()); }
+    session.core.disable_dos_session_input();
+    session.dos_input_active = false;
+    Ok(())
+}
+
 #[tauri::command]
 fn stop_emulation(state: State<'_, EmulatorState>) -> Result<(), String> {
     let mut session = state
@@ -6228,6 +6313,11 @@ pub fn run() {
             stop_n64_bridge,
             list_runtime_registrations,
             start_registered_emulation,
+            approve_dos_input,
+            dos_input_key,
+            dos_input_mouse,
+            release_dos_input,
+            disable_dos_input,
             scan_rom_directory,
             validate_action_envelope,
             start_emulation,

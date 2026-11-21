@@ -14,6 +14,12 @@ export interface AppSettings {
   ollamaModel: string | null;
 }
 
+export interface DosInputReceipt {
+  sessionId: number;
+  enabled: boolean;
+  scope: string;
+}
+
 export interface SteamHandoffReceipt {
   appId: number;
   protocolUri: string;
@@ -982,6 +988,27 @@ export async function startEmulation(
   gamePath: string,
 ): Promise<SessionInfo> {
   return invoke<SessionInfo>("start_emulation", { corePath, gamePath });
+}
+
+export async function approveDosInput(operatorApproved: boolean): Promise<DosInputReceipt> {
+  if (!isNativeShell()) throw new Error("DOS input requires native desktop app");
+  return invoke<DosInputReceipt>("approve_dos_input", { operatorApproved });
+}
+
+export async function sendDosInputKey(sessionId: number, key: string, pressed: boolean): Promise<void> {
+  return invoke("dos_input_key", { sessionId, key, pressed });
+}
+
+export async function sendDosInputMouse(sessionId: number, dx: number, dy: number, left: boolean): Promise<void> {
+  return invoke("dos_input_mouse", { sessionId, dx, dy, left });
+}
+
+export async function releaseDosInput(sessionId: number): Promise<void> {
+  return invoke("release_dos_input", { sessionId });
+}
+
+export async function disableDosInput(sessionId: number): Promise<void> {
+  return invoke("disable_dos_input", { sessionId });
 }
 
 export async function launchSteamApp(appId: number, operatorApproved: boolean): Promise<SteamHandoffReceipt> {
