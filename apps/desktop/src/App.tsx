@@ -1664,6 +1664,7 @@ export function App() {
     if (!native || !running || session?.core.libraryName.toLowerCase() !== "dosbox-pure") return;
     try {
       if (dosInputId !== null) {
+        dosMouseNextRef.current = null;
         await disableDosInput(dosInputId);
         setDosInputId(null);
         setNotice("DOS KEYBOARD AND MOUSE RELEASED");
@@ -1680,10 +1681,32 @@ export function App() {
 
   useEffect(() => {
     if ((!running || authority?.mode !== "human") && dosInputId !== null) {
+      dosMouseNextRef.current = null;
       void disableDosInput(dosInputId).catch(() => undefined);
       setDosInputId(null);
     }
   }, [running, authority?.mode, dosInputId]);
+
+  // Native desktop loses approval on Alt+Tab, OS focus changes or hidden
+  // windows. Simply releasing a held key isn't sufficient: gamepad polling
+  // could otherwise continue sending inputs to an unfocused game.
+  useEffect(() => {
+    if (dosInputId === null) return;
+    const revoke = () => {
+      dosMouseNextRef.current = null;
+      void disableDosInput(dosInputId).catch(() => undefined);
+      setDosInputId((current) => current === dosInputId ? null : current);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") revoke();
+    };
+    window.addEventListener("blur", revoke);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("blur", revoke);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [dosInputId]);
 
   const sendDosPointer = (dx: number, dy: number, left: boolean) => {
     if (dosInputId === null || !running) return;

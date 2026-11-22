@@ -58,6 +58,12 @@ blur/disable. No global keyboard hook, AI grants, or automatic game download.
 See [DOS desktop input boundary](docs/DOS_SESSION_INPUT.md).
 Real hardware/gameplay qualification is pending.
 
+**DOS Rung 6:** separate original DOS end-to-end CI test now drives the
+**production** session-input API (keyboard, mouse click, guest exit), rather
+than only the lab hooks. Focus-loss revokes desktop approval, and backend
+permissions get explicit stale/revoked/nonhuman regression tests.
+See [DOS session input scope](docs/DOS_SESSION_INPUT.md).
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.

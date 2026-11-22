@@ -1,4 +1,4 @@
-name: DOSBox Pure / Rung 4 guest mouse and exit qualification
+name: DOSBox Pure / Rung 4-6 source-built guest input qualification
 on:
   pull_request:
     paths:
@@ -20,7 +20,7 @@ permissions:
   contents: read
 jobs:
   original-fixture:
-    name: core / DOSBox Pure original guest input and exit
+    name: core / DOSBox Pure lab and production session guest qualification
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -56,9 +56,32 @@ jobs:
           assert r["retailDosGameCompatibilityQualified"] is False
           print("PASS: BIOS keyboard, guest mouse left-click, and core shutdown on guest exit; commercial games unqualified")
           PY
+      - name: Verify production session API reached original DOS guest
+        run: |
+          python3 - <<'PY'
+          import json
+          with open("artifacts/dos-session-original-fixture.json", encoding="utf8") as f:
+              r=json.load(f)
+          assert r["schema"] == "phicade.dos-session-original-fixture.v1"
+          assert r["result"] == "PASS"
+          assert r["magentaFrames"] >= 3
+          assert r["greenFrames"] >= 3
+          assert r["cyanFrames"] >= 3
+          assert r["shutdownFrame"] > 200
+          for field in ("preapprovalInputRefused", "revokedInputRefused",
+                        "forbiddenKeyRefused", "unboundedMouseRefused",
+                        "sessionApprovalUsed", "productionKeyboardGuestObserved",
+                        "productionMouseClickGuestObserved", "guestShutdownObserved"):
+              assert r[field] is True, field
+          assert r["retailGameCompatibilityQualified"] is False
+          assert r["windowsPhysicalDeviceQualified"] is False
+          print("PASS: production DOS session API end-to-end, permission denial and guest exit")
+          PY
       - name: Upload only metadata evidence receipt
         uses: actions/upload-artifact@v4
         with:
           name: dosbox-pure-original-fixture-evidence
-          path: artifacts/dosbox-pure-original-fixture.json
+          path: |
+            artifacts/dosbox-pure-original-fixture.json
+            artifacts/dos-session-original-fixture.json
           if-no-files-found: error

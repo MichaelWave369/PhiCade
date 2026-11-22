@@ -5699,6 +5699,17 @@ fn step_emulation(
         .as_mut()
         .ok_or_else(|| "no emulator session is running".to_owned())?;
 
+    // Revoke held guest inputs before a replay or autonomous mode can
+    // advance another frame, regardless of which command changed state.
+    if session.dos_input_active && (
+        session.authority.mode != ControlMode::Human
+        || session.recording.is_some()
+        || session.autodrive.as_ref().is_some_and(|a| a.active)
+    ) {
+        session.core.disable_dos_session_input();
+        session.dos_input_active = false;
+    }
+
     let authority_frame = session.core.frame_count();
 
     let grant_expired = session
@@ -6156,15 +6167,37 @@ struct DosInputReceipt {
     scope: &'static str,
 }
 
+// Pure policy shared by every Tauri DOS input command; unit-testable
+// without opening a native app or granting a synthetic agent capability.
+#[derive(Debug, Clone, Copy)]
+struct DosInputGuard {
+    active: bool,
+    current_id: u64,
+    human: bool,
+    recording: bool,
+    autonomous: bool,
+}
+
+impl DosInputGuard {
+    fn permitted(self, requested_id: u64) -> Result<(), &'static str> {
+        if !self.active || self.current_id != requested_id {
+            return Err("DOS input denied: inactive or stale session grant");
+        }
+        if !self.human || self.recording || self.autonomous {
+            return Err("DOS input denied outside human-only session");
+        }
+        Ok(())
+    }
+}
+
 fn check_dos_input(session: &EmulatorSession, id: u64) -> Result<(), String> {
-    if !session.dos_input_active || session.dos_input_id != id {
-        return Err("DOS input denied: inactive or stale session grant".into());
-    }
-    if session.authority.mode != ControlMode::Human || session.recording.is_some()
-        || session.autodrive.as_ref().is_some_and(|a| a.active) {
-        return Err("DOS input denied outside human-only session".into());
-    }
-    Ok(())
+    DosInputGuard {
+        active: session.dos_input_active,
+        current_id: session.dos_input_id,
+        human: session.authority.mode == ControlMode::Human,
+        recording: session.recording.is_some(),
+        autonomous: session.autodrive.as_ref().is_some_and(|a| a.active),
+    }.permitted(id).map_err(str::to_owned)
 }
 
 #[tauri::command]
@@ -6372,6 +6405,22 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dos_input_guard_denies_stale_revoked_and_non_human_sessions() {
+        let valid = DosInputGuard {
+            active: true, current_id: 21, human: true,
+            recording: false, autonomous: false,
+        };
+        assert!(valid.permitted(21).is_ok());
+        assert!(valid.permitted(20).is_err()); // stale previous game
+        assert!(DosInputGuard { active: false, ..valid }.permitted(21).is_err());
+        assert!(DosInputGuard { human: false, ..valid }.permitted(21).is_err());
+        assert!(DosInputGuard { recording: true, ..valid }.permitted(21).is_err());
+        assert!(DosInputGuard { autonomous: true, ..valid }.permitted(21).is_err());
+    }
+
+
 
     #[test]
     fn scummvm_session_features_disable_timeline_state() {

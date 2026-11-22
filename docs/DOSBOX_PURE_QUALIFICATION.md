@@ -132,3 +132,15 @@ clean-exit lifecycle contract for other cores.
 
 Until the GitHub checks actually pass these are proposed acceptance tests
 and not completed claims.
+
+## Rung 6: production API confirmation
+
+A second source-built DOS fixture qualification now calls the **production**
+session input methods (not the Rung 4 lab keyboard/mouse senders). It verifies
+the source guest sees ESC, guest mouse-left, and a Q-triggered shutdown, while
+checking denied preapproval events, forbidden keys and bounded mouse deltas.
+The deterministic guest-exit option remains lab-only. Two JSON receipts are
+uploaded, no game or emulator binaries. See
+[DOS session input](DOS_SESSION_INPUT.md) for permissions and limitations.
+
+This does **not** certify physical Windows input or arbitrary DOS games.

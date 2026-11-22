@@ -44,3 +44,30 @@ titles is NOT yet qualified.
 **Do not promote DOS gameplay generally until physical keyboard/mouse and
 replay/authority tests have been observed on Windows.** No private assets,
 games or binaries are included in this feature.
+
+## Rung 6: production session API to DOS guest
+
+The same original `PHITEST.COM` is now run twice against the pinned DOSBox Pure
+source-built core in CI. Rung 4 uses lab-only keyboard/mouse hooks. **Rung 6 uses
+the actual `enable_dos_session_input`, `dos_session_key`, and
+`dos_session_mouse` methods enabled in the Tauri desktop build.**
+
+The lab feature is enabled simultaneously only to configure a deterministic
+DOSBox Pure shutdown-on-guest-exit policy, not to inject inputs. When both
+features are compiled, the host deliberately routes libretro mouse polling
+to the **production session state**. The second CI receipt must show:
+
+- Preapproval keyboard/mouse delivery was denied.
+- An explicit session approval enabled the bounded API.
+- Forbidden F11 and out-of-range mouse deltas were denied.
+- Disabling approval revoked key/mouse commands; explicit reapproval restored it.
+- The source-built DOS guest painted magenta, then green after ESC via BIOS
+  `int 16h`, then cyan after a left-click via DOS `int 33h`.
+- Q triggered the guest exit and DOSBox Pure's shutdown callback.
+- Physical Windows input and retail DOS game compatibility stay `false`.
+
+**The Tauri UI is not running inside this CI test.** It proves production
+libretro input methods and a shared DOS fixture. Tauri's human-only session ID
+guard has separate unit tests, and all changes require the existing native
+compile and browser tests. Hardware focus, controller and Windows device tests
+still require an operator at the desktop.

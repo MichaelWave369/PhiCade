@@ -31,6 +31,13 @@ python3 "$ROOT/scripts/build-dos-fixture.py" \
 cargo run --locked --quiet -p phicade-libretro --features dos-lab-input --bin qualify_dosbox_pure -- \
   --core "$CORE" --fixture "$FIXTURE" --frames 240 --receipt "$RECEIPT"
 
+SESSION_RECEIPT="$ROOT/artifacts/dos-session-original-fixture.json"
+# This second qualifier uses the production user-session key/mouse methods.
+# The lab feature is present ONLY for a deterministic guest-exit core option.
+cargo run --locked --quiet -p phicade-libretro --features dos-lab-input,dos-session-input --bin qualify_dos_session -- \
+  --core "$CORE" --fixture "$FIXTURE" --receipt "$SESSION_RECEIPT"
+
+echo "Production DOS session receipt: $SESSION_RECEIPT"
 echo "Original fixture receipt: $RECEIPT"
 echo "Pinned DOSBox Pure source: $REVISION"
 echo "No copyrighted game or third-party core binary is uploaded."

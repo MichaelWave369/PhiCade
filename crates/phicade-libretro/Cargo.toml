@@ -27,5 +27,10 @@ name = "qualify_dosbox_pure"
 path = "src/bin/qualify_dosbox_pure.rs"
 required-features = ["dos-lab-input"]
 
+[[bin]]
+name = "qualify_dos_session"
+path = "src/bin/qualify_dos_session.rs"
+required-features = ["dos-session-input", "dos-lab-input"]
+
 [build-dependencies]
 cc = "1"
