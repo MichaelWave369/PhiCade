@@ -75,6 +75,23 @@ test("two browsers exchange WebRTC video, presence and bounded input", async ({
   });
   await expect(guest.locator("#game-title")).toHaveText("YOUR PHICADE");
   await expect(guest.locator("#score")).toContainText("CONTROLLER");
+  // A WebRTC "PAIRED" control message can arrive before Chromium has
+  // decoded the first remote video frame. Wait for actual playable video
+  // instead of sampling zero-sized metadata on the same event-loop tick.
+  await expect
+    .poll(
+      () =>
+        guest.locator("video").evaluate((v) => {
+          const video = v as HTMLVideoElement;
+          return (
+            video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            video.videoWidth > 0 &&
+            video.videoHeight > 0
+          );
+        }),
+      { timeout: 20_000, message: "guest received a decoded WebRTC video frame" },
+    )
+    .toBe(true);
   const stats = await guest.locator("video").evaluate((v) => ({
     width: (v as HTMLVideoElement).videoWidth,
     height: (v as HTMLVideoElement).videoHeight,
