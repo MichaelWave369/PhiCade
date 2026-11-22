@@ -64,6 +64,13 @@ than only the lab hooks. Focus-loss revokes desktop approval, and backend
 permissions get explicit stale/revoked/nonhuman regression tests.
 See [DOS session input scope](docs/DOS_SESSION_INPUT.md).
 
+**DOS Rung 7 Windows hardware check:** the desktop now includes an
+operator-entered Pass/Fail/Not-tested checklist with a local JSON report for
+physical keyboard, mouse, gamepad, focus-loss and replacement checks.
+Windows CI independently tests event revocation and manual-report logic.
+No physical devices are tested by GitHub Actions. See
+[DOS Windows qualification](docs/DOS_WINDOWS_QUALIFICATION.md).
+
 ## What you can do
 
 - **Open the Xbox browser gateway** to curated Field destinations with keyboard, touch, or standard Gamepad API navigation when exposed by the browser.

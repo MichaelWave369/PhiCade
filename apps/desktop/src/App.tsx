@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { boundedDosDelta, dosKeyFromBrowser, dosKeyFromGamepad } from "./dosInput";
+import { installDosFocusGuard } from "./dosFocusGuard";
+import DosHardwareCheck from "./DosHardwareCheck";
 import { XrHostPanel } from "./XrHostPanel";
 import { DolphinXrPanel } from "./DolphinXrPanel";
 import { ActionBus, type ActionSource, type GameAction } from "./actionBus";
@@ -1692,20 +1694,11 @@ export function App() {
   // could otherwise continue sending inputs to an unfocused game.
   useEffect(() => {
     if (dosInputId === null) return;
-    const revoke = () => {
+    return installDosFocusGuard(window, document, () => {
       dosMouseNextRef.current = null;
       void disableDosInput(dosInputId).catch(() => undefined);
       setDosInputId((current) => current === dosInputId ? null : current);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") revoke();
-    };
-    window.addEventListener("blur", revoke);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("blur", revoke);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
+    });
   }, [dosInputId]);
 
   const sendDosPointer = (dx: number, dy: number, left: boolean) => {
@@ -2352,6 +2345,9 @@ export function App() {
             </div>
           </div>
 
+          {running && session?.core.libraryName.toLowerCase() === "dosbox-pure" && (
+            <DosHardwareCheck key={session.gameKey} />
+          )}
           {running && session?.core.libraryName.toLowerCase() === "dosbox-pure" && (
             <div className="session-strip" aria-label="DOS input permissions">
               <button
