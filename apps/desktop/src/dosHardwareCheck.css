@@ -1,0 +1,12 @@
+.dos-hardware-check{margin:10px 0 16px;padding:14px;border:1px solid #617b89;background:#111e30;border-radius:12px;color:#dfe8f4;font-size:13px}
+.dos-hardware-check summary{cursor:pointer;letter-spacing:.05em;font-weight:700;color:#a8f5df}
+.dos-hardware-check p{color:#b9cbdd;line-height:1.6;max-width:850px}
+.dos-hardware-check__rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:9px;margin:14px 0}
+.dos-hardware-check__row{display:flex;flex-direction:column;gap:8px;padding:12px;background:#182b40;border:1px solid #44617c;border-radius:8px}
+.dos-hardware-check__row strong{display:block;margin-bottom:4px}
+.dos-hardware-check__row small{display:block;color:#aebdd1;line-height:1.45}
+.dos-hardware-check__row select{width:100%;padding:8px;border:1px solid #72889c;border-radius:7px;background:#0c1726;color:#f1f7ff;font:inherit}
+.dos-hardware-check__actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.dos-hardware-check__actions button{padding:9px 12px;border-radius:7px;border:1px solid #7ca5a0;background:#1d443f;color:#e4fff7;cursor:pointer}
+.dos-hardware-check textarea{display:block;width:100%;min-height:180px;resize:vertical;padding:10px;background:#071320;color:#d6ffe9;border:1px solid #5c847c;border-radius:8px;font:12px/1.5 ui-monospace,monospace}
+.dos-hardware-check__footer{display:block;line-height:1.5;color:#b7c8d6;margin:8px 0 0}
