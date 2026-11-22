@@ -38,6 +38,10 @@ jobs:
         run: npx vitest run apps/desktop/src/dosInput.test.ts apps/desktop/src/dosFocusGuard.test.ts apps/desktop/src/dosHardwareEvidence.test.ts
       - name: Typecheck and bundle real desktop frontend
         run: npm run build --workspace @phicade/desktop
+      # Tauri's Windows resource build requires icon.ico; only the source
+      # PNG is tracked. Match the already-green Windows N64 CI job.
+      - name: Generate Windows icons from tracked source PNG
+        run: npm run tauri -- icon src-tauri/icons/icon.png
       - uses: dtolnay/rust-toolchain@stable
       - name: Verify DOS authority guard on Windows
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib dos_input_guard_denies_stale_revoked_and_non_human_sessions
